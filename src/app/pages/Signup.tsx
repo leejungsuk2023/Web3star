@@ -1,0 +1,193 @@
+import { useState } from 'react';
+import logoImage from 'figma:asset/1abedf885993685a4d6cd6ba7515a93facdfdba3.png';
+import { useNavigate } from 'react-router';
+import GoogleIcon from '../components/GoogleIcon';
+import { supabase } from '../../lib/supabase';
+
+export default function Signup() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [referralCode, setReferralCode] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    // Validate referral code if provided
+    if (referralCode) {
+      const { data: referrer } = await supabase
+        .from('users')
+        .select('id')
+        .eq('invite_code', referralCode)
+        .single();
+
+      if (!referrer) {
+        setError('Invalid referral code. Please check and try again.');
+        setLoading(false);
+        return;
+      }
+    }
+
+    const { error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          nickname,
+          referral_code: referralCode || undefined,
+        },
+      },
+    });
+
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+      return;
+    }
+
+    // referred_by는 handle_new_user 트리거에서 metadata로 자동 저장됨
+    navigate('/');
+  };
+
+  const handleGoogleSignup = async () => {
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    if (oauthError) {
+      setError(oauthError.message);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        {/* Logo Section */}
+        <div className="flex flex-col items-center mb-12">
+          <img
+            src={logoImage}
+            alt="Web3Star Logo"
+            className="w-full mb-4 mix-blend-screen opacity-90"
+          />
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div role="alert" aria-live="polite" className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">
+            {error}
+          </div>
+        )}
+
+        {/* Form Section */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Google Signup Button */}
+          <button
+            type="button"
+            onClick={handleGoogleSignup}
+            className="w-full px-6 py-4 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-3 shadow-lg"
+          >
+            <GoogleIcon className="w-5 h-5" />
+            Start with Google
+          </button>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4 my-6">
+            <div className="flex-1 h-px bg-gray-800"></div>
+            <span className="text-sm text-gray-500">or</span>
+            <div className="flex-1 h-px bg-gray-800"></div>
+          </div>
+
+          {/* Email Input */}
+          <div>
+            <label htmlFor="email" className="block text-sm text-gray-400 mb-2">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3.5 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+
+          {/* Password Input */}
+          <div>
+            <label htmlFor="password" className="block text-sm text-gray-400 mb-2">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3.5 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
+          {/* Nickname Input */}
+          <div>
+            <label htmlFor="nickname" className="block text-sm text-gray-400 mb-2">
+              Nickname
+            </label>
+            <input
+              id="nickname"
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              className="w-full px-4 py-3.5 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
+              placeholder="Choose a nickname"
+              required
+            />
+          </div>
+
+          {/* Referral Code Input */}
+          <div>
+            <label htmlFor="referralCode" className="block text-sm text-gray-400 mb-2">
+              Referral Code <span className="text-gray-600">(Optional)</span>
+            </label>
+            <input
+              id="referralCode"
+              type="text"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value)}
+              className="w-full px-4 py-3.5 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
+              placeholder="Enter referral code"
+            />
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full mt-8 px-6 py-4 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg transition-all duration-200 shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Creating account...' : 'Start Mining'}
+          </button>
+        </form>
+
+        {/* Login Link */}
+        <div className="text-center mt-6">
+          <div className="text-sm text-gray-400">
+            Already have an account?{' '}
+            <button
+              onClick={() => navigate('/login')}
+              className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
+            >
+              Login
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

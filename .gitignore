@@ -1,0 +1,29 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+
+# Android build outputs
+android/.gradle/
+android/app/build/
+android/build/
+android/.idea/
+*.apk
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright
+test-results/
+playwright-report/
+
+# Claude
+.claude/
