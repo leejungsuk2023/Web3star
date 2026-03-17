@@ -5,6 +5,7 @@ import GetMorePointModal from '../components/GetMorePointModal';
 import WLogoSvg from '../components/WLogoSvg';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { showInterstitialAd, showRewardedAd } from '../../lib/admob';
 
 const MINING_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 const MINING_REWARD = 10;
@@ -276,11 +277,18 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Get More Point Modal */}
+      {/* Get More Point Modal: Watch Ad → 전면/보상형 광고 시청 후 보상 지급 */}
       <GetMorePointModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onWatchAd={handleWatchAd}
+        onWatchAd={async () => {
+          setIsModalOpen(false);
+          if (modalTriggerSource === 'center') {
+            await showInterstitialAd(handleWatchAd);
+          } else {
+            await showRewardedAd(handleWatchAd);
+          }
+        }}
         triggerSource={modalTriggerSource}
       />
     </div>

@@ -4,4 +4,6 @@
     <string name="title_activity_main">Web3Star</string>
     <string name="package_name">com.web3star.app</string>
     <string name="custom_url_scheme">com.web3star.app</string>
+    <!-- AdMob: 교체용 테스트 앱 ID (배포 시 본인 AdMob 앱 ID로 변경) -->
+    <string name="admob_app_id">ca-app-pub-7386110967445510~2890268357</string>
 </resources>

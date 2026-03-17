@@ -6,6 +6,7 @@ import Profile from "./pages/Profile";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import Splash from "./pages/Splash";
+import AdMobTest from "./pages/AdMobTest";
 import ProtectedRoute from "../components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -20,6 +21,10 @@ export const router = createBrowserRouter([
   {
     path: "/signup",
     Component: Signup,
+  },
+  {
+    path: "/admob-test",
+    Component: AdMobTest,
   },
   {
     path: "/",

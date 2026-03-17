@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import logoImage from 'figma:asset/1abedf885993685a4d6cd6ba7515a93facdfdba3.png';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -130,6 +130,15 @@ export default function Login() {
 
         {/* Links */}
         <div className="flex flex-col items-center gap-4 mt-6">
+          {Capacitor.isNativePlatform() && (
+            <button
+              type="button"
+              onClick={() => navigate('/admob-test')}
+              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              AdMob Test (Android/iOS)
+            </button>
+          )}
           <button
             type="button"
             onClick={async () => {
