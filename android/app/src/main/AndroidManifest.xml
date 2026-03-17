@@ -21,7 +21,19 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
+            <!-- OAuth 리다이렉트: capacitor:// 또는 앱 스킴으로 돌아올 때 앱이 열리도록 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="capacitor" android:host="localhost" android:pathPrefix="/" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.web3star.app" android:host="localhost" android:pathPrefix="/" />
+            </intent-filter>
         </activity>
 
         <provider

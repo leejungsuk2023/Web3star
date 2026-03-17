@@ -1,5 +1,8 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
+import { InAppBrowser } from '@capacitor/inappbrowser';
 import { supabase } from '../lib/supabase';
 
 export interface UserProfile {
@@ -57,16 +60,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchProfile]);
 
+  // OAuth 리다이렉트 URL에서 토큰 추출 후 세션 설정 (공통)
+  const setSessionFromOAuthUrl = useCallback(async (url: string) => {
+    if (!url || !url.includes('access_token')) return;
+    if (!url.includes('capacitor://localhost') && !url.includes('com.web3star.app://localhost')) return;
+    const hash = url.split('#')[1];
+    if (!hash) return;
+    const params = new URLSearchParams(hash);
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    if (access_token && refresh_token) {
+      await supabase.auth.setSession({ access_token, refresh_token });
+    }
+  }, []);
+
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    (async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const result = await App.getLaunchUrl();
+          const launchUrl = result?.url;
+          if (launchUrl) await setSessionFromOAuthUrl(launchUrl);
+        } catch {
+          // getLaunchUrl 실패 시 무시 (딥링크로 열리지 않았을 때)
+        }
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
       }
       setLoading(false);
-    });
+    })();
+  }, [fetchProfile, setSessionFromOAuthUrl]);
 
+  // WebView/Custom Tab 리다이렉트로 앱이 열릴 때 URL 수신 후 세션 설정 + 브라우저 닫기
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let listener: { remove: () => Promise<void> } | null = null;
+    const handler = async (event: { url: string }) => {
+      await setSessionFromOAuthUrl(event.url);
+      try {
+        await InAppBrowser.close();
+      } catch {
+        // 브라우저가 이미 닫혀 있으면 무시
+      }
+    };
+    App.addListener('appUrlOpen', handler).then((h) => { listener = h; });
+    return () => {
+      listener?.remove();
+    };
+  }, [setSessionFromOAuthUrl]);
+
+  useEffect(() => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
@@ -78,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchProfile]);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, refreshProfile }}>

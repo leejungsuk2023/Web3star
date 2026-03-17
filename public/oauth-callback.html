@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>로그인 중...</title>
+  <style>
+    body { font-family: system-ui; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #0a0a0f; color: #fff; }
+    p { margin: 0.5em 0; }
+  </style>
+</head>
+<body>
+  <div>
+    <p>로그인 중...</p>
+    <p id="msg">앱으로 돌아갑니다.</p>
+  </div>
+  <script>
+    (function () {
+      var hash = location.hash;
+      if (hash && hash.indexOf('access_token') !== -1) {
+        try {
+          location.replace('com.web3star.app://localhost' + hash);
+        } catch (e) {
+          document.getElementById('msg').textContent = '앱을 열 수 없습니다. Web3Star 앱으로 돌아가 주세요.';
+        }
+      } else {
+        document.getElementById('msg').textContent = '토큰이 없습니다. 앱에서 다시 로그인해 주세요.';
+      }
+    })();
+  </script>
+</body>
+</html>

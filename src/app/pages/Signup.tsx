@@ -2,7 +2,9 @@ import { useState } from 'react';
 import logoImage from 'figma:asset/1abedf885993685a4d6cd6ba7515a93facdfdba3.png';
 import { useNavigate } from 'react-router';
 import GoogleIcon from '../components/GoogleIcon';
-import { supabase } from '../../lib/supabase';
+import { Capacitor } from '@capacitor/core';
+import { InAppBrowser, DefaultWebViewOptions } from '@capacitor/inappbrowser';
+import { supabase, getAuthRedirectUrl } from '../../lib/supabase';
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -55,12 +57,20 @@ export default function Signup() {
   };
 
   const handleGoogleSignup = async () => {
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: getAuthRedirectUrl() },
     });
     if (oauthError) {
       setError(oauthError.message);
+      return;
+    }
+    if (data?.url) {
+      if (Capacitor.isNativePlatform()) {
+        await InAppBrowser.openInWebView({ url: data.url, options: DefaultWebViewOptions });
+      } else {
+        window.location.href = data.url;
+      }
     }
   };
 
