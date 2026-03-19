@@ -13,6 +13,8 @@ dependencies {
     implementation project(':capacitor-app')
     implementation project(':capacitor-browser')
     implementation project(':capacitor-inappbrowser')
+    implementation project(':capawesome-capacitor-google-sign-in')
+    implementation project(':capgo-capacitor-social-login')
 
 }
 

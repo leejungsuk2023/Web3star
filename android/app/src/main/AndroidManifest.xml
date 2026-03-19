@@ -30,13 +30,15 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="capacitor" android:host="localhost" android:pathPrefix="/" />
+                <!-- pathPrefix 제약을 완화해서 딥링크 경로가 비거나 달라도 잡힐 수 있게 -->
+                <data android:scheme="capacitor" android:host="localhost" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.web3star.app" android:host="localhost" android:pathPrefix="/" />
+                <!-- pathPrefix 제약을 완화해서 딥링크 경로가 비거나 달라도 잡힐 수 있게 -->
+                <data android:scheme="com.web3star.app" android:host="localhost" />
             </intent-filter>
         </activity>
 

@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import GoogleIcon from '../components/GoogleIcon';
 import { Capacitor } from '@capacitor/core';
-import { InAppBrowser, DefaultWebViewOptions } from '@capacitor/inappbrowser';
-import { supabase, getAuthRedirectUrl } from '../../lib/supabase';
+import { supabase, getAuthRedirectUrl, isLikelyNativePlatform } from '../../lib/supabase';
+import { googleNativeIdToken } from '../../lib/socialLogin';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -31,20 +31,39 @@ export default function Login() {
   };
 
   const handleGoogleLogin = async () => {
-    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: getAuthRedirectUrl() },
-    });
-    if (oauthError) {
-      setError(oauthError.message);
-      return;
-    }
-    if (data?.url) {
-      if (Capacitor.isNativePlatform()) {
-        await InAppBrowser.openInWebView({ url: data.url, options: DefaultWebViewOptions });
-      } else {
-        window.location.href = data.url;
+    if (loading) return; // 중복 클릭 방지
+    setLoading(true);
+    try {
+      setError('');
+      if (isLikelyNativePlatform()) {
+        // Android WebView OAuth 차단(403 disallowed_useragent) 회피: 네이티브 ID 토큰 로그인
+        const idToken = await googleNativeIdToken();
+        const { error: idTokenError } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: idToken,
+        });
+        if (idTokenError) {
+          setError(idTokenError.message);
+          return;
+        }
+        navigate('/');
+        return;
       }
+
+      // 웹: 기존 OAuth 리다이렉트 플로우
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: getAuthRedirectUrl() },
+      });
+      if (oauthError) {
+        setError(oauthError.message);
+        return;
+      }
+      if (data?.url) window.location.href = data.url;
+    } catch (e: any) {
+      setError(e?.message ?? 'Google login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,6 +92,7 @@ export default function Login() {
           <button
             type="button"
             onClick={handleGoogleLogin}
+            disabled={loading}
             className="w-full px-6 py-4 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-3 shadow-lg"
           >
             <GoogleIcon className="w-5 h-5" />

@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import logoImage from 'figma:asset/1abedf885993685a4d6cd6ba7515a93facdfdba3.png';
 import { useNavigate } from 'react-router';
 import GoogleIcon from '../components/GoogleIcon';
-import { Capacitor } from '@capacitor/core';
-import { InAppBrowser, DefaultWebViewOptions } from '@capacitor/inappbrowser';
-import { supabase, getAuthRedirectUrl } from '../../lib/supabase';
+import { supabase, getAuthRedirectUrl, isLikelyNativePlatform } from '../../lib/supabase';
+import { googleNativeIdToken } from '../../lib/socialLogin';
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -57,20 +56,37 @@ export default function Signup() {
   };
 
   const handleGoogleSignup = async () => {
-    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: getAuthRedirectUrl() },
-    });
-    if (oauthError) {
-      setError(oauthError.message);
-      return;
-    }
-    if (data?.url) {
-      if (Capacitor.isNativePlatform()) {
-        await InAppBrowser.openInWebView({ url: data.url, options: DefaultWebViewOptions });
-      } else {
-        window.location.href = data.url;
+    if (loading) return; // 중복 클릭 방지
+    setLoading(true);
+    try {
+      setError('');
+      if (isLikelyNativePlatform()) {
+        const idToken = await googleNativeIdToken();
+        const { error: idTokenError } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: idToken,
+        });
+        if (idTokenError) {
+          setError(idTokenError.message);
+          return;
+        }
+        navigate('/');
+        return;
       }
+
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: getAuthRedirectUrl() },
+      });
+      if (oauthError) {
+        setError(oauthError.message);
+        return;
+      }
+      if (data?.url) window.location.href = data.url;
+    } catch (e: any) {
+      setError(e?.message ?? 'Google login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,6 +115,7 @@ export default function Signup() {
           <button
             type="button"
             onClick={handleGoogleSignup}
+            disabled={loading}
             className="w-full px-6 py-4 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-3 shadow-lg"
           >
             <GoogleIcon className="w-5 h-5" />

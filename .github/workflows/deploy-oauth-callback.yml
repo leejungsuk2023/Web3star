@@ -1,10 +1,16 @@
 # OAuth 콜백 페이지를 GitHub Pages에 배포 (에뮬레이터 Google 로그인용)
-name: Deploy OAuth callback to GitHub Pages
+name: Deploy Web app to GitHub Pages
 
 on:
   push:
     branches: [main]
-    paths: ['public/oauth-callback.html']
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - '.github/workflows/deploy-oauth-callback.yml'
   workflow_dispatch:
 
 permissions:
@@ -22,13 +28,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_OAUTH_CALLBACK_URL: ${{ secrets.VITE_OAUTH_CALLBACK_URL }}
+          VITE_GOOGLE_WEB_CLIENT_ID: ${{ secrets.VITE_GOOGLE_WEB_CLIENT_ID }}
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload artifact (public folder only)
+      - name: SPA fallback for GitHub Pages
+        run: cp dist/index.html dist/404.html
+
+      - name: Upload artifact (dist)
         uses: actions/upload-pages-artifact@v3
         with:
-          path: public
+          path: dist
 
       - name: Deploy to GitHub Pages
         id: deployment

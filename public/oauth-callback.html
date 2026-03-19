@@ -19,7 +19,9 @@
       var hash = location.hash;
       if (hash && hash.indexOf('access_token') !== -1) {
         try {
-          location.replace('com.web3star.app://localhost' + hash);
+          // Android intent-filter가 / 경로(prefix="/")를 기대하는 경우가 있어
+          // 딥링크 경로에 / 를 포함시켜 매칭을 확실히 합니다.
+          location.replace('com.web3star.app://localhost/' + hash);
         } catch (e) {
           document.getElementById('msg').textContent = '앱을 열 수 없습니다. Web3Star 앱으로 돌아가 주세요.';
         }
