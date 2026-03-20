@@ -34,8 +34,8 @@ export default function ContactSupportModal({ isOpen, onClose }: ContactSupportM
     {
       icon: Globe,
       label: 'Website',
-      value: 'www.web3star.org/support',
-      href: 'https://www.web3star.org/support',
+      value: 'web3star.org',
+      href: 'https://web3star.org',
       description: 'Visit our help center'
     }
   ];

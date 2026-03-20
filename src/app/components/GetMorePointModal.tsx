@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { X, Zap } from 'lucide-react';
 
 interface GetMorePointModalProps {
@@ -46,26 +46,26 @@ export default function GetMorePointModal({ isOpen, onClose, onWatchAd, triggerS
           </div>
 
           <h2 className="text-2xl font-bold text-white mb-2">
-            {isMining ? '채굴 시작' : '포인트 획득'}
+            {isMining ? 'Start Mining' : 'Earn Points'}
           </h2>
           <p className="text-sm text-gray-400 mb-6">
             {isMining
-              ? '광고 시청 후 즉시 10 PTS가 지급됩니다'
-              : '광고 시청 후 즉시 포인트가 지급됩니다'}
+              ? 'After watching the ad, 10 PTS will be awarded immediately.'
+              : 'After watching the ad, points will be awarded immediately.'}
           </p>
 
           {!isMining && (
             <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-2xl p-4 mb-6 border border-gray-800 space-y-2 text-left">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">광고 1개 시청</span>
+                <span className="text-gray-400">Watch 1 ad</span>
                 <span className="text-cyan-400 font-bold">+5 PTS</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">5개 모두 시청 보너스</span>
+                <span className="text-gray-400">Bonus for watching all 5 ads</span>
                 <span className="text-amber-400 font-bold">+5 PTS</span>
               </div>
               <div className="border-t border-gray-700 pt-2 flex items-center justify-between text-sm">
-                <span className="text-gray-300 font-medium">5개 완주 시 총 광고 보상</span>
+                <span className="text-gray-300 font-medium">Total ad reward after completing all 5</span>
                 <span className="text-white font-bold">+30 PTS</span>
               </div>
             </div>
@@ -75,7 +75,7 @@ export default function GetMorePointModal({ isOpen, onClose, onWatchAd, triggerS
             onClick={onWatchAd}
             className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 active:scale-95"
           >
-            광고 보기
+            Watch Ad
           </button>
         </div>
       </div>

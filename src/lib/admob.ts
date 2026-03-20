@@ -5,14 +5,12 @@ import {
   RewardAdPluginEvents,
 } from '@capacitor-community/admob';
 
-// Google 테스트 광고 ID (배포 시 AdMob 콘솔에서 발급한 본인 광고 단위 ID로 교체, isTesting: false)
 const INTERSTITIAL_AD_ID = 'ca-app-pub-7386110967445510/4672420595';
 const REWARDED_AD_ID = 'ca-app-pub-7386110967445510/9098750762';
 
 const isNative = () => Capacitor.isNativePlatform();
 
-let interstitialDismissListener: { remove: () => Promise<void> } | null = null;
-let interstitialReady = false; // 광고가 미리 로딩됐는지 여부
+let interstitialReady = false;
 
 /**
  * AdMob 초기화 (네이티브에서만). 앱 시작 시 한 번 호출.
@@ -27,16 +25,12 @@ export async function initAdMob(): Promise<void> {
 }
 
 /**
- * 전면 광고를 미리 로딩. W 버튼이 활성화될 때 호출하면 클릭 즉시 광고 표시 가능.
+ * 전면 광고를 미리 로딩.
  */
 export async function preloadInterstitialAd(): Promise<void> {
   if (!isNative()) return;
-  if (interstitialReady) return; // 이미 로딩됨
+  if (interstitialReady) return;
   try {
-    if (interstitialDismissListener) {
-      await interstitialDismissListener.remove();
-      interstitialDismissListener = null;
-    }
     await AdMob.prepareInterstitial({
       adId: INTERSTITIAL_AD_ID,
       isTesting: true,
@@ -49,9 +43,8 @@ export async function preloadInterstitialAd(): Promise<void> {
 }
 
 /**
- * 전면 광고(Interstitial) 표시. 시청 완료(닫기) 시 onDone 호출.
- * 미리 로딩된 광고가 있으면 즉시 표시. 없으면 그 자리에서 로딩 후 표시.
- * 웹에서는 onDone을 바로 호출(테스트용).
+ * 전면 광고(Interstitial) 표시. 닫힌 후 onDone 호출.
+ * Dismissed / FailedToShow 모두 onDone을 한 번만 호출하도록 보장.
  */
 export async function showInterstitialAd(onDone: () => void | Promise<void>): Promise<void> {
   if (!isNative()) {
@@ -59,25 +52,45 @@ export async function showInterstitialAd(onDone: () => void | Promise<void>): Pr
     return;
   }
 
-  try {
-    if (interstitialDismissListener) {
-      await interstitialDismissListener.remove();
-      interstitialDismissListener = null;
+  let doneCalled = false;
+  const callDoneOnce = async () => {
+    if (doneCalled) return;
+    doneCalled = true;
+    interstitialReady = false;
+    try {
+      await Promise.resolve(onDone());
+    } catch (e) {
+      console.error('onDone callback error:', e);
     }
+  };
 
-    interstitialDismissListener = await AdMob.addListener(
+  const listeners: { remove: () => Promise<void> }[] = [];
+  const removeAllListeners = async () => {
+    for (const l of listeners) {
+      try { await l.remove(); } catch { /* ignore */ }
+    }
+    listeners.length = 0;
+  };
+
+  try {
+    const dismissedListener = await AdMob.addListener(
       InterstitialAdPluginEvents.Dismissed,
       async () => {
-        if (interstitialDismissListener) {
-          await interstitialDismissListener.remove();
-          interstitialDismissListener = null;
-        }
-        interstitialReady = false;
-        await Promise.resolve(onDone());
+        await removeAllListeners();
+        await callDoneOnce();
       }
     );
+    listeners.push(dismissedListener);
 
-    // 미리 로딩 안 됐으면 지금 로딩
+    const failedListener = await AdMob.addListener(
+      InterstitialAdPluginEvents.FailedToShow,
+      async () => {
+        await removeAllListeners();
+        await callDoneOnce();
+      }
+    );
+    listeners.push(failedListener);
+
     if (!interstitialReady) {
       await AdMob.prepareInterstitial({
         adId: INTERSTITIAL_AD_ID,
@@ -88,12 +101,8 @@ export async function showInterstitialAd(onDone: () => void | Promise<void>): Pr
     await AdMob.showInterstitial();
   } catch (e) {
     console.warn('Interstitial ad failed:', e);
-    if (interstitialDismissListener) {
-      await interstitialDismissListener.remove();
-      interstitialDismissListener = null;
-    }
-    interstitialReady = false;
-    await Promise.resolve(onDone());
+    await removeAllListeners();
+    await callDoneOnce();
   }
 }
 

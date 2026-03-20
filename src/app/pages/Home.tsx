@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import GetMorePointModal from '../components/GetMorePointModal';
@@ -221,21 +221,28 @@ export default function Home() {
     await refreshProfile();
 
     if (isComplete) {
-      toast.success(`+${AD_REWARD_PER_SLOT} PTS + 보너스 +${AD_BONUS_ALL_SLOTS} PTS! 🎉 광고 완주!`);
+      toast.success(`+${AD_REWARD_PER_SLOT} PTS + Bonus +${AD_BONUS_ALL_SLOTS} PTS! 🎉 Completed all 5 ads!`);
     } else {
-      toast.success(`+${AD_REWARD_PER_SLOT} PTS 광고 보상! (${newSlots.length}/5)`);
+      toast.success(`+${AD_REWARD_PER_SLOT} PTS Ad reward! (${newSlots.length}/5)`);
       setAdCooldown(AD_COOLDOWN_SECONDS); // 10s cooldown before next ad
     }
-  }, [user, activeSlots, profile, handleMine, refreshProfile]);
+  }, [user, activeSlots, profile, refreshProfile]);
 
-  const handleCenterButtonClick = () => {
+  // 항상 최신 handleMine을 참조하도록 ref 유지 (stale closure 방지)
+  const handleMineRef = useRef(handleMine);
+  useEffect(() => {
+    handleMineRef.current = handleMine;
+  }, [handleMine]);
+
+  const handleCenterButtonClick = useCallback(() => {
     if (centerButtonActive || isMining) return;
-    // 로고 클릭 → 모달 없이 즉시 인터스티셜 광고 → 광고 완료 후 handleMine 호출
-    showInterstitialAd(handleMine).catch((e) => {
+    showInterstitialAd(async () => {
+      await handleMineRef.current();
+    }).catch((e) => {
       console.warn('Ad failed, mining anyway:', e);
-      handleMine();
+      handleMineRef.current();
     });
-  };
+  }, [centerButtonActive, isMining]);
 
   const handleSlotClick = () => {
     if (activeSlots.length < 5 && adCooldown === 0) {
@@ -301,7 +308,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <span className="text-sm text-gray-400 font-medium">Get More Points</span>
-              <span className="text-xs text-gray-600 ml-2">광고 1개 = +5 PTS</span>
+              <span className="text-xs text-gray-600 ml-2">Watch 1 ad = +5 PTS</span>
             </div>
             <div className="flex items-center gap-2">
               {adCooldown > 0 && (
@@ -339,13 +346,13 @@ export default function Home() {
           {activeSlots.length < 5 && (
             <div className="mt-3 text-center">
               <span className="text-xs text-gray-600">
-                5개 모두 시청 시 보너스 <span className="text-cyan-500">+5 PTS</span> 추가
+                Bonus <span className="text-cyan-500">+5 PTS</span> for watching all 5 ads
               </span>
             </div>
           )}
           {activeSlots.length === 5 && (
             <div className="mt-3 text-center">
-              <span className="text-xs text-cyan-400 font-medium">광고 완주! 총 +30 PTS 달성</span>
+              <span className="text-xs text-cyan-400 font-medium">All 5 ads completed! Total +30 PTS</span>
             </div>
           )}
 
@@ -353,7 +360,7 @@ export default function Home() {
           {adCooldown > 0 && (
             <div className="mt-3 text-center">
               <span className="text-xs text-amber-400">
-                다음 광고까지 <span className="font-mono font-bold">{adCooldown}초</span> 대기
+                Wait <span className="font-mono font-bold">{adCooldown}s</span> until the next ad
               </span>
             </div>
           )}
