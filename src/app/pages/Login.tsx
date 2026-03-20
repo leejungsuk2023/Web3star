@@ -7,12 +7,119 @@ import { Capacitor } from '@capacitor/core';
 import { supabase, getAuthRedirectUrl, isLikelyNativePlatform } from '../../lib/supabase';
 import { googleNativeIdToken } from '../../lib/socialLogin';
 
+const TERMS_AGREED_KEY = 'web3star_terms_agreed';
+
+function PreAuthModal({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: (referralCode: string) => void;
+  onCancel: () => void;
+}) {
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+
+  const canProceed = agreedToTerms && agreedToPrivacy;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm px-4 pb-4">
+      <div className="w-full max-w-md bg-[#13131e] border border-gray-700 rounded-2xl p-6 space-y-5 shadow-2xl">
+        <h2 className="text-white font-bold text-lg text-center">시작하기 전에</h2>
+
+        {/* Referral Code */}
+        <div>
+          <label htmlFor="modal-referral" className="block text-sm text-gray-400 mb-2">
+            추천인 코드 <span className="text-gray-600">(선택)</span>
+          </label>
+          <input
+            id="modal-referral"
+            type="text"
+            value={referralCode}
+            onChange={(e) => setReferralCode(e.target.value)}
+            className="w-full px-4 py-3 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors text-sm"
+            placeholder="추천인 코드 입력"
+          />
+        </div>
+
+        {/* Terms */}
+        <div className="space-y-3">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-cyan-400 cursor-pointer flex-shrink-0"
+            />
+            <span className="text-sm text-gray-300">
+              <a
+                href="#"
+                onClick={(e) => e.stopPropagation()}
+                className="text-cyan-400 hover:text-cyan-300 underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                서비스 이용약관
+              </a>
+              에 동의합니다 <span className="text-red-400">(필수)</span>
+            </span>
+          </label>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={agreedToPrivacy}
+              onChange={(e) => setAgreedToPrivacy(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-cyan-400 cursor-pointer flex-shrink-0"
+            />
+            <span className="text-sm text-gray-300">
+              <a
+                href="#"
+                onClick={(e) => e.stopPropagation()}
+                className="text-cyan-400 hover:text-cyan-300 underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                개인정보 보호정책
+              </a>
+              에 동의합니다 <span className="text-red-400">(필수)</span>
+            </span>
+          </label>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-3 pt-1">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-3 border border-gray-700 text-gray-400 hover:text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            취소
+          </button>
+          <button
+            onClick={() => {
+              localStorage.setItem(TERMS_AGREED_KEY, 'true');
+              onConfirm(referralCode.trim());
+            }}
+            disabled={!canProceed}
+            className="flex-1 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            동의하고 계속하기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  const alreadyAgreed = () => localStorage.getItem(TERMS_AGREED_KEY) === 'true';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,15 +137,14 @@ export default function Login() {
     navigate('/');
   };
 
-  const handleGoogleLogin = async () => {
-    if (loading) return; // 중복 클릭 방지
+  const proceedGoogleLogin = async (referralCode = '') => {
     setLoading(true);
+    setShowModal(false);
     try {
       setError('');
       if (isLikelyNativePlatform()) {
-        // Android WebView OAuth 차단(403 disallowed_useragent) 회피: 네이티브 ID 토큰 로그인
         const idToken = await googleNativeIdToken();
-        const { error: idTokenError } = await supabase.auth.signInWithIdToken({
+        const { data: sessionData, error: idTokenError } = await supabase.auth.signInWithIdToken({
           provider: 'google',
           token: idToken,
         });
@@ -46,11 +152,27 @@ export default function Login() {
           setError(idTokenError.message);
           return;
         }
+        // 신규 유저이고 추천인 코드가 있으면 적용
+        if (sessionData?.user && referralCode) {
+          const { data: referrer } = await supabase
+            .from('users')
+            .select('id')
+            .eq('invite_code', referralCode)
+            .single();
+          if (referrer) {
+            await supabase
+              .from('users')
+              .update({ referred_by: referrer.id })
+              .eq('id', sessionData.user.id);
+          }
+        }
         navigate('/');
         return;
       }
 
-      // 웹: 기존 OAuth 리다이렉트 플로우
+      if (referralCode) {
+        sessionStorage.setItem('pending_referral_code', referralCode);
+      }
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: getAuthRedirectUrl() },
@@ -64,6 +186,17 @@ export default function Login() {
       setError(e?.message ?? 'Google login failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    if (loading) return;
+    if (alreadyAgreed()) {
+      // 이미 동의한 기존 사용자 → 모달 없이 바로 진행
+      proceedGoogleLogin();
+    } else {
+      // 신규 사용자 → 약관 + 추천인 모달 표시
+      setShowModal(true);
     }
   };
 
@@ -93,7 +226,7 @@ export default function Login() {
             type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full px-6 py-4 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-3 shadow-lg"
+            className="w-full px-6 py-4 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-3 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <GoogleIcon className="w-5 h-5" />
             Continue with Google
@@ -190,6 +323,14 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {/* Pre-auth modal */}
+      {showModal && (
+        <PreAuthModal
+          onConfirm={(code) => proceedGoogleLogin(code)}
+          onCancel={() => setShowModal(false)}
+        />
+      )}
     </div>
   );
 }

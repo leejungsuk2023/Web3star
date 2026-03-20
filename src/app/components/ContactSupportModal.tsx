@@ -20,22 +20,22 @@ export default function ContactSupportModal({ isOpen, onClose }: ContactSupportM
     {
       icon: Mail,
       label: 'Email',
-      value: 'support@web3star.com',
-      href: 'mailto:support@web3star.com',
+      value: 'support@web3star.org',
+      href: 'mailto:support@web3star.org',
       description: 'We typically respond within 24 hours'
     },
     {
       icon: MessageCircle,
       label: 'Telegram',
-      value: '@web3star_support',
-      href: 'https://t.me/web3star_support',
-      description: 'Live chat support'
+      value: '준비중 (Coming Soon)',
+      href: undefined,
+      description: 'Telegram support is coming soon'
     },
     {
       icon: Globe,
       label: 'Website',
-      value: 'www.web3star.com/support',
-      href: 'https://www.web3star.com/support',
+      value: 'www.web3star.org/support',
+      href: 'https://www.web3star.org/support',
       description: 'Visit our help center'
     }
   ];
@@ -43,7 +43,7 @@ export default function ContactSupportModal({ isOpen, onClose }: ContactSupportM
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       ></div>
@@ -75,7 +75,30 @@ export default function ContactSupportModal({ isOpen, onClose }: ContactSupportM
           <div className="space-y-4 mb-8">
             {contactMethods.map((method) => {
               const Icon = method.icon;
-              return (
+              const isComingSoon = !method.href;
+              const content = (
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <Icon className={`w-6 h-6 ${isComingSoon ? 'text-gray-500' : 'text-cyan-400'}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-gray-400 mb-1">{method.label}</div>
+                    <div className={`font-medium mb-1 break-all ${isComingSoon ? 'text-gray-500' : 'text-white'}`}>
+                      {method.value}
+                    </div>
+                    <div className="text-xs text-gray-500">{method.description}</div>
+                  </div>
+                </div>
+              );
+
+              return isComingSoon ? (
+                <div
+                  key={method.label}
+                  className="block bg-gradient-to-r from-gray-800/30 to-gray-900/30 rounded-2xl p-4 border border-gray-800/50 opacity-60 cursor-not-allowed"
+                >
+                  {content}
+                </div>
+              ) : (
                 <a
                   key={method.label}
                   href={method.href}
@@ -83,16 +106,7 @@ export default function ContactSupportModal({ isOpen, onClose }: ContactSupportM
                   rel="noopener noreferrer"
                   className="block bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-2xl p-4 border border-gray-800 hover:border-cyan-500/30 transition-colors"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-6 h-6 text-cyan-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-gray-400 mb-1">{method.label}</div>
-                      <div className="text-white font-medium mb-1 break-all">{method.value}</div>
-                      <div className="text-xs text-gray-500">{method.description}</div>
-                    </div>
-                  </div>
+                  {content}
                 </a>
               );
             })}

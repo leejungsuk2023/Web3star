@@ -1,14 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import GetMorePointModal from '../components/GetMorePointModal';
 import WLogoSvg from '../components/WLogoSvg';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { showInterstitialAd, showRewardedAd } from '../../lib/admob';
+import { showInterstitialAd, showRewardedAd, preloadInterstitialAd } from '../../lib/admob';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 
 const MINING_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 const MINING_REWARD = 10;
+const AD_REWARD_PER_SLOT = 5;
+const AD_BONUS_ALL_SLOTS = 5;
+const AD_COOLDOWN_SECONDS = 10;
 
 function getTimeRemaining(lastMinedAt: string | null): { hours: number; minutes: number; seconds: number } {
   if (!lastMinedAt) return { hours: 0, minutes: 0, seconds: 0 };
@@ -32,8 +37,8 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeSlots, setActiveSlots] = useState<number[]>([]);
   const [centerButtonActive, setCenterButtonActive] = useState(false);
-  const [modalTriggerSource, setModalTriggerSource] = useState<'slot' | 'center'>('slot');
   const [isMining, setIsMining] = useState(false);
+  const [adCooldown, setAdCooldown] = useState(0); // seconds remaining between ads
 
   // Initialize state from profile
   useEffect(() => {
@@ -41,13 +46,11 @@ export default function Home() {
       const remaining = getTimeRemaining(profile.last_mined_at);
       setTime(remaining);
 
-      // Check if mining is on cooldown (center button should be active/glowing)
       if (profile.last_mined_at) {
         const elapsed = Date.now() - new Date(profile.last_mined_at).getTime();
         setCenterButtonActive(elapsed < MINING_COOLDOWN_MS);
       }
 
-      // Load ad slots from DB
       const slots = profile.ad_slots_viewed;
       if (Array.isArray(slots)) {
         setActiveSlots(slots);
@@ -55,16 +58,17 @@ export default function Home() {
     }
   }, [profile]);
 
-  // Timer countdown
+  // Mining cycle timer
   useEffect(() => {
     const timer = setInterval(() => {
       if (profile?.last_mined_at) {
         const remaining = getTimeRemaining(profile.last_mined_at);
         setTime(remaining);
 
-        // When timer hits zero, reset center button
         if (remaining.hours === 0 && remaining.minutes === 0 && remaining.seconds === 0) {
           setCenterButtonActive(false);
+          // 쿨다운 끝 → W 버튼 활성화 → 광고 미리 로딩
+          preloadInterstitialAd();
         }
       }
     }, 1000);
@@ -72,20 +76,62 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [profile?.last_mined_at]);
 
+  // 앱 시작 시 W 버튼이 이미 활성화 상태라면 바로 광고 미리 로딩
+  useEffect(() => {
+    if (profile && !centerButtonActive) {
+      const elapsed = profile.last_mined_at
+        ? Date.now() - new Date(profile.last_mined_at).getTime()
+        : MINING_COOLDOWN_MS + 1;
+      if (elapsed >= MINING_COOLDOWN_MS) {
+        preloadInterstitialAd();
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id]); // 프로필 첫 로딩 시 한 번만
+
+  // Ad cooldown countdown
+  useEffect(() => {
+    if (adCooldown <= 0) return;
+    const t = setTimeout(() => setAdCooldown(s => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [adCooldown]);
+
   const formatTime = (value: number) => String(value).padStart(2, '0');
 
+  // 채굴 완료 4시간 뒤 로컬 알림 예약
+  const scheduleMiningNotification = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      const { display } = await LocalNotifications.checkPermissions();
+      if (display !== 'granted') {
+        await LocalNotifications.requestPermissions();
+      }
+      // 기존 채굴 알림 취소 후 재예약
+      await LocalNotifications.cancel({ notifications: [{ id: 1001 }] });
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: 1001,
+            title: '⛏️ Web3Star 채굴 가능!',
+            body: '4시간이 지났습니다. 지금 채굴하여 포인트를 획득하세요!',
+            schedule: { at: new Date(Date.now() + MINING_COOLDOWN_MS) },
+            sound: undefined,
+            smallIcon: 'ic_stat_icon_config_sample',
+          },
+        ],
+      });
+    } catch (e) {
+      console.warn('Local notification scheduling failed:', e);
+    }
+  }, []);
+
+  // Mine: always exactly MINING_REWARD (10) points, no ad bonus
   const handleMine = useCallback(async () => {
     if (!user || isMining || centerButtonActive) return;
     setIsMining(true);
 
     const now = new Date().toISOString();
 
-    // Ad bonus: +1pt per watched slot (1~5 slots = +1~5pt)
-    const adBonus = activeSlots.length;
-
-    const totalReward = MINING_REWARD + adBonus;
-
-    // Fetch latest point from DB to avoid stale client-side value
     const { data: freshUser } = await supabase
       .from('users')
       .select('point')
@@ -94,13 +140,12 @@ export default function Home() {
 
     const currentPoint = freshUser?.point ?? profile?.point ?? 0;
 
-    // Update user points and last_mined_at
     const { error: updateError } = await supabase
       .from('users')
       .update({
-        point: currentPoint + totalReward,
+        point: currentPoint + MINING_REWARD,
         last_mined_at: now,
-        ad_slots_viewed: [], // reset slots after mining
+        ad_slots_viewed: [], // reset ad slots for new cycle
       })
       .eq('id', user.id);
 
@@ -111,90 +156,102 @@ export default function Home() {
       return;
     }
 
-    // Log mining event
-    const { error: logError } = await supabase.from('mining_logs').insert({
+    await supabase.from('mining_logs').insert({
       user_id: user.id,
       amount: MINING_REWARD,
       type: 'MINING',
     });
-    if (logError) console.error('Failed to log mining:', logError);
-
-    // Log ad bonus if any
-    if (adBonus > 0) {
-      const { error: adLogError } = await supabase.from('mining_logs').insert({
-        user_id: user.id,
-        amount: adBonus,
-        type: 'AD_POINT',
-        slot_number: activeSlots.length,
-      });
-      if (adLogError) console.error('Failed to log ad bonus:', adLogError);
-    }
 
     setCenterButtonActive(true);
     setActiveSlots([]);
+    setAdCooldown(0);
     await refreshProfile();
-    toast.success(`+${totalReward} Points earned!`);
+    toast.success(`+${MINING_REWARD} PTS 채굴 완료!`);
+    // 4시간 뒤 알림 예약
+    await scheduleMiningNotification();
     setIsMining(false);
-  }, [user, isMining, centerButtonActive, activeSlots, profile, refreshProfile]);
+  }, [user, isMining, centerButtonActive, profile, refreshProfile, scheduleMiningNotification]);
 
+  // Ad watched: immediately award 5 pts per ad, +5 bonus on completing all 5
   const handleWatchAd = useCallback(async () => {
     if (!user) return;
     setIsModalOpen(false);
 
-    if (modalTriggerSource === 'center') {
-      await handleMine();
-    } else {
-      if (activeSlots.length < 5) {
-        const nextSlot = [1, 2, 3, 4, 5].find(s => !activeSlots.includes(s));
-        if (!nextSlot) return;
-        const newSlots = [...activeSlots, nextSlot];
-        setActiveSlots(newSlots);
+    if (activeSlots.length >= 5) return;
 
-        const { error: slotError } = await supabase
-          .from('users')
-          .update({ ad_slots_viewed: newSlots })
-          .eq('id', user.id);
+    const nextSlot = [1, 2, 3, 4, 5].find(s => !activeSlots.includes(s));
+    if (!nextSlot) return;
 
-        if (slotError) {
-          console.error('Failed to save ad slot:', slotError);
-          setActiveSlots(activeSlots); // rollback
-          toast.error('Failed to save progress.');
-          return;
-        }
+    const newSlots = [...activeSlots, nextSlot];
+    const isComplete = newSlots.length === 5;
+    const reward = AD_REWARD_PER_SLOT + (isComplete ? AD_BONUS_ALL_SLOTS : 0);
 
-        toast.success(`Slot ${nextSlot}/5 activated! +1 bonus point`);
-        await refreshProfile();
-      }
+    // Fetch fresh points to avoid stale values
+    const { data: freshUser } = await supabase
+      .from('users')
+      .select('point')
+      .eq('id', user.id)
+      .single();
+
+    const currentPoint = freshUser?.point ?? profile?.point ?? 0;
+
+    const { error: slotError } = await supabase
+      .from('users')
+      .update({
+        ad_slots_viewed: newSlots,
+        point: currentPoint + reward,
+      })
+      .eq('id', user.id);
+
+    if (slotError) {
+      console.error('Failed to save ad slot:', slotError);
+      toast.error('Failed to save progress.');
+      return;
     }
-  }, [user, modalTriggerSource, activeSlots, handleMine, refreshProfile]);
+
+    setActiveSlots(newSlots);
+
+    await supabase.from('mining_logs').insert({
+      user_id: user.id,
+      amount: reward,
+      type: 'AD_POINT',
+      slot_number: nextSlot,
+    });
+
+    await refreshProfile();
+
+    if (isComplete) {
+      toast.success(`+${AD_REWARD_PER_SLOT} PTS + 보너스 +${AD_BONUS_ALL_SLOTS} PTS! 🎉 광고 완주!`);
+    } else {
+      toast.success(`+${AD_REWARD_PER_SLOT} PTS 광고 보상! (${newSlots.length}/5)`);
+      setAdCooldown(AD_COOLDOWN_SECONDS); // 10s cooldown before next ad
+    }
+  }, [user, activeSlots, profile, handleMine, refreshProfile]);
 
   const handleCenterButtonClick = () => {
-    if (!centerButtonActive) {
-      setModalTriggerSource('center');
-      setIsModalOpen(true);
-    }
+    if (centerButtonActive || isMining) return;
+    // 로고 클릭 → 모달 없이 즉시 인터스티셜 광고 → 광고 완료 후 handleMine 호출
+    showInterstitialAd(handleMine).catch((e) => {
+      console.warn('Ad failed, mining anyway:', e);
+      handleMine();
+    });
   };
 
   const handleSlotClick = () => {
-    if (activeSlots.length < 5) {
-      setModalTriggerSource('slot');
+    if (activeSlots.length < 5 && adCooldown === 0) {
       setIsModalOpen(true);
     }
   };
 
   const getSlotColor = (slot: number) => {
     const isActive = activeSlots.includes(slot);
-
     if (isActive) {
       const intensity = activeSlots.length / 5;
-      if (intensity >= 0.8) {
-        return 'bg-gradient-to-br from-cyan-400 to-blue-500 border-2 border-cyan-300 shadow-lg shadow-cyan-400/60';
-      } else if (intensity >= 0.6) {
-        return 'bg-gradient-to-br from-cyan-500 to-blue-600 border-2 border-cyan-400 shadow-lg shadow-cyan-500/50';
-      } else {
-        return 'bg-gradient-to-br from-cyan-600 to-blue-700 border-2 border-cyan-500 shadow-lg shadow-cyan-500/40';
-      }
+      if (intensity >= 0.8) return 'bg-gradient-to-br from-cyan-400 to-blue-500 border-2 border-cyan-300 shadow-lg shadow-cyan-400/60';
+      if (intensity >= 0.6) return 'bg-gradient-to-br from-cyan-500 to-blue-600 border-2 border-cyan-400 shadow-lg shadow-cyan-500/50';
+      return 'bg-gradient-to-br from-cyan-600 to-blue-700 border-2 border-cyan-500 shadow-lg shadow-cyan-500/40';
     }
+    if (adCooldown > 0) return 'bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700 opacity-50 cursor-not-allowed';
     return 'bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700 hover:border-cyan-500/50 cursor-pointer';
   };
 
@@ -204,7 +261,6 @@ export default function Home() {
       <div className="flex-1 flex flex-col items-center justify-center px-6">
         {/* Glowing Circular Button */}
         <div className="relative mb-8">
-          {/* Outer glow rings */}
           <div className={`absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 blur-3xl scale-125 animate-pulse transition-opacity duration-500 ${
             centerButtonActive ? 'opacity-30' : 'opacity-10'
           }`}></div>
@@ -212,7 +268,6 @@ export default function Home() {
             centerButtonActive ? 'opacity-20' : 'opacity-5'
           }`}></div>
 
-          {/* Main button */}
           <button
             onClick={handleCenterButtonClick}
             disabled={centerButtonActive || isMining}
@@ -223,16 +278,8 @@ export default function Home() {
                 : 'bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 shadow-gray-800/30 hover:scale-102 cursor-pointer'
             }`}
           >
-            {/* Inner glow */}
             <div className="absolute inset-2 rounded-full bg-black/40 backdrop-blur-sm"></div>
-
-            {/* W Logo SVG */}
-            <WLogoSvg
-              className="relative z-10 w-32 h-32"
-              isActive={centerButtonActive}
-            />
-
-            {/* Border ring */}
+            <WLogoSvg className="relative z-10 w-32 h-32" isActive={centerButtonActive} />
             <div className={`absolute inset-0 rounded-full border-2 transition-colors duration-300 ${
               centerButtonActive ? 'border-white/20' : 'border-gray-700/50'
             }`}></div>
@@ -248,48 +295,80 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Bottom Section - Get More Point Slots */}
+      {/* Bottom Section - Ad Slots */}
       <div className="px-6 pb-6">
         <div className="bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm rounded-2xl p-4 border border-gray-800">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-gray-400 font-medium">Get More Point</span>
-            <span className="text-xs text-cyan-400">{activeSlots.length}/5</span>
+            <div>
+              <span className="text-sm text-gray-400 font-medium">Get More Points</span>
+              <span className="text-xs text-gray-600 ml-2">광고 1개 = +5 PTS</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {adCooldown > 0 && (
+                <span className="text-xs text-amber-400 font-mono font-bold animate-pulse">
+                  {adCooldown}s
+                </span>
+              )}
+              <span className="text-xs text-cyan-400">{activeSlots.length}/5</span>
+            </div>
           </div>
+
           <div className="flex items-center justify-between gap-3">
             {[1, 2, 3, 4, 5].map((slot) => (
               <button
                 key={slot}
                 onClick={handleSlotClick}
-                disabled={activeSlots.includes(slot)}
-                aria-label={`Ad slot ${slot}${activeSlots.includes(slot) ? ' (watched)' : ''}`}
+                disabled={activeSlots.includes(slot) || adCooldown > 0}
+                aria-label={`Ad slot ${slot}${activeSlots.includes(slot) ? ' (watched)' : adCooldown > 0 ? ' (cooldown)' : ''}`}
                 className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${getSlotColor(slot)}`}
               >
                 <Zap
                   className={`w-5 h-5 transition-colors ${
                     activeSlots.includes(slot)
                       ? 'text-white fill-white'
+                      : adCooldown > 0
+                      ? 'text-gray-600'
                       : 'text-gray-600 group-hover:text-cyan-500'
                   }`}
                 />
               </button>
             ))}
           </div>
+
+          {/* Bonus info */}
+          {activeSlots.length < 5 && (
+            <div className="mt-3 text-center">
+              <span className="text-xs text-gray-600">
+                5개 모두 시청 시 보너스 <span className="text-cyan-500">+5 PTS</span> 추가
+              </span>
+            </div>
+          )}
+          {activeSlots.length === 5 && (
+            <div className="mt-3 text-center">
+              <span className="text-xs text-cyan-400 font-medium">광고 완주! 총 +30 PTS 달성</span>
+            </div>
+          )}
+
+          {/* Cooldown message */}
+          {adCooldown > 0 && (
+            <div className="mt-3 text-center">
+              <span className="text-xs text-amber-400">
+                다음 광고까지 <span className="font-mono font-bold">{adCooldown}초</span> 대기
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Get More Point Modal: Watch Ad → 전면/보상형 광고 시청 후 보상 지급 */}
+      {/* 광고 슬롯 모달 (하단 번개 버튼용) */}
       <GetMorePointModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onWatchAd={async () => {
           setIsModalOpen(false);
-          if (modalTriggerSource === 'center') {
-            await showInterstitialAd(handleWatchAd);
-          } else {
-            await showRewardedAd(handleWatchAd);
-          }
+          await showRewardedAd(handleWatchAd);
         }}
-        triggerSource={modalTriggerSource}
+        triggerSource="slot"
       />
     </div>
   );
