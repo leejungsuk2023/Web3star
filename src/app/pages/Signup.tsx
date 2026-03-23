@@ -7,7 +7,7 @@ import { googleNativeIdToken } from '../../lib/socialLogin';
 import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
-import ComingSoonModal from '../components/ComingSoonModal';
+import TermsOfServiceModal from '../components/TermsOfServiceModal';
 
 const TERMS_AGREED_KEY = 'web3star_terms_agreed';
 
@@ -312,7 +312,7 @@ export default function Signup() {
           isOpen={isPrivacyPolicyOpen}
           onClose={() => setIsPrivacyPolicyOpen(false)}
         />
-        <ComingSoonModal
+        <TermsOfServiceModal
           isOpen={isTermsModalOpen}
           onClose={() => setIsTermsModalOpen(false)}
         />

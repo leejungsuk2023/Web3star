@@ -1,20 +1,38 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 // 고정 테스트 계정 (global-setup에서 생성)
 const TEST_EMAIL = 'e2etest@web3star.com';
 const TEST_PASSWORD = 'TestPass1234!';
 const TEST_NICKNAME = 'E2ETester';
 
+async function agreeToSignupPolicies(page: Page) {
+  const boxes = page.getByRole('checkbox');
+  await boxes.nth(0).check();
+  await boxes.nth(1).check();
+}
+
 // ─────────────────────────────────────────────
 // 1. 회원가입
 // ─────────────────────────────────────────────
 test.describe('Signup', () => {
+  test('should open Terms of Service modal from link', async ({ page }) => {
+    await page.goto('/signup');
+    await page.getByRole('button', { name: 'Terms of Service' }).click();
+    await expect(page.getByRole('heading', { name: 'Web3Star Terms of Service' })).toBeVisible();
+    await expect(page.getByText('1. Purpose')).toBeVisible();
+    await expect(page.getByText('10. Governing Law and Dispute Resolution')).toBeVisible();
+    await page.getByRole('button', { name: 'Close' }).first().click();
+    await expect(page.getByRole('heading', { name: 'Web3Star Terms of Service' })).toBeHidden();
+  });
+
   test('should show signup form and submit', async ({ page }) => {
     await page.goto('/signup');
 
     // 페이지 로드 확인
-    await expect(page.getByRole('button', { name: 'Start Mining' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Start with Google' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Start mining/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
+
+    await agreeToSignupPolicies(page);
 
     // 폼 입력 (고유 이메일로 가입 테스트)
     const uniqueEmail = `signup${Date.now()}@web3star.com`;
@@ -23,24 +41,26 @@ test.describe('Signup', () => {
     await page.getByLabel('Nickname').fill('SignupTest');
 
     // 가입 클릭
-    await page.getByRole('button', { name: 'Start Mining' }).click();
+    await page.getByRole('button', { name: /Start mining/i }).click();
 
-    // 홈으로 이동 (이메일 인증 비활성화 시) 또는 로딩 상태
+    // 이메일 인증 ON이면 /login 등으로 빠질 수 있음 — signup 페이지를 벗어나면 성공
+    await page.waitForURL((url) => !url.pathname.endsWith('/signup'), { timeout: 20000 });
     await expect(
-      page.getByText('Next Mining Cycle')
-        .or(page.getByRole('button', { name: 'Creating account...' }))
+      page.getByText('Next Mining Cycle').or(page.getByRole('button', { name: 'Login' }))
     ).toBeVisible({ timeout: 10000 });
   });
 
   test('should show error for invalid referral code', async ({ page }) => {
     await page.goto('/signup');
 
+    await agreeToSignupPolicies(page);
+
     await page.getByLabel('Email').fill(`invalid${Date.now()}@web3star.com`);
     await page.getByLabel('Password').fill(TEST_PASSWORD);
     await page.getByLabel('Nickname').fill('BadRef');
     await page.getByPlaceholder('Enter referral code').fill('XXXXXX');
 
-    await page.getByRole('button', { name: 'Start Mining' }).click();
+    await page.getByRole('button', { name: /Start mining/i }).click();
 
     // 잘못된 추천코드 에러 확인
     await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 });
@@ -49,7 +69,7 @@ test.describe('Signup', () => {
 
   test('should navigate to login page', async ({ page }) => {
     await page.goto('/signup');
-    await page.getByText('Login').click();
+    await page.getByRole('button', { name: 'Log in' }).click();
     await expect(page).toHaveURL('/login');
   });
 });
