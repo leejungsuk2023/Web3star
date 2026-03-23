@@ -27,7 +27,7 @@ export default function ContactSupportModal({ isOpen, onClose }: ContactSupportM
     {
       icon: MessageCircle,
       label: 'Telegram',
-      value: '준비중 (Coming Soon)',
+      value: 'Coming soon',
       href: undefined,
       description: 'Telegram support is coming soon'
     },

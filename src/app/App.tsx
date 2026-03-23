@@ -9,7 +9,7 @@ import { initSocialLogin } from '../lib/socialLogin';
 export default function App() {
   useEffect(() => {
     initAdMob();
-    // 네이티브 Google 로그인 초기화 (Android WebView OAuth 차단 회피)
+    // Native Google Sign-In (avoids WebView OAuth restrictions on Android)
     initSocialLogin().catch((e) => console.warn('SocialLogin init failed:', e));
   }, []);
 

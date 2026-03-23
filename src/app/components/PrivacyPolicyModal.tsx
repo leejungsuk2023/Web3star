@@ -116,9 +116,16 @@ export default function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyMod
           <section>
             <h3 className="text-white font-semibold text-base mb-2">9. Contact Us</h3>
             <p>
-              If you have any questions about this Privacy Policy, please contact us at:
+              If you have any questions about this Privacy Policy, please visit:
               <br />
-              <span className="text-cyan-400">support@web3star.org</span>
+              <a
+                href="https://web3star.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan-400 hover:text-cyan-300 underline"
+              >
+                web3star.org
+              </a>
             </p>
           </section>
         </div>

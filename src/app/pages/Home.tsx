@@ -112,8 +112,8 @@ export default function Home() {
         notifications: [
           {
             id: 1001,
-            title: '⛏️ Web3Star 채굴 가능!',
-            body: '4시간이 지났습니다. 지금 채굴하여 포인트를 획득하세요!',
+            title: '⛏️ Web3Star — Mining ready',
+            body: 'Your 4-hour cooldown has ended. Open the app and mine to earn PTS!',
             schedule: { at: new Date(Date.now() + MINING_COOLDOWN_MS) },
             sound: undefined,
             smallIcon: 'ic_stat_icon_config_sample',
@@ -166,7 +166,7 @@ export default function Home() {
     setActiveSlots([]);
     setAdCooldown(0);
     await refreshProfile();
-    toast.success(`+${MINING_REWARD} PTS 채굴 완료!`);
+    toast.success(`+${MINING_REWARD} PTS — Mining complete!`);
     // 4시간 뒤 알림 예약
     await scheduleMiningNotification();
     setIsMining(false);

@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { InAppBrowser } from '@capacitor/inappbrowser';
 import { supabase } from '../lib/supabase';
+import { applyReferralRewards } from '../lib/referral';
 
 export interface UserProfile {
   id: string;
@@ -126,6 +127,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Web Google OAuth: Signup/Login stores referral code before redirect; apply after session exists.
+  useEffect(() => {
+    if (!user?.id) return;
+    const code = sessionStorage.getItem('pending_referral_code');
+    if (!code?.trim()) return;
+    sessionStorage.removeItem('pending_referral_code');
+    void applyReferralRewards(user.id, code).then(async (res) => {
+      if (!res.ok) {
+        console.warn('[referral] pending_referral_code apply failed:', res.message);
+        return;
+      }
+      await fetchProfile(user.id);
+    });
+  }, [user?.id, fetchProfile]);
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, refreshProfile }}>

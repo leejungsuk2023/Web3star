@@ -6,6 +6,8 @@ import GoogleIcon from '../components/GoogleIcon';
 import { Capacitor } from '@capacitor/core';
 import { supabase, getAuthRedirectUrl, isLikelyNativePlatform } from '../../lib/supabase';
 import { googleNativeIdToken } from '../../lib/socialLogin';
+import { applyReferralRewards } from '../../lib/referral';
+import { useAuth } from '../../context/AuthContext';
 
 const TERMS_AGREED_KEY = 'web3star_terms_agreed';
 
@@ -25,12 +27,15 @@ function PreAuthModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm px-4 pb-4">
       <div className="w-full max-w-md bg-[#13131e] border border-gray-700 rounded-2xl p-6 space-y-5 shadow-2xl">
-        <h2 className="text-white font-bold text-lg text-center">시작하기 전에</h2>
+        <h2 className="text-white font-bold text-lg text-center">Before you continue</h2>
+        <p className="text-xs text-gray-500 text-center">
+          You can sign in with Google. If you have a referral code, enter it below (optional).
+        </p>
 
         {/* Referral Code */}
         <div>
           <label htmlFor="modal-referral" className="block text-sm text-gray-400 mb-2">
-            추천인 코드 <span className="text-gray-600">(선택)</span>
+            Referral code <span className="text-gray-600">(optional)</span>
           </label>
           <input
             id="modal-referral"
@@ -38,7 +43,7 @@ function PreAuthModal({
             value={referralCode}
             onChange={(e) => setReferralCode(e.target.value)}
             className="w-full px-4 py-3 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors text-sm"
-            placeholder="추천인 코드 입력"
+            placeholder="Enter referral code"
           />
         </div>
 
@@ -52,6 +57,7 @@ function PreAuthModal({
               className="mt-0.5 w-4 h-4 accent-cyan-400 cursor-pointer flex-shrink-0"
             />
             <span className="text-sm text-gray-300">
+              I agree to the{' '}
               <a
                 href="#"
                 onClick={(e) => e.stopPropagation()}
@@ -59,9 +65,9 @@ function PreAuthModal({
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                서비스 이용약관
+                Terms of Service
               </a>
-              에 동의합니다 <span className="text-red-400">(필수)</span>
+              <span className="text-red-400"> (required)</span>
             </span>
           </label>
 
@@ -73,6 +79,7 @@ function PreAuthModal({
               className="mt-0.5 w-4 h-4 accent-cyan-400 cursor-pointer flex-shrink-0"
             />
             <span className="text-sm text-gray-300">
+              I agree to the{' '}
               <a
                 href="#"
                 onClick={(e) => e.stopPropagation()}
@@ -80,9 +87,9 @@ function PreAuthModal({
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                개인정보 보호정책
+                Privacy Policy
               </a>
-              에 동의합니다 <span className="text-red-400">(필수)</span>
+              <span className="text-red-400"> (required)</span>
             </span>
           </label>
         </div>
@@ -93,7 +100,7 @@ function PreAuthModal({
             onClick={onCancel}
             className="flex-1 py-3 border border-gray-700 text-gray-400 hover:text-white rounded-lg text-sm font-medium transition-colors"
           >
-            취소
+            Cancel
           </button>
           <button
             onClick={() => {
@@ -103,7 +110,7 @@ function PreAuthModal({
             disabled={!canProceed}
             className="flex-1 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            동의하고 계속하기
+            Agree & continue
           </button>
         </div>
       </div>
@@ -112,6 +119,7 @@ function PreAuthModal({
 }
 
 export default function Login() {
+  const { refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -152,26 +160,20 @@ export default function Login() {
           setError(idTokenError.message);
           return;
         }
-        // 신규 유저이고 추천인 코드가 있으면 적용
-        if (sessionData?.user && referralCode) {
-          const { data: referrer } = await supabase
-            .from('users')
-            .select('id')
-            .eq('invite_code', referralCode)
-            .single();
-          if (referrer) {
-            await supabase
-              .from('users')
-              .update({ referred_by: referrer.id })
-              .eq('id', sessionData.user.id);
+        if (sessionData?.user && referralCode.trim()) {
+          const refRes = await applyReferralRewards(sessionData.user.id, referralCode);
+          if (!refRes.ok) {
+            setError(refRes.message);
+            return;
           }
+          await refreshProfile();
         }
         navigate('/');
         return;
       }
 
-      if (referralCode) {
-        sessionStorage.setItem('pending_referral_code', referralCode);
+      if (referralCode.trim()) {
+        sessionStorage.setItem('pending_referral_code', referralCode.trim());
       }
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
