@@ -194,10 +194,10 @@ export default function Login() {
   const handleGoogleLogin = () => {
     if (loading) return;
     if (alreadyAgreed()) {
-      // 이미 동의한 기존 사용자 → 모달 없이 바로 진행
+      // Returning user (terms already saved): skip modal
       proceedGoogleLogin();
     } else {
-      // 신규 사용자 → 약관 + 추천인 모달 표시
+      // First-time flow: show terms + optional referral modal
       setShowModal(true);
     }
   };

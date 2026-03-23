@@ -165,7 +165,7 @@ export default function Signup() {
 
           {/* Terms Agreement */}
           <div className="p-4 bg-[#1a1a24] border border-gray-800 rounded-lg space-y-3">
-            <p className="text-xs text-gray-500 mb-1">가입 전 아래 약관에 동의해 주세요</p>
+            <p className="text-xs text-gray-500 mb-1">Before signing up, please agree to the following</p>
 
             <label className="flex items-start gap-3 cursor-pointer group">
               <input
@@ -272,7 +272,7 @@ export default function Signup() {
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 className="w-full px-4 py-3.5 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
-                placeholder="닉네임 입력"
+                placeholder="Enter your nickname"
                 required
               />
             </div>
