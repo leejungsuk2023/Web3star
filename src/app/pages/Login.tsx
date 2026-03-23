@@ -8,6 +8,8 @@ import { supabase, getAuthRedirectUrl, isLikelyNativePlatform } from '../../lib/
 import { googleNativeIdToken } from '../../lib/socialLogin';
 import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
+import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
+import ComingSoonModal from '../components/ComingSoonModal';
 
 const TERMS_AGREED_KEY = 'web3star_terms_agreed';
 
@@ -21,6 +23,8 @@ function PreAuthModal({
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
   const [referralCode, setReferralCode] = useState('');
+  const [isPrivacyPolicyOpen, setIsPrivacyPolicyOpen] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
   const canProceed = agreedToTerms && agreedToPrivacy;
 
@@ -58,15 +62,17 @@ function PreAuthModal({
             />
             <span className="text-sm text-gray-300">
               I agree to the{' '}
-              <a
-                href="#"
-                onClick={(e) => e.stopPropagation()}
-                className="text-cyan-400 hover:text-cyan-300 underline"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsTermsModalOpen(true);
+                }}
+                className="text-cyan-400 hover:text-cyan-300 underline inline p-0 bg-transparent border-0 cursor-pointer text-sm font-inherit align-baseline"
               >
                 Terms of Service
-              </a>
+              </button>
               <span className="text-red-400"> (required)</span>
             </span>
           </label>
@@ -80,15 +86,17 @@ function PreAuthModal({
             />
             <span className="text-sm text-gray-300">
               I agree to the{' '}
-              <a
-                href="#"
-                onClick={(e) => e.stopPropagation()}
-                className="text-cyan-400 hover:text-cyan-300 underline"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsPrivacyPolicyOpen(true);
+                }}
+                className="text-cyan-400 hover:text-cyan-300 underline inline p-0 bg-transparent border-0 cursor-pointer text-sm font-inherit align-baseline"
               >
                 Privacy Policy
-              </a>
+              </button>
               <span className="text-red-400"> (required)</span>
             </span>
           </label>
@@ -113,6 +121,15 @@ function PreAuthModal({
             Agree & continue
           </button>
         </div>
+
+        <PrivacyPolicyModal
+          isOpen={isPrivacyPolicyOpen}
+          onClose={() => setIsPrivacyPolicyOpen(false)}
+        />
+        <ComingSoonModal
+          isOpen={isTermsModalOpen}
+          onClose={() => setIsTermsModalOpen(false)}
+        />
       </div>
     </div>
   );

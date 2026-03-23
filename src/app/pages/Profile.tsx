@@ -1,4 +1,5 @@
-import { Copy, ClipboardCheck, History, FileText, Lock, Mail, LogOut } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { Copy, ClipboardCheck, History, FileText, Lock, Mail, LogOut, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import ComingSoonModal from '../components/ComingSoonModal';
@@ -64,11 +65,17 @@ export default function Profile() {
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
   };
 
-  const menuItems = [
+  const menuItems: {
+    icon: LucideIcon;
+    label: string;
+    danger?: boolean;
+    comingSoon?: boolean;
+  }[] = [
     { icon: History, label: 'Activity History' },
     { icon: FileText, label: 'White Paper' },
     { icon: Lock, label: 'Privacy Policy' },
     { icon: Mail, label: 'Contact Support' },
+    { icon: Shield, label: 'KYC', comingSoon: true },
     { icon: LogOut, label: 'Log Out', danger: true },
   ];
 
@@ -111,15 +118,25 @@ export default function Profile() {
             return (
               <button
                 key={item.label}
-                onClick={() => handleMenuClick(item.label)}
-                className={`w-full flex items-center px-5 py-4 hover:bg-[#252525] transition-colors ${
-                  index !== menuItems.length - 1 ? 'border-b border-gray-800' : ''
-                }`}
+                type="button"
+                onClick={() => {
+                  if (item.comingSoon) return;
+                  handleMenuClick(item.label);
+                }}
+                disabled={item.comingSoon}
+                className={`w-full flex items-center px-5 py-4 transition-colors ${
+                  item.comingSoon
+                    ? 'cursor-default opacity-75'
+                    : 'hover:bg-[#252525]'
+                } ${index !== menuItems.length - 1 ? 'border-b border-gray-800' : ''}`}
               >
-                <Icon className={`w-5 h-5 mr-4 ${item.danger ? 'text-red-500' : 'text-gray-400'}`} />
-                <span className={item.danger ? 'text-red-500' : 'text-gray-200'}>
+                <Icon className={`w-5 h-5 mr-4 flex-shrink-0 ${item.danger ? 'text-red-500' : 'text-gray-400'}`} />
+                <span className={`flex-1 text-left ${item.danger ? 'text-red-500' : 'text-gray-200'}`}>
                   {item.label}
                 </span>
+                {item.comingSoon && (
+                  <span className="text-xs text-gray-500 font-medium">Coming soon</span>
+                )}
               </button>
             );
           })}

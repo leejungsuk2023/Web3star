@@ -172,15 +172,15 @@ export default function Home() {
     setIsMining(false);
   }, [user, isMining, centerButtonActive, profile, refreshProfile, scheduleMiningNotification]);
 
-  // Ad watched: immediately award 5 pts per ad, +5 bonus on completing all 5
-  const handleWatchAd = useCallback(async () => {
-    if (!user) return;
+  // Ad watched: award PTS on Rewarded. Returns true if 10s cooldown should start after ad is dismissed (X).
+  const handleWatchAd = useCallback(async (): Promise<boolean> => {
+    if (!user) return false;
     setIsModalOpen(false);
 
-    if (activeSlots.length >= 5) return;
+    if (activeSlots.length >= 5) return false;
 
     const nextSlot = [1, 2, 3, 4, 5].find(s => !activeSlots.includes(s));
-    if (!nextSlot) return;
+    if (!nextSlot) return false;
 
     const newSlots = [...activeSlots, nextSlot];
     const isComplete = newSlots.length === 5;
@@ -206,7 +206,7 @@ export default function Home() {
     if (slotError) {
       console.error('Failed to save ad slot:', slotError);
       toast.error('Failed to save progress.');
-      return;
+      return false;
     }
 
     setActiveSlots(newSlots);
@@ -222,10 +222,10 @@ export default function Home() {
 
     if (isComplete) {
       toast.success(`+${AD_REWARD_PER_SLOT} PTS + Bonus +${AD_BONUS_ALL_SLOTS} PTS! 🎉 Completed all 5 ads!`);
-    } else {
-      toast.success(`+${AD_REWARD_PER_SLOT} PTS Ad reward! (${newSlots.length}/5)`);
-      setAdCooldown(AD_COOLDOWN_SECONDS); // 10s cooldown before next ad
+      return false;
     }
+    toast.success(`+${AD_REWARD_PER_SLOT} PTS Ad reward! (${newSlots.length}/5)`);
+    return true;
   }, [user, activeSlots, profile, refreshProfile]);
 
   // 항상 최신 handleMine을 참조하도록 ref 유지 (stale closure 방지)
@@ -373,7 +373,17 @@ export default function Home() {
         onClose={() => setIsModalOpen(false)}
         onWatchAd={async () => {
           setIsModalOpen(false);
-          await showRewardedAd(handleWatchAd);
+          let startCooldownAfterDismiss = false;
+          await showRewardedAd(
+            async () => {
+              startCooldownAfterDismiss = await handleWatchAd();
+            },
+            async () => {
+              if (startCooldownAfterDismiss) {
+                setAdCooldown(AD_COOLDOWN_SECONDS);
+              }
+            }
+          );
         }}
         triggerSource="slot"
       />

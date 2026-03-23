@@ -107,25 +107,33 @@ export async function showInterstitialAd(onDone: () => void | Promise<void>): Pr
 }
 
 /**
- * 보상형 광고(Rewarded) 표시. 시청 완료 시에만 onReward 호출.
- * 웹에서는 onReward를 바로 호출(테스트용).
+ * 보상형 광고. Rewarded 시 onReward, 광고 화면이 닫힐 때(Dismissed) onDismissed.
+ * 쿨다운 등은 onDismissed에서 처리해, 광고 시청 중 백그라운드에서 타이머가 도는 문제를 막는다.
  */
-export async function showRewardedAd(onReward: () => void | Promise<void>): Promise<void> {
+export async function showRewardedAd(
+  onReward: () => void | Promise<void>,
+  onDismissed?: () => void | Promise<void>
+): Promise<void> {
   if (!isNative()) {
     await Promise.resolve(onReward());
+    await Promise.resolve(onDismissed?.());
     return;
   }
 
   let rewardListener: { remove: () => Promise<void> } | null = null;
   let dismissedListener: { remove: () => Promise<void> } | null = null;
+  /** Rewarded handler may still be awaiting DB; Dismissed must wait so onDismissed sees correct state */
+  let rewardInFlight: Promise<void> = Promise.resolve();
 
   try {
     rewardListener = await AdMob.addListener(RewardAdPluginEvents.Rewarded, async () => {
-      await Promise.resolve(onReward());
+      rewardInFlight = Promise.resolve(onReward()).catch((e) => {
+        console.error('Rewarded onReward error:', e);
+      });
     });
 
     dismissedListener = await AdMob.addListener(RewardAdPluginEvents.Dismissed, async () => {
-      // 광고를 닫을 때 리스너 정리 (보상 여부는 Rewarded 이벤트로만 판단)
+      await rewardInFlight;
       if (rewardListener) {
         await rewardListener.remove();
         rewardListener = null;
@@ -134,6 +142,7 @@ export async function showRewardedAd(onReward: () => void | Promise<void>): Prom
         await dismissedListener.remove();
         dismissedListener = null;
       }
+      await Promise.resolve(onDismissed?.());
     });
 
     await AdMob.prepareRewardVideoAd({

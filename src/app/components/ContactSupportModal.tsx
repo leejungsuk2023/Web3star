@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { X, Mail, MessageCircle, Globe } from 'lucide-react';
+import { X, Mail, MessageCircle, Globe, ExternalLink } from 'lucide-react';
 
 interface ContactSupportModalProps {
   isOpen: boolean;
@@ -25,18 +25,25 @@ export default function ContactSupportModal({ isOpen, onClose }: ContactSupportM
       description: 'We typically respond within 24 hours'
     },
     {
+      icon: Globe,
+      label: 'Website',
+      value: 'web3star.org',
+      href: 'https://web3star.org',
+      description: 'Visit our website'
+    },
+    {
+      icon: ExternalLink,
+      label: 'X (Twitter)',
+      value: 'x.com/web3starorg',
+      href: 'https://x.com/web3starorg',
+      description: 'Follow us on X'
+    },
+    {
       icon: MessageCircle,
       label: 'Telegram',
       value: 'Coming soon',
       href: undefined,
       description: 'Telegram support is coming soon'
-    },
-    {
-      icon: Globe,
-      label: 'Website',
-      value: 'web3star.org',
-      href: 'https://web3star.org',
-      description: 'Visit our help center'
     }
   ];
 
