@@ -286,15 +286,18 @@ export default function Home() {
             }`}
           >
             <div className="absolute inset-2 rounded-full bg-black/40 backdrop-blur-sm"></div>
-            <img
-              src={miningCenterLogo}
-              alt="Web3Star mining logo"
-              className={`relative z-10 w-32 h-32 object-contain transition-all duration-300 ${
-                centerButtonActive
-                  ? 'drop-shadow-[0_0_22px_rgba(56,189,248,0.75)] brightness-110'
-                  : 'drop-shadow-[0_0_12px_rgba(148,163,184,0.35)] opacity-90'
-              }`}
-            />
+            <div className="relative z-10 w-40 h-40 rounded-full overflow-hidden bg-[#05070d]">
+              <img
+                src={miningCenterLogo}
+                alt="Web3Star mining logo"
+                className={`w-full h-full object-cover transition-all duration-300 ${
+                  centerButtonActive
+                    ? 'scale-[1.55] saturate-125 contrast-125 brightness-110 drop-shadow-[0_0_26px_rgba(56,189,248,0.8)]'
+                    : 'scale-[1.55] saturate-115 contrast-115 brightness-105 drop-shadow-[0_0_14px_rgba(148,163,184,0.35)]'
+                }`}
+              />
+              <div className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle,transparent_58%,rgba(5,7,13,0.75)_82%,rgba(5,7,13,0.96)_100%)]" />
+            </div>
             <div className={`absolute inset-0 rounded-full border-2 transition-colors duration-300 ${
               centerButtonActive ? 'border-white/20' : 'border-gray-700/50'
             }`}></div>
