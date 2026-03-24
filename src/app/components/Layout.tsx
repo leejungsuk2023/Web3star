@@ -16,7 +16,7 @@ export default function Layout() {
       {/* Top Header */}
       <header className="flex items-center justify-between px-6 pt-8 pb-4">
         <button
-          onClick={() => navigate('/profile')}
+          onClick={() => navigate('/app/profile')}
           className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/30 hover:scale-105 transition-transform active:scale-95"
         >
           <User className="w-6 h-6 text-white" />
@@ -45,66 +45,66 @@ export default function Layout() {
       <nav className="bg-gradient-to-t from-gray-900/95 to-gray-900/80 backdrop-blur-md border-t border-gray-800 px-6 py-4">
         <div className="flex items-center justify-around max-w-sm mx-auto">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/app')}
             className="flex flex-col items-center gap-1 group"
           >
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-              location.pathname === '/'
+              location.pathname === '/app'
                 ? 'bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30'
                 : 'bg-gray-800/50 group-hover:bg-gray-700/50'
             }`}>
               <Home className={`w-5 h-5 transition-colors ${
-                location.pathname === '/'
+                location.pathname === '/app'
                   ? 'text-white'
                   : 'text-gray-500 group-hover:text-gray-300'
               }`} />
             </div>
             <span className={`text-xs transition-colors ${
-              location.pathname === '/'
+              location.pathname === '/app'
                 ? 'text-white font-medium'
                 : 'text-gray-500 group-hover:text-gray-300'
             }`}>Home</span>
           </button>
 
           <button
-            onClick={() => navigate('/leaderboard')}
+            onClick={() => navigate('/app/leaderboard')}
             className="flex flex-col items-center gap-1 group"
           >
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-              location.pathname === '/leaderboard'
+              location.pathname === '/app/leaderboard'
                 ? 'bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30'
                 : 'bg-gray-800/50 group-hover:bg-gray-700/50'
             }`}>
               <Trophy className={`w-5 h-5 transition-colors ${
-                location.pathname === '/leaderboard'
+                location.pathname === '/app/leaderboard'
                   ? 'text-white'
                   : 'text-gray-500 group-hover:text-gray-300'
               }`} />
             </div>
             <span className={`text-xs transition-colors ${
-              location.pathname === '/leaderboard'
+              location.pathname === '/app/leaderboard'
                 ? 'text-white font-medium'
                 : 'text-gray-500 group-hover:text-gray-300'
             }`}>Leaderboard</span>
           </button>
 
           <button
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/app/profile')}
             className="flex flex-col items-center gap-1 group"
           >
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-              location.pathname === '/profile'
+              location.pathname === '/app/profile'
                 ? 'bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30'
                 : 'bg-gray-800/50 group-hover:bg-gray-700/50'
             }`}>
               <User className={`w-5 h-5 transition-colors ${
-                location.pathname === '/profile'
+                location.pathname === '/app/profile'
                   ? 'text-white'
                   : 'text-gray-500 group-hover:text-gray-300'
               }`} />
             </div>
             <span className={`text-xs transition-colors ${
-              location.pathname === '/profile'
+              location.pathname === '/app/profile'
                 ? 'text-white font-medium'
                 : 'text-gray-500 group-hover:text-gray-300'
             }`}>Profile</span>

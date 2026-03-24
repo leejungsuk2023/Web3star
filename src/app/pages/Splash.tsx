@@ -13,9 +13,9 @@ export default function Splash() {
 
     const timer = setTimeout(() => {
       if (user) {
-        navigate('/', { replace: true });
+        navigate('/app', { replace: true });
       } else {
-        navigate('/login', { replace: true });
+        navigate('/app/login', { replace: true });
       }
     }, 2000);
 

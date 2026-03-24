@@ -8,28 +8,33 @@ import Login from "./pages/Login";
 import Splash from "./pages/Splash";
 import AdMobTest from "./pages/AdMobTest";
 import ProtectedRoute from "../components/ProtectedRoute";
+import Homepage from "./pages/Homepage";
 
 const routerBase = import.meta.env.BASE_URL;
 
 export const router = createBrowserRouter([
   {
-    path: "/splash",
+    path: "/",
+    Component: Homepage,
+  },
+  {
+    path: "/app/splash",
     Component: Splash,
   },
   {
-    path: "/login",
+    path: "/app/login",
     Component: Login,
   },
   {
-    path: "/signup",
+    path: "/app/signup",
     Component: Signup,
   },
   {
-    path: "/admob-test",
+    path: "/app/admob-test",
     Component: AdMobTest,
   },
   {
-    path: "/",
+    path: "/app",
     Component: ProtectedRoute,
     children: [
       {
@@ -42,6 +47,12 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  // Legacy compatibility links
+  { path: "/login", loader: () => redirect("/app/login") },
+  { path: "/signup", loader: () => redirect("/app/signup") },
+  { path: "/splash", loader: () => redirect("/app/splash") },
+  { path: "/admob-test", loader: () => redirect("/app/admob-test") },
+  { path: "/homepage", loader: () => redirect("/") },
   {
     path: "*",
     loader: () => redirect("/"),

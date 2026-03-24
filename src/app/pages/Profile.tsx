@@ -42,7 +42,7 @@ export default function Profile() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/login');
+    navigate('/app/login');
   };
 
   const handleMenuClick = (label: string) => {

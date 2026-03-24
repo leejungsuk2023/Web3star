@@ -77,7 +77,7 @@ export default function Signup() {
     }
 
     localStorage.setItem(TERMS_AGREED_KEY, 'true');
-    navigate('/');
+    navigate('/app');
   };
 
   const handleGoogleSignup = async () => {
@@ -108,7 +108,7 @@ export default function Signup() {
           await refreshProfile();
         }
         localStorage.setItem(TERMS_AGREED_KEY, 'true');
-        navigate('/');
+        navigate('/app');
         return;
       }
 
@@ -300,7 +300,7 @@ export default function Signup() {
           <div className="text-sm text-gray-400">
             Already have an account?{' '}
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/app/login')}
               className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
             >
               Log in

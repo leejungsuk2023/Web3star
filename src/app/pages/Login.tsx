@@ -159,7 +159,7 @@ export default function Login() {
       return;
     }
 
-    navigate('/');
+    navigate('/app');
   };
 
   const proceedGoogleLogin = async (referralCode = '') => {
@@ -185,7 +185,7 @@ export default function Login() {
           }
           await refreshProfile();
         }
-        navigate('/');
+        navigate('/app');
         return;
       }
 
@@ -305,7 +305,7 @@ export default function Login() {
           {Capacitor.isNativePlatform() && (
             <button
               type="button"
-              onClick={() => navigate('/admob-test')}
+              onClick={() => navigate('/app/admob-test')}
               className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
             >
               AdMob Test (Android/iOS)
@@ -319,7 +319,7 @@ export default function Login() {
                 return;
               }
               const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${getAuthRedirectUrl()}/login`,
+                redirectTo: `${window.location.origin}/app/login`,
               });
               if (resetError) {
                 setError(resetError.message);
@@ -334,7 +334,7 @@ export default function Login() {
           <div className="text-sm text-gray-400">
             Don't have an account?{' '}
             <button
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/app/signup')}
               className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
             >
               Sign Up
