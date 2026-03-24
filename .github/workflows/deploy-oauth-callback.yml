@@ -1,5 +1,5 @@
 # OAuth 콜백 페이지를 GitHub Pages에 배포 (에뮬레이터 Google 로그인용)
-name: Deploy Web app to GitHub Pages
+name: Deploy Web app to GitHub Pages # pages deploy pipeline
 
 on:
   push:
