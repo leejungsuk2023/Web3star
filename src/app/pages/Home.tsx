@@ -283,7 +283,7 @@ export default function Home() {
               centerButtonActive
                 ? 'bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-600 shadow-blue-500/50 hover:scale-105 active:scale-95'
                 : 'bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 shadow-gray-800/30 hover:scale-102 cursor-pointer'
-            }`}
+            } overflow-hidden`}
           >
             <div className="absolute inset-2 rounded-full bg-[radial-gradient(circle_at_50%_45%,#091a2b_0%,#040912_55%,#02050a_100%)]"></div>
             <div className="relative z-10 w-40 h-40 rounded-full overflow-hidden bg-transparent">
