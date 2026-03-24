@@ -1,6 +1,8 @@
 import React from 'react';
 import { MessageCircle, Send, Twitter } from 'lucide-react';
 import heroImage from '../../assets/web3star-home-hero.png';
+import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
+import TermsOfServiceModal from '../components/TermsOfServiceModal';
 
 const navItems = [
   { label: 'Process', href: '#process' },
@@ -96,6 +98,9 @@ const benefitCards = [
 ];
 
 export default function Homepage() {
+  const [isPrivacyPolicyOpen, setIsPrivacyPolicyOpen] = React.useState(false);
+  const [isTermsOpen, setIsTermsOpen] = React.useState(false);
+
   return (
     <div className="min-h-screen bg-black text-white scroll-smooth">
       <header className="sticky top-0 z-40 bg-black/85 backdrop-blur border-b border-gray-900">
@@ -302,6 +307,101 @@ export default function Homepage() {
           </article>
         </section>
       </main>
+
+      <footer className="border-t border-gray-900 bg-gradient-to-b from-black to-[#05070d]">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-12 grid md:grid-cols-4 gap-8">
+          <div className="md:col-span-2 space-y-4">
+            <h3 className="text-2xl font-bold">
+              <span className="text-white">Web3</span>
+              <span className="text-cyan-400">Star</span>
+            </h3>
+            <p className="text-gray-400 max-w-xl leading-7">
+              The Web3 creation platform where creators become the economic driver. Build, mine,
+              and grow your future with transparent rewards and creator-first token utility.
+            </p>
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-xs text-cyan-300">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+              Web3Star ecosystem is expanding globally
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-4 text-white">Quick Links</h4>
+            <ul className="space-y-2 text-sm text-gray-400">
+              {navItems.map((item) => (
+                <li key={`footer-${item.href}`}>
+                  <a href={item.href} className="hover:text-cyan-400 transition-colors">
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-4 text-white">Connect</h4>
+            <ul className="space-y-2 text-sm text-gray-400">
+              <li>
+                <a
+                  href="https://x.com/Web3starOrg"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-cyan-400 transition-colors"
+                >
+                  X (Twitter)
+                </a>
+              </li>
+              <li>Telegram (Coming soon)</li>
+              <li>Discord (Coming soon)</li>
+              <li>
+                <a
+                  href="mailto:support@web3star.org"
+                  className="hover:text-cyan-400 transition-colors"
+                >
+                  support@web3star.org
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="border-t border-gray-900">
+          <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-500">
+            <p>© {new Date().getFullYear()} Web3Star. All rights reserved.</p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsPrivacyPolicyOpen(true)}
+                className="hover:text-cyan-400 transition-colors"
+              >
+                Privacy Policy
+              </button>
+              <span className="text-gray-700">|</span>
+              <button
+                type="button"
+                onClick={() => setIsTermsOpen(true)}
+                className="hover:text-cyan-400 transition-colors"
+              >
+                Terms of Service
+              </button>
+              <span className="text-gray-700 hidden md:inline">|</span>
+              <span className="hidden md:inline">
+                This site is for informational purposes only and does not constitute financial
+                advice.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <PrivacyPolicyModal
+          isOpen={isPrivacyPolicyOpen}
+          onClose={() => setIsPrivacyPolicyOpen(false)}
+        />
+        <TermsOfServiceModal
+          isOpen={isTermsOpen}
+          onClose={() => setIsTermsOpen(false)}
+        />
+      </footer>
     </div>
   );
 }
