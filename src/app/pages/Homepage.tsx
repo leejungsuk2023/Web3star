@@ -1,5 +1,6 @@
 import React from 'react';
 import { MessageCircle, Send, Twitter } from 'lucide-react';
+import { Link } from 'react-router';
 import heroImage from '../../assets/web3star-home-hero.png';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
@@ -160,12 +161,12 @@ export default function Homepage() {
               token utility become a real digital economy.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
-              <a
-                href="/app/login"
+              <Link
+                to="/app/login"
                 className="px-5 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold hover:from-cyan-400 hover:to-blue-400 transition-colors"
               >
                 Start with Web3Star
-              </a>
+              </Link>
               <a
                 href="#whitepaper"
                 className="px-5 py-3 rounded-full border border-gray-700 text-gray-200 hover:border-cyan-400 hover:text-cyan-400 transition-colors"
@@ -276,10 +277,21 @@ export default function Homepage() {
               <li>3. Activate mining every 4 hours and complete KYC</li>
             </ol>
             <div className="flex flex-wrap gap-3 pt-2">
-              <a href="#" className="px-5 py-3 rounded-full bg-cyan-500 text-black font-semibold hover:bg-cyan-400 transition-colors">
+              <button
+                type="button"
+                className="px-5 py-3 rounded-full bg-cyan-500/70 text-black/90 font-semibold cursor-not-allowed"
+                title="Google Play release coming soon"
+              >
                 Android Download
-              </a>
-              <a href="#" className="px-5 py-3 rounded-full border border-gray-700 text-gray-200 hover:border-cyan-400 hover:text-cyan-400 transition-colors">
+              </button>
+              <button
+                type="button"
+                className="px-5 py-3 rounded-full border border-indigo-500/40 bg-indigo-500/10 text-indigo-200 font-semibold cursor-not-allowed"
+                title="App Store release coming soon"
+              >
+                iOS Download
+              </button>
+              <a href="#process" className="px-5 py-3 rounded-full border border-gray-700 text-gray-200 hover:border-cyan-400 hover:text-cyan-400 transition-colors">
                 Installation Guide
               </a>
             </div>
@@ -308,14 +320,14 @@ export default function Homepage() {
         </section>
       </main>
 
-      <footer className="border-t border-gray-900 bg-gradient-to-b from-black to-[#05070d]">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 py-12 grid md:grid-cols-4 gap-8">
+      <footer className="mt-20 border-t border-cyan-900/30 bg-[radial-gradient(circle_at_20%_0%,rgba(6,182,212,0.12),transparent_45%),radial-gradient(circle_at_80%_20%,rgba(59,130,246,0.12),transparent_40%),linear-gradient(180deg,#05060a_0%,#020307_100%)]">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 pt-16 pb-12 grid md:grid-cols-4 gap-10">
           <div className="md:col-span-2 space-y-4">
-            <h3 className="text-2xl font-bold">
+            <h3 className="text-3xl font-bold">
               <span className="text-white">Web3</span>
               <span className="text-cyan-400">Star</span>
             </h3>
-            <p className="text-gray-400 max-w-xl leading-7">
+            <p className="text-gray-300/90 max-w-xl leading-7">
               The Web3 creation platform where creators become the economic driver. Build, mine,
               and grow your future with transparent rewards and creator-first token utility.
             </p>
@@ -326,11 +338,11 @@ export default function Homepage() {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4 text-white">Quick Links</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
+            <h4 className="font-semibold mb-4 text-white tracking-wide">Quick Links</h4>
+            <ul className="space-y-2.5 text-sm text-gray-400">
               {navItems.map((item) => (
                 <li key={`footer-${item.href}`}>
-                  <a href={item.href} className="hover:text-cyan-400 transition-colors">
+                  <a href={item.href} className="hover:text-cyan-300 transition-colors">
                     {item.label}
                   </a>
                 </li>
@@ -339,14 +351,14 @@ export default function Homepage() {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4 text-white">Connect</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
+            <h4 className="font-semibold mb-4 text-white tracking-wide">Connect</h4>
+            <ul className="space-y-2.5 text-sm text-gray-400">
               <li>
                 <a
                   href="https://x.com/Web3starOrg"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-cyan-400 transition-colors"
+                  className="hover:text-cyan-300 transition-colors"
                 >
                   X (Twitter)
                 </a>
@@ -356,7 +368,7 @@ export default function Homepage() {
               <li>
                 <a
                   href="mailto:support@web3star.org"
-                  className="hover:text-cyan-400 transition-colors"
+                  className="hover:text-cyan-300 transition-colors"
                 >
                   support@web3star.org
                 </a>
@@ -365,27 +377,25 @@ export default function Homepage() {
           </div>
         </div>
 
-        <div className="border-t border-gray-900">
-          <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-500">
+        <div className="border-t border-cyan-900/20">
+          <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500">
             <p>© {new Date().getFullYear()} Web3Star. All rights reserved.</p>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={() => setIsPrivacyPolicyOpen(true)}
-                className="hover:text-cyan-400 transition-colors"
+                className="px-3 py-1.5 rounded-full bg-indigo-500/15 border border-indigo-400/30 text-indigo-200 hover:bg-indigo-500/25 hover:border-indigo-300/40 transition-colors"
               >
                 Privacy Policy
               </button>
-              <span className="text-gray-700">|</span>
               <button
                 type="button"
                 onClick={() => setIsTermsOpen(true)}
-                className="hover:text-cyan-400 transition-colors"
+                className="px-3 py-1.5 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-200 hover:bg-cyan-500/25 hover:border-cyan-300/40 transition-colors"
               >
                 Terms of Service
               </button>
-              <span className="text-gray-700 hidden md:inline">|</span>
-              <span className="hidden md:inline">
+              <span className="hidden lg:inline text-gray-600">
                 This site is for informational purposes only and does not constitute financial
                 advice.
               </span>
