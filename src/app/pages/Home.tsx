@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import GetMorePointModal from '../components/GetMorePointModal';
-import WLogoSvg from '../components/WLogoSvg';
+import miningCenterLogo from '../../assets/mining-center-logo.png';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { showInterstitialAd, showRewardedAd, preloadInterstitialAd } from '../../lib/admob';
@@ -286,7 +286,15 @@ export default function Home() {
             }`}
           >
             <div className="absolute inset-2 rounded-full bg-black/40 backdrop-blur-sm"></div>
-            <WLogoSvg className="relative z-10 w-32 h-32" isActive={centerButtonActive} />
+            <img
+              src={miningCenterLogo}
+              alt="Web3Star mining logo"
+              className={`relative z-10 w-32 h-32 object-contain transition-all duration-300 ${
+                centerButtonActive
+                  ? 'drop-shadow-[0_0_22px_rgba(56,189,248,0.75)] brightness-110'
+                  : 'drop-shadow-[0_0_12px_rgba(148,163,184,0.35)] opacity-90'
+              }`}
+            />
             <div className={`absolute inset-0 rounded-full border-2 transition-colors duration-300 ${
               centerButtonActive ? 'border-white/20' : 'border-gray-700/50'
             }`}></div>
