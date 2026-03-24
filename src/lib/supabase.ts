@@ -2,11 +2,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const hasSupabaseEnv = Boolean(supabaseUrl && supabaseAnonKey);
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in environment variables');
+if (!hasSupabaseEnv) {
+  // Do not crash the entire site (landing page should still be viewable).
+  // Auth features will fail until env vars are configured in deployment.
+  console.error('[Web3Star] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY');
 }
 
 /** anon JWT payload의 ref가 URL 서브도메인과 같아야 함. 다르면 Supabase가 "Invalid API key" 반환 */
@@ -41,7 +44,9 @@ function assertSupabaseProjectMatchesAnonKey(url: string, anonKey: string) {
   }
 }
 
-assertSupabaseProjectMatchesAnonKey(supabaseUrl, supabaseAnonKey);
+if (hasSupabaseEnv) {
+  assertSupabaseProjectMatchesAnonKey(supabaseUrl!, supabaseAnonKey!);
+}
 
 export function isLikelyNativePlatform(): boolean {
   // Capacitor.isNativePlatform()만으로 분기하면, 일부 환경에서 기대대로 동작하지 않을 수 있어
@@ -68,4 +73,11 @@ export function getAuthRedirectUrl(): string {
   return window.location.origin;
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const fallbackSupabaseUrl = 'https://example.supabase.co';
+const fallbackSupabaseAnonKey =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWYiOiJleGFtcGxlIiwicm9sZSI6ImFub24iLCJpYXQiOjAsImV4cCI6MzI1MDM2ODAwMDB9.placeholder';
+
+export const supabase = createClient(
+  hasSupabaseEnv ? supabaseUrl! : fallbackSupabaseUrl,
+  hasSupabaseEnv ? supabaseAnonKey! : fallbackSupabaseAnonKey,
+);
