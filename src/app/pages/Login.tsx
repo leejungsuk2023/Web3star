@@ -136,7 +136,7 @@ function PreAuthModal({
 }
 
 export default function Login() {
-  const { refreshProfile } = useAuth();
+  const { user, loading: authLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -218,6 +218,13 @@ export default function Login() {
       setShowModal(true);
     }
   };
+
+  React.useEffect(() => {
+    if (authLoading) return;
+    if (user) {
+      navigate('/app', { replace: true });
+    }
+  }, [authLoading, user, navigate]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
@@ -319,7 +326,7 @@ export default function Login() {
                 return;
               }
               const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/app/login`,
+                redirectTo: getAuthRedirectUrl(),
               });
               if (resetError) {
                 setError(resetError.message);
