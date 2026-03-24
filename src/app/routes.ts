@@ -9,6 +9,8 @@ import Splash from "./pages/Splash";
 import AdMobTest from "./pages/AdMobTest";
 import ProtectedRoute from "../components/ProtectedRoute";
 
+const routerBase = import.meta.env.BASE_URL;
+
 export const router = createBrowserRouter([
   {
     path: "/splash",
@@ -44,4 +46,6 @@ export const router = createBrowserRouter([
     path: "*",
     loader: () => redirect("/"),
   },
-]);
+], {
+  basename: routerBase,
+});
