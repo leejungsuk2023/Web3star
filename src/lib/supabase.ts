@@ -49,17 +49,14 @@ if (hasSupabaseEnv) {
 }
 
 export function isLikelyNativePlatform(): boolean {
-  // Capacitor.isNativePlatform()만으로 분기하면, 일부 환경에서 기대대로 동작하지 않을 수 있어
-  // UA로 한 번 더 보정합니다.
+  // OAuth redirect must never treat normal web/mobile browsers as native.
+  // Only true Capacitor native runtime should use app-scheme callbacks.
   try {
     if (Capacitor.isNativePlatform()) return true;
   } catch {
     // ignore
   }
-
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent.toLowerCase();
-  return ua.includes('android') || ua.includes('iphone') || ua.includes('ipad') || ua.includes('ios');
+  return false;
 }
 
 /** OAuth 후 돌아올 URL. 앱에서는 앱 스킴 또는 호스팅 콜백(에뮬레이터용).
