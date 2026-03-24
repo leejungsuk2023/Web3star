@@ -1,6 +1,6 @@
 import React from 'react';
 import { MessageCircle, Send, Twitter } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import heroImage from '../../assets/web3star-home-hero.png';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
@@ -99,8 +99,23 @@ const benefitCards = [
 ];
 
 export default function Homepage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isPrivacyPolicyOpen, setIsPrivacyPolicyOpen] = React.useState(false);
   const [isTermsOpen, setIsTermsOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const hash = (location.hash || '').toLowerCase();
+    const isOAuthReturn =
+      hash.includes('access_token=') ||
+      hash.includes('refresh_token=') ||
+      hash.includes('error=') ||
+      hash.includes('error_description=');
+
+    if (isOAuthReturn) {
+      navigate('/app/login', { replace: true });
+    }
+  }, [location.hash, navigate]);
 
   return (
     <div className="min-h-screen bg-black text-white scroll-smooth">

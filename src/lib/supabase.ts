@@ -51,11 +51,13 @@ if (hasSupabaseEnv) {
 export function isLikelyNativePlatform(): boolean {
   // OAuth redirect must never treat normal web/mobile browsers as native.
   // Only true Capacitor native runtime should use app-scheme callbacks.
+  let native = false;
   try {
-    if (Capacitor.isNativePlatform()) return true;
+    native = Capacitor.isNativePlatform();
   } catch {
     // ignore
   }
+  if (native) return true;
   return false;
 }
 
@@ -71,7 +73,8 @@ export function getAuthRedirectUrl(): string {
   // Return to app login route so OAuth completion continues inside the app flow.
   const basePath = import.meta.env.BASE_URL || '/';
   const appBaseUrl = new URL(basePath, window.location.origin);
-  return new URL('app/login', appBaseUrl).toString();
+  const redirectUrl = new URL('app/login', appBaseUrl).toString();
+  return redirectUrl;
 }
 
 const fallbackSupabaseUrl = 'https://example.supabase.co';

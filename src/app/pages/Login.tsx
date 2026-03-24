@@ -192,15 +192,33 @@ export default function Login() {
       if (referralCode.trim()) {
         sessionStorage.setItem('pending_referral_code', referralCode.trim());
       }
+      const computedRedirect = getAuthRedirectUrl();
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: getAuthRedirectUrl() },
+        options: { redirectTo: computedRedirect },
       });
       if (oauthError) {
         setError(oauthError.message);
         return;
       }
-      if (data?.url) window.location.href = data.url;
+      if (data?.url) {
+        const authUrl = new URL(data.url);
+        const returnedRedirectTo = authUrl.searchParams.get('redirect_to');
+        const providerRedirectUri = authUrl.searchParams.get('redirect_uri');
+        const oauthUrlSnapshot = {
+          returnedRedirectTo,
+          providerRedirectUri,
+          authUrlHost: authUrl.host,
+        };
+        if (returnedRedirectTo?.includes('localhost')) {
+          setError(
+            `OAuth misconfiguration detected: Supabase returned localhost redirect (${returnedRedirectTo}). ` +
+              `Check Supabase Auth URL config (Site URL + Redirect URLs) for GitHub Pages.`,
+          );
+          return;
+        }
+        window.location.href = data.url;
+      }
     } catch (e: any) {
       setError(e?.message ?? 'Google login failed');
     } finally {
