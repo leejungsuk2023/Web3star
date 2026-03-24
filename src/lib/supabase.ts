@@ -70,7 +70,10 @@ export function getAuthRedirectUrl(): string {
     if (callbackUrl) return callbackUrl;
     return 'com.web3star.app://localhost';
   }
-  return window.location.origin;
+  // Web deployment can live under a subpath (e.g. GitHub Pages `/Web3star/`).
+  // Use Vite base path to produce a redirect URL that matches deployed routing.
+  const basePath = import.meta.env.BASE_URL || '/';
+  return new URL(basePath, window.location.origin).toString();
 }
 
 const fallbackSupabaseUrl = 'https://example.supabase.co';
