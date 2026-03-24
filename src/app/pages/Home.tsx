@@ -285,8 +285,8 @@ export default function Home() {
                 : 'bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 shadow-gray-800/30 hover:scale-102 cursor-pointer'
             }`}
           >
-            <div className="absolute inset-2 rounded-full bg-black/40 backdrop-blur-sm"></div>
-            <div className="relative z-10 w-40 h-40 rounded-full overflow-hidden bg-[#05070d]">
+            <div className="absolute inset-2 rounded-full bg-black"></div>
+            <div className="relative z-10 w-40 h-40 rounded-full overflow-hidden bg-black">
               <img
                 src={miningCenterLogo}
                 alt="Web3Star mining logo"
