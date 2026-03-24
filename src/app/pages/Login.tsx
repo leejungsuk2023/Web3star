@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import logoImage from 'figma:asset/1abedf885993685a4d6cd6ba7515a93facdfdba3.png';
+import logoImage from '../../assets/signup-hero-new.png';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import GoogleIcon from '../components/GoogleIcon';
