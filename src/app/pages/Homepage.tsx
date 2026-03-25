@@ -950,7 +950,7 @@ function HeroSection() {
               Your content, your power, your future.
             </p>
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-gray-500">
-              Mining, tokens, and community — one ecosystem built for ownership, not rent.
+              The New Era of Crypto-based Creation. <span className="text-cyan-200">“Web3Star”</span>
             </p>
             <div className="mt-8 flex flex-row flex-wrap items-center gap-4">
               <a
@@ -1107,6 +1107,25 @@ export default function Homepage() {
         <HeroSection />
 
         <div className="mx-auto max-w-6xl space-y-16 px-4 py-10 md:px-8 md:py-14">
+          <section className="rounded-3xl border border-gray-800 bg-[#0c0c0c] px-4 py-6 shadow-[0_0_40px_rgba(6,182,212,0.04)] md:px-6 md:py-7">
+            <div className="mx-auto max-w-3xl">
+              <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-cyan-400">Platform Vision</p>
+              <h2 className="mt-2 text-2xl font-bold text-white md:text-3xl">Web3 Star Vision</h2>
+              <div className="mt-3 space-y-3 text-sm leading-relaxed text-gray-300 md:text-base">
+                <p>Web3Star is a platform where creators are a real driver of the economy.</p>
+                <p>
+                  Creators can directly connect with fans by issuing their own personal coins (creator tokens) based
+                  on content. Advertising revenue is transparently distributed to creators, maximizing creators&apos;
+                  rights and profits that have been overlooked on existing platforms.
+                </p>
+                <p>
+                  Web3 Star will usher in the era of Web3 where personal dreams and creation become assets of the
+                  future.
+                </p>
+              </div>
+            </div>
+          </section>
+
           <ProcessRoadmapTimeline />
 
           <WhitepaperDocument />
