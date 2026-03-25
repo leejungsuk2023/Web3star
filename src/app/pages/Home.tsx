@@ -279,27 +279,28 @@ export default function Home() {
             onClick={handleCenterButtonClick}
             disabled={centerButtonActive || isMining}
             aria-label={centerButtonActive ? 'Mining in progress' : 'Start Mining'}
-            className={`relative w-56 h-56 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
+            className={`relative h-56 w-56 overflow-hidden rounded-full p-[3px] shadow-2xl transition-all duration-300 ${
               centerButtonActive
-                ? 'bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-600 shadow-blue-500/50 hover:scale-105 active:scale-95'
-                : 'bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 shadow-gray-800/30 hover:scale-102 cursor-pointer'
-            } overflow-hidden`}
+                ? 'bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 shadow-blue-500/45 hover:scale-105 active:scale-95'
+                : 'cursor-pointer bg-gradient-to-br from-purple-700/95 via-blue-800/95 to-indigo-900/95 shadow-black/40 hover:scale-[1.02]'
+            }`}
           >
-            <div className="absolute inset-2 z-[1] flex items-center justify-center rounded-full bg-[#000000] p-4 overflow-hidden">
+            <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#000000] shadow-[inset_0_0_42px_rgba(0,0,0,0.94),inset_0_2px_4px_rgba(255,255,255,0.04)]">
               <img
                 src={miningCenterLogo}
                 alt="Web3Star mining logo"
-                className={`h-full w-full object-contain transition-all duration-300 ${
+                className={`h-full w-full origin-center scale-[1.22] object-contain transition-all duration-300 ${
                   centerButtonActive
-                    ? 'saturate-125 contrast-120 brightness-110 drop-shadow-[0_0_24px_rgba(56,189,248,0.75)]'
-                    : 'saturate-115 contrast-110 brightness-105 drop-shadow-[0_0_12px_rgba(148,163,184,0.3)]'
+                    ? 'saturate-[1.15] contrast-[1.12] brightness-110 drop-shadow-[0_0_28px_rgba(96,165,250,0.5)]'
+                    : 'saturate-[1.08] contrast-[1.08] brightness-[1.04] drop-shadow-[0_0_18px_rgba(129,140,248,0.28)]'
                 }`}
               />
             </div>
-            <div
-              className={`pointer-events-none absolute inset-0 z-[2] rounded-full border-2 transition-colors duration-300 ${
-                centerButtonActive ? 'border-white/20' : 'border-gray-700/50'
+            <span
+              className={`pointer-events-none absolute inset-[3px] z-[1] rounded-full ring-1 ring-inset transition-colors duration-300 ${
+                centerButtonActive ? 'ring-white/15' : 'ring-white/[0.06]'
               }`}
+              aria-hidden
             />
           </button>
         </div>

@@ -12,9 +12,17 @@ export default function Layout() {
   const points = profile?.point ?? 0;
 
   return (
-    <div className="h-screen w-full bg-black text-white flex flex-col overflow-hidden max-w-md mx-auto">
+    <div className="relative h-screen w-full text-white flex flex-col overflow-hidden max-w-md mx-auto">
+      <div
+        className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-[#101018] via-[#08080f] to-black"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -left-24 -top-10 z-0 h-72 w-72 rounded-full bg-gradient-to-br from-blue-500/35 via-indigo-500/30 to-purple-600/25 blur-[56px]"
+        aria-hidden
+      />
       {/* Top Header */}
-      <header className="flex items-center justify-between px-6 pt-8 pb-4">
+      <header className="relative z-10 flex items-center justify-between px-6 pt-8 pb-4">
         <button
           onClick={() => navigate('/app/profile')}
           className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/30 hover:scale-105 transition-transform active:scale-95"
@@ -39,10 +47,12 @@ export default function Layout() {
       </header>
 
       {/* Page Content */}
-      <Outlet />
+      <div className="relative z-10 min-h-0 flex-1 flex flex-col">
+        <Outlet />
+      </div>
 
       {/* Bottom Navigation Bar */}
-      <nav className="bg-gradient-to-t from-gray-900/95 to-gray-900/80 backdrop-blur-md border-t border-gray-800 px-6 py-4">
+      <nav className="relative z-10 bg-gradient-to-t from-gray-900/95 to-gray-900/80 backdrop-blur-md border-t border-gray-800 px-6 py-4">
         <div className="flex items-center justify-around max-w-sm mx-auto">
           <button
             onClick={() => navigate('/app')}
