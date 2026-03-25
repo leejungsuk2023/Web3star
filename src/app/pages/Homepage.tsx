@@ -111,7 +111,10 @@ const tokenomicsSegments = [
   },
 ] as const;
 
-const roadmapPinColors = ['#ec4899', '#14b8a6', '#a855f7', '#f97316', '#38bdf8', '#f43f5e'] as const;
+/** 로드맵 도로 중심선 (viewBox 좌표) — 핀 위치는 이 경로 기준으로 샘플링 */
+const ROAD_VIEW = { w: 1200, h: 440 };
+const ROAD_CENTER_PATH =
+  'M 36 238 C 160 238, 210 72, 360 72 C 510 72, 550 292, 700 292 C 850 292, 890 88, 1040 88 C 1140 88, 1168 218, 1184 238';
 
 function buildTokenomicsConicGradient() {
   let acc = 0;
@@ -125,124 +128,175 @@ function buildTokenomicsConicGradient() {
   return `conic-gradient(from -90deg, ${parts.join(', ')})`;
 }
 
+function RoadmapPin({ n, gradId }: { n: number; gradId: string }) {
+  return (
+    <svg width="36" height="46" viewBox="0 0 44 56" className="shrink-0 drop-shadow-[0_4px_12px_rgba(34,211,238,0.25)]" aria-hidden>
+      <defs>
+        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#22d3ee" />
+          <stop offset="100%" stopColor="#3b82f6" />
+        </linearGradient>
+      </defs>
+      <path d="M22 52c-8-10-14-22-14-30a14 14 0 1 1 28 0c0 8-6 20-14 30z" fill={`url(#${gradId})`} />
+      <circle cx="22" cy="20" r="9" fill="#0a0a0f" stroke="rgba(34,211,238,0.5)" strokeWidth="1" />
+      <text
+        x="22"
+        y="24"
+        textAnchor="middle"
+        fill="#e5e7eb"
+        fontSize="11"
+        fontWeight="700"
+        style={{ fontFamily: 'system-ui, sans-serif' }}
+      >
+        {n}
+      </text>
+    </svg>
+  );
+}
+
 function ProcessRoadmapTimeline() {
-  const pinLeftPct = [8, 22, 38, 54, 70, 86];
-  const pinTopPct = [58, 28, 62, 26, 58, 30];
+  const measureRef = React.useRef<SVGPathElement | null>(null);
+  const [anchors, setAnchors] = React.useState<{ x: number; y: number }[]>([]);
+
+  React.useLayoutEffect(() => {
+    const el = measureRef.current;
+    if (!el) return;
+    const len = el.getTotalLength();
+    if (!(len > 0)) return;
+    const t = [0.06, 0.22, 0.38, 0.54, 0.72, 0.9];
+    setAnchors(t.map((frac) => {
+      const p = el.getPointAtLength(len * frac);
+      return { x: p.x, y: p.y };
+    }));
+  }, []);
+
+  const { w: vbW, h: vbH } = ROAD_VIEW;
 
   return (
-    <section id="process" className="scroll-mt-24 overflow-hidden rounded-2xl border border-[#b8ba28]/40 shadow-xl">
-      <div className="bg-[#bfc122] py-4 md:py-5 text-center">
-        <h2 className="text-2xl md:text-3xl font-extrabold tracking-[0.2em] text-white uppercase">
-          Process Roadmap
-        </h2>
-        <p className="mt-1 text-sm text-white/90 font-medium">Phase 1 — 6 · Web3Star journey</p>
+    <section
+      id="process"
+      className="scroll-mt-24 rounded-3xl border border-gray-800 bg-[#090909] overflow-hidden shadow-[0_0_40px_rgba(6,182,212,0.06)]"
+    >
+      <div className="px-4 md:px-8 pt-8 md:pt-10 pb-2">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2">
+          <h2 className="text-3xl md:text-4xl font-bold text-white">Process / Roadmap</h2>
+          <span className="text-cyan-400/90 text-sm font-medium tracking-wide">Phase 01 — 06</span>
+        </div>
+        <p className="mt-3 text-gray-400 text-sm max-w-2xl leading-relaxed">
+          From mining app launch to global rollout — aligned on one path.
+        </p>
       </div>
 
-      <div className="bg-white text-gray-900">
-        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-8 md:py-12">
-          <div className="relative min-h-0 lg:min-h-[340px]">
-            <svg
-              className="absolute inset-x-0 bottom-8 md:bottom-10 w-full h-[200px] md:h-[220px] text-black pointer-events-none hidden lg:block"
-              viewBox="0 0 1000 220"
-              preserveAspectRatio="xMidYMid meet"
-              aria-hidden
-            >
-              <path
-                d="M 0 140 Q 160 55 320 140 T 640 140 T 1000 140"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="52"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 0 140 Q 160 55 320 140 T 640 140 T 1000 140"
-                fill="none"
-                stroke="white"
-                strokeWidth="2.5"
-                strokeDasharray="11 16"
-                strokeLinecap="round"
-                opacity="0.95"
-              />
-            </svg>
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 pb-10 md:pb-12">
+        <div className="hidden lg:block mt-4 overflow-x-auto overflow-y-visible pb-4 -mx-1 px-1 [scrollbar-width:thin]">
+        <div
+          className="relative w-full min-w-[920px] xl:min-w-0 max-w-[1200px] xl:max-w-none mx-auto"
+          style={{ aspectRatio: `${vbW} / ${vbH}` }}
+        >
+          <svg
+            className="absolute inset-0 w-full h-full text-[#16161f]"
+            viewBox={`0 0 ${vbW} ${vbH}`}
+            preserveAspectRatio="xMidYMid meet"
+            aria-hidden
+          >
+            <defs>
+              <linearGradient id="road-edge-glow" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="rgba(6,182,212,0.12)" />
+                <stop offset="50%" stopColor="rgba(59,130,246,0.1)" />
+                <stop offset="100%" stopColor="rgba(6,182,212,0.12)" />
+              </linearGradient>
+            </defs>
+            <path
+              d={ROAD_CENTER_PATH}
+              fill="none"
+              stroke="#1c1c26"
+              strokeWidth="48"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d={ROAD_CENTER_PATH}
+              fill="none"
+              stroke="url(#road-edge-glow)"
+              strokeWidth="48"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d={ROAD_CENTER_PATH}
+              fill="none"
+              stroke="rgba(34,211,238,0.45)"
+              strokeWidth="2"
+              strokeDasharray="9 14"
+              strokeLinecap="round"
+            />
+            <path
+              ref={measureRef}
+              d={ROAD_CENTER_PATH}
+              fill="none"
+              stroke="transparent"
+              strokeWidth="1"
+            />
+          </svg>
 
-            <div className="relative z-10 hidden lg:block h-[300px]">
-              {roadmapItems.map((item, i) => (
-                <div
-                  key={item.phase}
-                  className="absolute flex flex-col items-center w-[15%] min-w-[100px] max-w-[150px] -translate-x-1/2"
-                  style={{ left: `${pinLeftPct[i]}%`, top: `${pinTopPct[i]}%` }}
-                >
-                  <div className="relative mb-2 drop-shadow-md">
-                    <svg width="44" height="56" viewBox="0 0 44 56" aria-hidden>
-                      <path
-                        d="M22 52c-8-10-14-22-14-30a14 14 0 1 1 28 0c0 8-6 20-14 30z"
-                        fill={roadmapPinColors[i]}
-                      />
-                      <circle cx="22" cy="20" r="9" fill="white" />
-                      <text
-                        x="22"
-                        y="24"
-                        textAnchor="middle"
-                        fill="#111"
-                        fontSize="11"
-                        fontWeight="700"
-                        style={{ fontFamily: 'system-ui, sans-serif' }}
-                      >
-                        {i + 1}
-                      </text>
-                    </svg>
-                  </div>
-                  <h3 className="text-center text-sm font-bold text-gray-900 leading-tight">{item.title}</h3>
-                  <ul className="mt-2 text-center text-[11px] md:text-xs text-gray-500 leading-snug space-y-1">
+          {anchors.length === roadmapItems.length &&
+            roadmapItems.map((item, i) => (
+              <div
+                key={item.phase}
+                className="absolute z-10 flex flex-col items-center w-[148px] xl:w-[168px]"
+                style={{
+                  left: `${(anchors[i].x / vbW) * 100}%`,
+                  top: `${(anchors[i].y / vbH) * 100}%`,
+                  transform: 'translate(-50%, -100%)',
+                }}
+              >
+                <div className="rounded-xl border border-cyan-500/20 bg-black/75 backdrop-blur-sm px-2.5 py-2 shadow-lg shadow-cyan-950/40 mb-1">
+                  <p className="text-[10px] font-semibold text-cyan-400/90 tabular-nums">Phase {item.phase}</p>
+                  <h3 className="text-center text-[11px] xl:text-xs font-semibold text-white leading-snug mt-0.5">
+                    {item.title}
+                  </h3>
+                  <ul className="mt-1.5 space-y-1 text-[9px] xl:text-[10px] text-gray-400 leading-snug text-left">
                     {item.points.map((p) => (
-                      <li key={p}>{p}</li>
+                      <li key={p} className="pl-2 border-l border-cyan-500/25">
+                        {p}
+                      </li>
                     ))}
                   </ul>
                 </div>
-              ))}
-            </div>
-
-            <div className="lg:hidden space-y-6 pt-4">
-              {roadmapItems.map((item, i) => (
-                <article key={item.phase} className="flex gap-4">
-                  <div className="shrink-0">
-                    <svg width="40" height="52" viewBox="0 0 44 56" aria-hidden>
-                      <path
-                        d="M22 52c-8-10-14-22-14-30a14 14 0 1 1 28 0c0 8-6 20-14 30z"
-                        fill={roadmapPinColors[i]}
-                      />
-                      <circle cx="22" cy="20" r="9" fill="white" />
-                      <text
-                        x="22"
-                        y="24"
-                        textAnchor="middle"
-                        fill="#111"
-                        fontSize="10"
-                        fontWeight="700"
-                        style={{ fontFamily: 'system-ui, sans-serif' }}
-                      >
-                        {i + 1}
-                      </text>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900">{item.title}</h3>
-                    <ul className="mt-2 text-sm text-gray-600 space-y-1.5">
-                      {item.points.map((p) => (
-                        <li key={p}>· {p}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
+                <RoadmapPin n={i + 1} gradId={`roadmap-pin-grad-${item.phase}`} />
+              </div>
+            ))}
+        </div>
         </div>
 
-        <div className="bg-[#bfc122] py-3 flex justify-center">
-          <span className="rounded-full bg-white/95 px-5 py-1.5 text-xs md:text-sm font-semibold text-gray-800 shadow-sm">
-            web3star.org
-          </span>
+        <div className="lg:hidden mt-8 relative pl-3">
+          <div
+            className="absolute left-[19px] top-2 bottom-2 w-px bg-gradient-to-b from-cyan-500/60 via-blue-500/40 to-indigo-600/30"
+            aria-hidden
+          />
+          <ul className="space-y-8">
+            {roadmapItems.map((item, i) => (
+              <li key={item.phase} className="relative flex gap-4 pl-10">
+                <div className="absolute left-0 top-1 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-500/35 bg-[#0c0c12] shadow-[0_0_20px_rgba(34,211,238,0.12)]">
+                  <span className="text-xs font-bold bg-gradient-to-br from-cyan-300 to-blue-400 bg-clip-text text-transparent">
+                    {i + 1}
+                  </span>
+                </div>
+                <article className="flex-1 rounded-2xl border border-gray-800 bg-[#0c0c0c] px-4 py-3">
+                  <p className="text-xs font-semibold text-cyan-400/90">Phase {item.phase}</p>
+                  <h3 className="text-base font-semibold text-white mt-0.5">{item.title}</h3>
+                  <ul className="mt-2 space-y-1.5 text-sm text-gray-400">
+                    {item.points.map((p) => (
+                      <li key={p} className="flex gap-2">
+                        <span className="text-cyan-500/50 shrink-0">·</span>
+                        <span>{p}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>
