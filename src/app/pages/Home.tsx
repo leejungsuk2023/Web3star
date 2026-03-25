@@ -285,22 +285,22 @@ export default function Home() {
                 : 'bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 shadow-gray-800/30 hover:scale-102 cursor-pointer'
             } overflow-hidden`}
           >
-            <div className="absolute inset-2 rounded-full bg-[radial-gradient(circle_at_50%_45%,#091a2b_0%,#040912_55%,#02050a_100%)]"></div>
-            <div className="relative z-10 w-40 h-40 rounded-full overflow-hidden bg-transparent">
+            <div className="absolute inset-2 z-[1] flex items-center justify-center rounded-full bg-[#000000] p-4 overflow-hidden">
               <img
                 src={miningCenterLogo}
                 alt="Web3Star mining logo"
-                className={`absolute top-1/2 left-1/2 w-[75%] h-[75%] -translate-x-1/2 -translate-y-1/2 rounded-full object-contain bg-[#000] transition-all duration-300 ${
+                className={`h-full w-full object-contain transition-all duration-300 ${
                   centerButtonActive
                     ? 'saturate-125 contrast-120 brightness-110 drop-shadow-[0_0_24px_rgba(56,189,248,0.75)]'
                     : 'saturate-115 contrast-110 brightness-105 drop-shadow-[0_0_12px_rgba(148,163,184,0.3)]'
                 }`}
               />
-              <div className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle,transparent_62%,rgba(2,5,10,0.5)_80%,rgba(2,5,10,0.86)_100%)]" />
             </div>
-            <div className={`absolute inset-0 rounded-full border-2 transition-colors duration-300 ${
-              centerButtonActive ? 'border-white/20' : 'border-gray-700/50'
-            }`}></div>
+            <div
+              className={`pointer-events-none absolute inset-0 z-[2] rounded-full border-2 transition-colors duration-300 ${
+                centerButtonActive ? 'border-white/20' : 'border-gray-700/50'
+              }`}
+            />
           </button>
         </div>
 
