@@ -3,7 +3,6 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Apple,
   Download,
-  ExternalLink,
   Globe2,
   Mail,
   MessageCircle,
@@ -222,7 +221,7 @@ function TokenomicsDonutChart({ className }: { className?: string }) {
 
 const downloadSteps = [
   'Download the Android app package (APK or store listing when available).',
-  'Sign up and add a referral code if you have one (optional).',
+  'Sign up with Google and, if you have a referral code, add it (optional).',
   'Activate mining every 4 hours and complete KYC to qualify for token distribution.',
 ] as const;
 
@@ -334,7 +333,7 @@ function ProcessRoadmapTimeline() {
           <div>
             <h2 className="text-2xl font-bold text-white md:text-3xl">Process / Roadmap</h2>
             <p className="mt-1.5 max-w-xl text-sm leading-snug text-gray-400">
-              Six phases in order — left to right, then the next row (1 → 6).
+              Six phases in order.
             </p>
           </div>
           <p className="mt-2 shrink-0 text-xs font-medium tabular-nums text-cyan-400/90 sm:mt-1">01 → 06</p>
@@ -540,26 +539,7 @@ function DownloadSection() {
             <Apple className="h-3.5 w-3.5 shrink-0" aria-hidden />
             iOS
           </button>
-          <a
-            href="#process"
-            className="btn-glow-outline inline-flex items-center gap-1.5 rounded-lg border border-gray-700 px-3 py-2 text-xs font-semibold text-gray-200 hover:border-cyan-400/45 hover:text-cyan-300"
-          >
-            Installation guide
-            <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
-          </a>
         </div>
-        <p className="mt-2 text-[11px] text-gray-500">
-          Store listings on{' '}
-          <a
-            href="https://x.com/Web3starOrg"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-cyan-500/80 hover:text-cyan-400 hover:underline"
-          >
-            X
-          </a>
-          .
-        </p>
       </div>
     </section>
   );
@@ -697,11 +677,11 @@ const whitepaperSections = [
     n: 6,
     title: 'Distribution',
     lines: [
-      '40–45% — Mobile mining rewards (40–45B $W3S)',
-      '15–20% — Ecosystem & partnerships (15–20B $W3S)',
+      '42% — Mobile mining rewards (42B $W3S)',
+      '18% — Ecosystem & partnerships (18B $W3S)',
       '15% — Core team (vested, 15B $W3S)',
-      '10% — Community growth (10B $W3S)',
-      '7–10% — Development reserve (7–10B $W3S)',
+      '12% — Community growth (12B $W3S)',
+      '13% — Development reserve (13B $W3S)',
     ],
   },
   {
