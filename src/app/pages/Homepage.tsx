@@ -13,7 +13,7 @@ import {
   Sparkles,
   Twitter,
 } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import heroImage from '../../assets/web3star-hero-creation.png';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
@@ -862,6 +862,7 @@ function BenefitsSection() {
 }
 
 function HeroSection() {
+  const webAppLoginHref = `${import.meta.env.BASE_URL}app/login`;
   const wrapRef = React.useRef<HTMLElement>(null);
   const rafRef = React.useRef(0);
   const pendingRef = React.useRef({ xPct: 50, yPct: 45, px: 0, py: 0 });
@@ -972,12 +973,12 @@ function HeroSection() {
               Mining, tokens, and community — one ecosystem built for ownership, not rent.
             </p>
             <div className="mt-8 flex flex-row flex-wrap items-center gap-4">
-              <Link
-                to="/app/login"
+              <a
+                href={webAppLoginHref}
                 className="hero-btn hero-btn-primary inline-flex h-12 min-w-[220px] items-center justify-center rounded-xl border border-cyan-200/35 px-10 text-center text-sm font-bold tracking-[0.01em] text-white btn-glow-primary"
               >
                 Start with Web3Star
-              </Link>
+              </a>
               <a
                 href="#whitepaper"
                 className="hero-btn hero-btn-secondary inline-flex h-12 min-w-[220px] items-center justify-center rounded-xl border border-white/25 px-10 text-center text-sm font-medium tracking-[0.01em] text-slate-100/95 btn-glow-outline hover:border-white/40"
