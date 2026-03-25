@@ -1,8 +1,21 @@
 import React from 'react';
-import { MessageCircle, Send, Twitter } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Apple,
+  Download,
+  ExternalLink,
+  Globe2,
+  Mail,
+  MessageCircle,
+  Send,
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
+  Twitter,
+} from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import heroImage from '../../assets/web3star-home-hero.png';
+import heroImage from '../../assets/web3star-hero-creation.png';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
 
@@ -72,332 +85,413 @@ const roadmapItems = [
   },
 ];
 
-/** 도넛 차트용 (합계 100%) — 표기는 기존 레인지와 정합 */
+/** 합계 100% — 백서 구간과 정합 · 시안 계열 */
 const tokenomicsSegments = [
   {
     label: 'Mobile Mining Rewards',
     pct: 42,
     display: '40–45%',
-    color: '#ff6b35',
-    detail: 'Primary incentives for miners & early adopters.',
+    supplyB: '40–45B',
+    color: '#22d3ee',
+    detail: 'Largest slice: cloud mining, referrals, and early network effects.',
   },
   {
     label: 'Ecosystem & Partnerships',
     pct: 18,
     display: '15–20%',
-    color: '#e056fd',
-    detail: 'Partners, integrations, and ecosystem grants.',
+    supplyB: '15–20B',
+    color: '#38bdf8',
+    detail: 'Integrations, grants, and strategic partners that expand utility.',
   },
   {
     label: 'Core Team (Vested)',
     pct: 15,
     display: '15%',
-    color: '#a855f7',
-    detail: 'Long-term alignment with cliff & vesting.',
+    supplyB: '15B',
+    color: '#60a5fa',
+    detail: 'Cliff & vesting schedule; aligned with long-term delivery.',
   },
   {
     label: 'Community Growth',
     pct: 12,
     display: '10%',
-    color: '#ec4899',
-    detail: 'Campaigns, airdrops, and community programs.',
+    supplyB: '10B',
+    color: '#2dd4bf',
+    detail: 'Campaigns, education, airdrops, and user acquisition programs.',
   },
   {
     label: 'Development Reserve',
     pct: 13,
     display: '7–10%',
+    supplyB: '7–10B',
     color: '#fbbf24',
-    detail: 'Protocol R&D, security, and infrastructure.',
+    detail: 'Security audits, protocol R&D, and infrastructure runway.',
   },
 ] as const;
 
-/** 로드맵 도로 중심선 (viewBox 좌표) — 핀 위치는 이 경로 기준으로 샘플링 */
-const ROAD_VIEW = { w: 1200, h: 440 };
-const ROAD_CENTER_PATH =
-  'M 36 238 C 160 238, 210 72, 360 72 C 510 72, 550 292, 700 292 C 850 292, 890 88, 1040 88 C 1140 88, 1168 218, 1184 238';
-
-function buildTokenomicsConicGradient() {
-  let acc = 0;
-  const parts: string[] = [];
-  for (const s of tokenomicsSegments) {
-    const start = (acc / 100) * 360;
-    acc += s.pct;
-    const end = (acc / 100) * 360;
-    parts.push(`${s.color} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`);
-  }
-  return `conic-gradient(from -90deg, ${parts.join(', ')})`;
+/** SVG 도넛 슬라이스 (도 단위, -90° = 12시 방향) */
+function donutAnnulusPath(
+  cx: number,
+  cy: number,
+  rOuter: number,
+  rInner: number,
+  startDeg: number,
+  endDeg: number,
+): string {
+  const rad = (d: number) => ((d - 90) * Math.PI) / 180;
+  const pt = (r: number, d: number) => ({
+    x: cx + r * Math.cos(rad(d)),
+    y: cy + r * Math.sin(rad(d)),
+  });
+  const o1 = pt(rOuter, startDeg);
+  const o2 = pt(rOuter, endDeg);
+  const i2 = pt(rInner, endDeg);
+  const i1 = pt(rInner, startDeg);
+  const large = endDeg - startDeg > 180 ? 1 : 0;
+  return `M ${o1.x} ${o1.y} A ${rOuter} ${rOuter} 0 ${large} 1 ${o2.x} ${o2.y} L ${i2.x} ${i2.y} A ${rInner} ${rInner} 0 ${large} 0 ${i1.x} ${i1.y} Z`;
 }
 
-function RoadmapPin({ n, gradId }: { n: number; gradId: string }) {
+function TokenomicsDonutChart({ className }: { className?: string }) {
+  const cx = 50;
+  const cy = 50;
+  const rOuter = 43.5;
+  const rInner = 25.5;
+  const gapDeg = 1.15;
+  const n = tokenomicsSegments.length;
+  const totalGap = gapDeg * n;
+  const usable = 360 - totalGap;
+  let angle = -90 + gapDeg / 2;
+
   return (
-    <svg width="36" height="46" viewBox="0 0 44 56" className="shrink-0 drop-shadow-[0_4px_12px_rgba(34,211,238,0.25)]" aria-hidden>
+    <svg viewBox="0 0 100 100" className={className} aria-hidden>
       <defs>
-        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#22d3ee" />
-          <stop offset="100%" stopColor="#3b82f6" />
+        <filter id="tok-donut-glow" x="-35%" y="-35%" width="170%" height="170%">
+          <feGaussianBlur stdDeviation="1.2" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <linearGradient id="tok-donut-orbit" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(34,211,238,0.45)" />
+          <stop offset="50%" stopColor="rgba(59,130,246,0.2)" />
+          <stop offset="100%" stopColor="rgba(34,211,238,0.25)" />
         </linearGradient>
+        <radialGradient id="tok-donut-hub-shine" cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.08)" />
+          <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+        </radialGradient>
       </defs>
-      <path d="M22 52c-8-10-14-22-14-30a14 14 0 1 1 28 0c0 8-6 20-14 30z" fill={`url(#${gradId})`} />
-      <circle cx="22" cy="20" r="9" fill="#0a0a0f" stroke="rgba(34,211,238,0.5)" strokeWidth="1" />
-      <text
-        x="22"
-        y="24"
-        textAnchor="middle"
-        fill="#e5e7eb"
-        fontSize="11"
-        fontWeight="700"
-        style={{ fontFamily: 'system-ui, sans-serif' }}
-      >
-        {n}
-      </text>
+
+      <circle
+        cx={cx}
+        cy={cy}
+        r={rOuter + 3.2}
+        fill="none"
+        stroke="url(#tok-donut-orbit)"
+        strokeWidth="0.55"
+        opacity={0.85}
+      />
+      <circle cx={cx} cy={cy} r={rOuter + 1.4} fill="none" stroke="rgba(6,182,212,0.12)" strokeWidth="0.35" />
+
+      {tokenomicsSegments.map((s) => {
+        const sweep = (s.pct / 100) * usable;
+        const start = angle;
+        const end = angle + sweep;
+        angle = end + gapDeg;
+        return (
+          <path
+            key={s.label}
+            d={donutAnnulusPath(cx, cy, rOuter, rInner, start, end)}
+            fill={s.color}
+            filter="url(#tok-donut-glow)"
+            opacity={0.96}
+            stroke="rgba(0,0,0,0.35)"
+            strokeWidth="0.12"
+            strokeLinejoin="round"
+            className="origin-center transition-[opacity,transform] duration-200 hover:opacity-100 hover:brightness-110"
+          />
+        );
+      })}
+
+      <circle cx={cx} cy={cy} r={rInner - 0.35} fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth="0.4" />
+      <circle cx={cx} cy={cy} r={rInner - 0.9} fill="url(#tok-donut-hub-shine)" opacity={0.9} />
     </svg>
   );
 }
 
+const downloadSteps = [
+  'Download the Android app package (APK or store listing when available).',
+  'Sign up and add a referral code if you have one (optional).',
+  'Activate mining every 4 hours and complete KYC to qualify for token distribution.',
+] as const;
+
+const communityChannels: {
+  label: string;
+  detail: string;
+  icon: LucideIcon;
+  href?: string;
+  external?: boolean;
+  soon?: boolean;
+}[] = [
+  {
+    label: 'Website',
+    detail: 'web3star.org',
+    href: 'https://web3star.org',
+    icon: Globe2,
+    external: true,
+  },
+  {
+    label: 'X (Twitter)',
+    detail: 'x.com/Web3starOrg',
+    href: 'https://x.com/Web3starOrg',
+    icon: Twitter,
+    external: true,
+  },
+  {
+    label: 'Email',
+    detail: 'support@web3star.org',
+    href: 'mailto:support@web3star.org',
+    icon: Mail,
+    external: false,
+  },
+  { label: 'Telegram', detail: 'Community announcements', icon: Send, soon: true },
+  { label: 'Discord', detail: 'Builders & support', icon: MessageCircle, soon: true },
+];
+
+function RoadmapPhaseCard({
+  item,
+  stepIndex,
+  compact = false,
+}: {
+  item: (typeof roadmapItems)[number];
+  stepIndex: number;
+  compact?: boolean;
+}) {
+  return (
+    <article
+      className={`relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-cyan-500/18 bg-[#0c0c0c] shadow-[0_0_28px_rgba(6,182,212,0.05)] before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-gradient-to-b before:from-cyan-400/70 before:via-sky-500/40 before:to-blue-600/30 ${
+        compact ? 'rounded-xl p-4' : 'p-5'
+      }`}
+    >
+      <div
+        className={`pointer-events-none absolute right-2 top-1 select-none font-black tabular-nums leading-none text-cyan-400/[0.07] ${
+          compact ? 'text-4xl' : 'text-5xl sm:text-6xl right-3 top-2'
+        }`}
+        aria-hidden
+      >
+        {item.phase}
+      </div>
+      <div className={`relative z-[1] flex items-center gap-2 ${compact ? 'gap-2.5' : 'gap-3'}`}>
+        <span
+          className={`flex shrink-0 items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/10 font-bold text-cyan-200 tabular-nums ${
+            compact ? 'h-8 w-8 text-xs' : 'h-9 w-9 rounded-xl text-sm'
+          }`}
+        >
+          {stepIndex}
+        </span>
+        <div className="min-w-0">
+          <p
+            className={`font-semibold uppercase tracking-wider text-cyan-400/85 ${
+              compact ? 'text-[10px]' : 'text-[11px]'
+            }`}
+          >
+            Phase {item.phase}
+          </p>
+          <h3 className={`font-semibold leading-snug text-white ${compact ? 'text-sm' : 'text-base'}`}>
+            {item.title}
+          </h3>
+        </div>
+      </div>
+      <ul
+        className={`relative z-[1] flex flex-1 flex-col text-gray-400 ${
+          compact ? 'mt-3 gap-1.5 text-xs leading-relaxed' : 'mt-4 gap-2.5 text-sm leading-relaxed'
+        }`}
+      >
+        {item.points.map((p) => (
+          <li key={p} className={`flex gap-2 border-l border-cyan-500/20 pl-2.5 ${compact ? 'gap-1.5 pl-2' : 'gap-2.5 pl-3'}`}>
+            <span
+              className={`mt-1 shrink-0 rounded-full bg-cyan-400/50 ${compact ? 'h-0.5 w-0.5' : 'mt-1.5 h-1 w-1'}`}
+              aria-hidden
+            />
+            <span>{p}</span>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+/** 로드맵: 짧은 흐름 스트립 + 3열 그리드(읽는 순서 = 시간 순서) — 세로 길이 최소화 */
 function ProcessRoadmapTimeline() {
-  const measureRef = React.useRef<SVGPathElement | null>(null);
-  const [anchors, setAnchors] = React.useState<{ x: number; y: number }[]>([]);
-
-  React.useLayoutEffect(() => {
-    const el = measureRef.current;
-    if (!el) return;
-    const len = el.getTotalLength();
-    if (!(len > 0)) return;
-    const t = [0.06, 0.22, 0.38, 0.54, 0.72, 0.9];
-    setAnchors(t.map((frac) => {
-      const p = el.getPointAtLength(len * frac);
-      return { x: p.x, y: p.y };
-    }));
-  }, []);
-
-  const { w: vbW, h: vbH } = ROAD_VIEW;
-
   return (
     <section
       id="process"
-      className="scroll-mt-24 rounded-3xl border border-gray-800 bg-[#090909] overflow-hidden shadow-[0_0_40px_rgba(6,182,212,0.06)]"
+      className="scroll-mt-24 rounded-3xl border border-gray-800 bg-[#090909] shadow-[0_0_40px_rgba(6,182,212,0.06)]"
     >
-      <div className="px-4 md:px-8 pt-8 md:pt-10 pb-2">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2">
-          <h2 className="text-3xl md:text-4xl font-bold text-white">Process / Roadmap</h2>
-          <span className="text-cyan-400/90 text-sm font-medium tracking-wide">Phase 01 — 06</span>
+      <div className="border-b border-gray-800/80 px-4 py-6 md:px-8 md:py-7">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white md:text-3xl">Process / Roadmap</h2>
+            <p className="mt-1.5 max-w-xl text-sm leading-snug text-gray-400">
+              Six phases in order — left to right, then the next row (1 → 6).
+            </p>
+          </div>
+          <p className="mt-2 shrink-0 text-xs font-medium tabular-nums text-cyan-400/90 sm:mt-1">01 → 06</p>
         </div>
-        <p className="mt-3 text-gray-400 text-sm max-w-2xl leading-relaxed">
-          From mining app launch to global rollout — aligned on one path.
-        </p>
+
+        <div
+          className="mt-5 flex flex-wrap items-center gap-x-0 gap-y-1.5 text-[11px] font-medium text-cyan-500/45"
+          aria-hidden
+        >
+          {roadmapItems.map((item, i) => (
+            <React.Fragment key={`seq-${item.phase}`}>
+              {i > 0 && <span className="px-1.5 sm:px-2">→</span>}
+              <span
+                className="rounded border border-cyan-500/25 bg-cyan-500/[0.07] px-2 py-0.5 tabular-nums text-cyan-200/95"
+                title={item.title}
+              >
+                {String(i + 1).padStart(2, '0')}
+              </span>
+            </React.Fragment>
+          ))}
+        </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-3 sm:px-6 pb-10 md:pb-12">
-        <div className="hidden lg:block mt-4 overflow-x-auto overflow-y-visible pb-4 -mx-1 px-1 [scrollbar-width:thin]">
-        <div
-          className="relative w-full min-w-[920px] xl:min-w-0 max-w-[1200px] xl:max-w-none mx-auto"
-          style={{ aspectRatio: `${vbW} / ${vbH}` }}
-        >
-          <svg
-            className="absolute inset-0 w-full h-full text-[#16161f]"
-            viewBox={`0 0 ${vbW} ${vbH}`}
-            preserveAspectRatio="xMidYMid meet"
-            aria-hidden
-          >
-            <defs>
-              <linearGradient id="road-edge-glow" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="rgba(6,182,212,0.12)" />
-                <stop offset="50%" stopColor="rgba(59,130,246,0.1)" />
-                <stop offset="100%" stopColor="rgba(6,182,212,0.12)" />
-              </linearGradient>
-            </defs>
-            <path
-              d={ROAD_CENTER_PATH}
-              fill="none"
-              stroke="#1c1c26"
-              strokeWidth="48"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d={ROAD_CENTER_PATH}
-              fill="none"
-              stroke="url(#road-edge-glow)"
-              strokeWidth="48"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d={ROAD_CENTER_PATH}
-              fill="none"
-              stroke="rgba(34,211,238,0.45)"
-              strokeWidth="2"
-              strokeDasharray="9 14"
-              strokeLinecap="round"
-            />
-            <path
-              ref={measureRef}
-              d={ROAD_CENTER_PATH}
-              fill="none"
-              stroke="transparent"
-              strokeWidth="1"
-            />
-          </svg>
-
-          {anchors.length === roadmapItems.length &&
-            roadmapItems.map((item, i) => (
-              <div
-                key={item.phase}
-                className="absolute z-10 flex flex-col items-center w-[148px] xl:w-[168px]"
-                style={{
-                  left: `${(anchors[i].x / vbW) * 100}%`,
-                  top: `${(anchors[i].y / vbH) * 100}%`,
-                  transform: 'translate(-50%, -100%)',
-                }}
-              >
-                <div className="rounded-xl border border-cyan-500/20 bg-black/75 backdrop-blur-sm px-2.5 py-2 shadow-lg shadow-cyan-950/40 mb-1">
-                  <p className="text-[10px] font-semibold text-cyan-400/90 tabular-nums">Phase {item.phase}</p>
-                  <h3 className="text-center text-[11px] xl:text-xs font-semibold text-white leading-snug mt-0.5">
-                    {item.title}
-                  </h3>
-                  <ul className="mt-1.5 space-y-1 text-[9px] xl:text-[10px] text-gray-400 leading-snug text-left">
-                    {item.points.map((p) => (
-                      <li key={p} className="pl-2 border-l border-cyan-500/25">
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <RoadmapPin n={i + 1} gradId={`roadmap-pin-grad-${item.phase}`} />
-              </div>
-            ))}
-        </div>
-        </div>
-
-        <div className="lg:hidden mt-8 relative pl-3">
-          <div
-            className="absolute left-[19px] top-2 bottom-2 w-px bg-gradient-to-b from-cyan-500/60 via-blue-500/40 to-indigo-600/30"
-            aria-hidden
-          />
-          <ul className="space-y-8">
-            {roadmapItems.map((item, i) => (
-              <li key={item.phase} className="relative flex gap-4 pl-10">
-                <div className="absolute left-0 top-1 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-500/35 bg-[#0c0c12] shadow-[0_0_20px_rgba(34,211,238,0.12)]">
-                  <span className="text-xs font-bold bg-gradient-to-br from-cyan-300 to-blue-400 bg-clip-text text-transparent">
-                    {i + 1}
-                  </span>
-                </div>
-                <article className="flex-1 rounded-2xl border border-gray-800 bg-[#0c0c0c] px-4 py-3">
-                  <p className="text-xs font-semibold text-cyan-400/90">Phase {item.phase}</p>
-                  <h3 className="text-base font-semibold text-white mt-0.5">{item.title}</h3>
-                  <ul className="mt-2 space-y-1.5 text-sm text-gray-400">
-                    {item.points.map((p) => (
-                      <li key={p} className="flex gap-2">
-                        <span className="text-cyan-500/50 shrink-0">·</span>
-                        <span>{p}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              </li>
-            ))}
-          </ul>
+      <div className="px-4 py-6 md:px-8 md:py-7">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {roadmapItems.map((item, i) => (
+            <RoadmapPhaseCard key={item.phase} item={item} stepIndex={i + 1} compact />
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-function TokenomicsInfographic() {
-  const gradient = buildTokenomicsConicGradient();
-  const mid = Math.ceil(tokenomicsSegments.length / 2);
-  const leftCol = tokenomicsSegments.slice(0, mid);
-  const rightCol = tokenomicsSegments.slice(mid);
-
+function TokenomicsSection() {
   return (
     <section
       id="tokenomics"
-      className="scroll-mt-24 relative overflow-hidden rounded-3xl border border-purple-500/20"
+      className="scroll-mt-24 rounded-3xl border border-gray-800 bg-[#090909] shadow-[0_0_40px_rgba(6,182,212,0.06)]"
     >
-      <div
-        className="absolute inset-0 bg-gradient-to-br from-[#1a0a2e] via-[#2d1b4e] to-[#0a0518]"
-        aria-hidden
-      />
-      <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(140%,800px)] h-[min(140%,800px)] rounded-full bg-fuchsia-600/15 blur-3xl pointer-events-none"
-        aria-hidden
-      />
-
-      <div className="relative z-10 px-4 md:px-8 py-10 md:py-14">
-        <h2 className="text-center text-3xl md:text-4xl font-bold text-white tracking-tight mb-2">
-          Tokenomics
-        </h2>
-        <p className="text-center text-sm text-purple-200/80 mb-10 md:mb-12 max-w-xl mx-auto">
-          Name: Web3Star · Symbol: $W3S (planned) · Illustrative allocation (totals 100%)
+      <div className="border-b border-gray-800/80 px-4 py-4 md:px-6 md:py-5">
+        <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-cyan-400">Supply design</p>
+        <h2 className="mt-1.5 text-xl font-bold text-white md:text-2xl">Tokenomics</h2>
+        <p className="mt-1 max-w-3xl text-xs leading-snug text-gray-400 md:text-sm">
+          Illustrative allocation for Web3Star ($W3S) on a 100B max supply. Model weights sum to 100%; public
+          sale and vesting mechanics will be confirmed with audits and governance.
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[
+            { k: 'Symbol', v: '$W3S' },
+            { k: 'Max supply', v: '100B' },
+            { k: 'Chain (plan)', v: 'Solana' },
+            { k: 'Allocation', v: '100%' },
+          ].map((row) => (
+            <div
+              key={row.k}
+              className="rounded-lg border border-cyan-500/20 bg-cyan-500/[0.06] px-2.5 py-1.5"
+            >
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-cyan-400/80">{row.k}</p>
+              <p className="text-sm font-bold tabular-nums text-white">{row.v}</p>
+            </div>
+          ))}
+        </div>
+      </div>
 
-        <div className="max-w-5xl mx-auto grid lg:grid-cols-[1fr_minmax(260px,320px)_1fr] gap-8 lg:gap-6 items-center">
-          <ul className="space-y-6 order-2 lg:order-1 flex flex-col items-end lg:items-end">
-            {leftCol.map((s) => (
-              <li key={s.label} className="w-full max-w-[260px] text-right">
-                <p className="text-base font-semibold" style={{ color: s.color }}>
-                  {s.label}
+      <div className="px-4 py-4 md:px-6 md:py-5">
+        <div className="grid items-center gap-6 lg:grid-cols-12 lg:gap-8">
+          <div className="relative mx-auto w-full max-w-[min(88vw,300px)] sm:max-w-[340px] md:max-w-[380px] lg:col-span-5 lg:mx-0 lg:max-w-none">
+            <div
+              className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[108%] max-w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-cyan-500/[0.14] via-blue-600/[0.06] to-transparent blur-3xl"
+              aria-hidden
+            />
+            <div
+              className="relative aspect-square w-full"
+              role="img"
+              aria-label="Web3Star token allocation: five segments totaling one hundred percent of the model pool"
+            >
+              <TokenomicsDonutChart className="h-full w-full drop-shadow-[0_0_40px_rgba(34,211,238,0.18)]" />
+              <div className="absolute inset-[21.5%] z-[2] flex flex-col items-center justify-center rounded-full border border-cyan-500/30 bg-gradient-to-b from-[#14141c] via-[#0a0a10] to-[#050508] px-2.5 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_0_0_1px_rgba(0,0,0,0.4)] sm:px-3 sm:py-2.5">
+                <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-cyan-400/90 sm:text-[9px]">
+                  Max supply (cap)
                 </p>
-                <p className="text-lg font-bold text-white">{s.display}</p>
-                <p className="text-xs text-purple-200/70 mt-1 leading-relaxed">{s.detail}</p>
-              </li>
-            ))}
-          </ul>
-
-          <div className="relative flex justify-center order-1 lg:order-2 py-4">
-            <div
-              className="absolute inset-0 m-auto w-[min(85vw,280px)] h-[min(85vw,280px)] md:w-[300px] md:h-[300px] rounded-full bg-white/5 backdrop-blur-md border border-white/10 shadow-[0_0_60px_rgba(236,72,153,0.25)] pointer-events-none scale-110"
-              aria-hidden
-            />
-            <div
-              className="absolute right-0 top-1/4 w-24 h-32 rounded-2xl bg-white/[0.07] backdrop-blur-lg border border-white/15 shadow-lg hidden md:block"
-              aria-hidden
-            />
-            <div
-              className="absolute right-[-8px] bottom-1/4 w-20 h-24 rounded-xl bg-white/[0.06] backdrop-blur-md border border-white/10 hidden md:block"
-              aria-hidden
-            />
-
-            <div className="relative w-[min(78vw,260px)] h-[min(78vw,260px)] md:w-[280px] md:h-[280px]">
-              <div
-                className="absolute inset-0 rounded-full shadow-[0_0_40px_rgba(255,107,53,0.35)]"
-                style={{
-                  background: gradient,
-                  maskImage: 'radial-gradient(circle, transparent 56%, black 56.5%)',
-                  WebkitMaskImage: 'radial-gradient(circle, transparent 56%, black 56.5%)',
-                }}
-              />
-              <div className="absolute inset-[18%] rounded-full bg-gradient-to-b from-[#1f0f3a]/95 to-[#0d0618] border border-purple-500/30 flex flex-col items-center justify-center text-center px-4 shadow-inner">
-                <p className="text-[10px] md:text-xs uppercase tracking-[0.25em] text-purple-300/90 font-semibold">
-                  Allocation
+                <p className="mt-0.5 text-2xl font-bold tabular-nums leading-none tracking-tight text-white sm:text-3xl md:text-[2rem]">
+                  100B
                 </p>
-                <p className="text-2xl md:text-3xl font-bold text-white mt-1">100%</p>
-                <p className="text-[10px] text-purple-300/70 mt-1">$W3S · planned</p>
+                <p className="mt-0.5 text-[9px] text-gray-500 sm:text-[10px]">$W3S tokens · hard ceiling</p>
+
+                <div className="my-2 w-[82%] border-t border-white/10" />
+
+                <p className="text-[10px] font-semibold text-cyan-200/95 sm:text-[11px]">
+                  <span className="tabular-nums">$W3S</span>
+                  <span className="mx-1 text-gray-600">·</span>
+                  <span className="font-normal text-gray-400">Web3Star</span>
+                </p>
+                <p className="mt-1 max-w-[11rem] text-[8px] leading-snug text-gray-500 sm:max-w-[13rem] sm:text-[9px]">
+                  Five allocation pools in this model sum to{' '}
+                  <span className="font-medium text-gray-400">100%</span>. The largest slice is mobile mining (
+                  <span className="tabular-nums text-cyan-500/80">~42%</span>
+                  ).
+                </p>
+                <p className="mt-1.5 text-[8px] text-gray-600 sm:text-[9px]">Solana (planned) · illustrative only</p>
               </div>
             </div>
+            <p className="mt-3 text-center text-[10px] leading-snug text-gray-500 lg:text-left">
+              Slices are separated for clarity; hover desktop segments for emphasis. Figures align with the
+              whitepaper Distribution section.
+            </p>
           </div>
 
-          <ul className="space-y-6 order-3">
-            {rightCol.map((s) => (
-              <li key={s.label}>
-                <div className="max-w-[240px]">
-                  <p className="text-base font-semibold" style={{ color: s.color }}>
-                    {s.label}
-                  </p>
-                  <p className="text-lg font-bold text-white">{s.display}</p>
-                  <p className="text-xs text-purple-200/70 mt-1 leading-relaxed">{s.detail}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="lg:col-span-7">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              Breakdown · % model + indicative $W3S (max 100B)
+            </p>
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Allocation legend and details">
+              {tokenomicsSegments.map((s) => (
+                <li
+                  key={s.label}
+                  className="rounded-xl border border-gray-800/90 bg-[#0c0c0c] p-3 shadow-[0_0_20px_rgba(6,182,212,0.04)] transition-colors hover:border-cyan-500/20"
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="mt-0.5 h-9 w-1.5 shrink-0 rounded-full shadow-[0_0_12px_currentColor]"
+                      style={{ backgroundColor: s.color, color: s.color }}
+                      aria-hidden
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                        <p className="text-xs font-semibold leading-tight text-white md:text-sm">{s.label}</p>
+                        <p className="text-base font-bold tabular-nums text-cyan-200 md:text-lg">{s.pct}%</p>
+                      </div>
+                      <p className="mt-0.5 text-[11px] tabular-nums text-cyan-500/70">
+                        {s.supplyB} $W3S · {s.display} band
+                      </p>
+                      <p className="mt-1.5 text-[11px] leading-relaxed text-gray-500 md:text-xs">{s.detail}</p>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
-        <div className="max-w-3xl mx-auto mt-12 rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm p-5 md:p-6">
-          <h3 className="text-sm font-semibold text-purple-200 mb-2">Distribution principles</h3>
-          <ul className="text-sm text-purple-100/85 space-y-2 leading-relaxed">
-            <li>· Early contributors are rewarded through mining-focused allocation.</li>
-            <li>· Sustainable ecosystem growth via partner and reserve pools.</li>
-            <li>· Community ownership expands over time through governance mechanisms.</li>
+        <div className="mt-4 rounded-xl border border-cyan-500/15 bg-[#0c0c0c] px-3 py-3 md:px-4">
+          <h3 className="text-xs font-semibold text-cyan-400/90">Distribution principles</h3>
+          <ul className="mt-2 grid gap-1.5 text-[11px] leading-relaxed text-gray-400 sm:grid-cols-3 sm:gap-x-4 sm:text-xs">
+            <li className="flex gap-1.5">
+              <span className="text-cyan-500/50">·</span>
+              Mining-first rewards for early contributors and network growth.
+            </li>
+            <li className="flex gap-1.5">
+              <span className="text-cyan-500/50">·</span>
+              Ecosystem and reserve tranches fund partners, R&amp;D, and runway.
+            </li>
+            <li className="flex gap-1.5">
+              <span className="text-cyan-500/50">·</span>
+              Governance can refine weights as the protocol matures.
+            </li>
           </ul>
         </div>
       </div>
@@ -405,24 +499,548 @@ function TokenomicsInfographic() {
   );
 }
 
-const benefitCards = [
+function DownloadSection() {
+  return (
+    <section
+      id="download"
+      className="scroll-mt-24 rounded-3xl border border-gray-800 bg-[#090909] shadow-[0_0_40px_rgba(6,182,212,0.06)]"
+    >
+      <div className="border-b border-gray-800/80 px-4 py-4 md:px-6 md:py-5">
+        <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-cyan-400">Mobile app</p>
+        <h2 className="mt-1 text-xl font-bold text-white md:text-2xl">Download</h2>
+        <p className="mt-1 max-w-xl text-xs leading-snug text-gray-400">
+          Mining and full product features run in the native app — get started in three steps.
+        </p>
+      </div>
+      <div className="px-4 py-4 md:px-6 md:py-5">
+        <ol className="space-y-2">
+          {downloadSteps.map((step, i) => (
+            <li key={step} className="flex gap-2.5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-500/30 bg-cyan-500/10 text-[11px] font-bold tabular-nums text-cyan-200">
+                {i + 1}
+              </span>
+              <p className="pt-0.5 text-xs leading-snug text-gray-300">{step}</p>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-800/80 pt-3">
+          <button
+            type="button"
+            className="btn-glow-soft inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-cyan-500/35 bg-cyan-500/15 px-3 py-2 text-xs font-semibold text-cyan-50 opacity-85 hover:opacity-95"
+            title="Google Play release coming soon"
+          >
+            <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            Android
+          </button>
+          <button
+            type="button"
+            className="btn-glow-soft inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-gray-700 bg-[#0c0c0c] px-3 py-2 text-xs font-semibold text-gray-500 hover:border-gray-600"
+            title="App Store release coming soon"
+          >
+            <Apple className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            iOS
+          </button>
+          <a
+            href="#process"
+            className="btn-glow-outline inline-flex items-center gap-1.5 rounded-lg border border-gray-700 px-3 py-2 text-xs font-semibold text-gray-200 hover:border-cyan-400/45 hover:text-cyan-300"
+          >
+            Installation guide
+            <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
+          </a>
+        </div>
+        <p className="mt-2 text-[11px] text-gray-500">
+          Store listings on{' '}
+          <a
+            href="https://x.com/Web3starOrg"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan-500/80 hover:text-cyan-400 hover:underline"
+          >
+            X
+          </a>
+          .
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function CommunitySection() {
+  return (
+    <section
+      id="community"
+      className="scroll-mt-24 rounded-3xl border border-gray-800 bg-[#090909] shadow-[0_0_40px_rgba(6,182,212,0.06)]"
+    >
+      <div className="border-b border-gray-800/80 px-4 py-4 md:px-6 md:py-5">
+        <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-cyan-400">Stay connected</p>
+        <h2 className="mt-1 text-xl font-bold text-white md:text-2xl">Community</h2>
+        <p className="mt-1 max-w-xl text-xs leading-snug text-gray-400">
+          Official channels for updates, support, and announcements.
+        </p>
+      </div>
+      <div className="px-4 py-4 md:px-6 md:py-5">
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {communityChannels.map((ch) => (
+            <li
+              key={ch.label}
+              className="flex items-center gap-2.5 rounded-lg border border-gray-800 bg-[#0c0c0c] px-3 py-2.5"
+            >
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
+                  ch.soon ? 'border-gray-700 text-gray-500' : 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300'
+                }`}
+              >
+                <ch.icon className="h-4 w-4" aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-cyan-400/80">{ch.label}</p>
+                {ch.soon ? (
+                  <span className="text-[11px] text-gray-500">Coming soon</span>
+                ) : ch.href ? (
+                  <a
+                    href={ch.href}
+                    {...(ch.href.startsWith('mailto:') ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
+                    className="block truncate text-xs font-medium text-cyan-300 hover:text-cyan-200"
+                  >
+                    {ch.detail}
+                  </a>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+const benefitCards: {
+  title: string;
+  desc: string;
+  Icon: LucideIcon;
+}[] = [
   {
     title: 'Creator-first Economy',
     desc: 'Creators issue personal tokens and monetize directly with transparent revenue sharing.',
+    Icon: Sparkles,
   },
   {
     title: 'Low Barrier Entry',
     desc: '4-hour cloud mining works on mobile without hardware cost, battery burden, or complexity.',
+    Icon: Smartphone,
   },
   {
     title: 'Web3 Utility',
     desc: 'Token utility, social features, and long-term DAO governance are integrated in one ecosystem.',
+    Icon: Globe2,
   },
   {
     title: 'Security by Design',
     desc: 'Bot prevention, KYC before withdrawal, encryption, and smart contract audits.',
+    Icon: ShieldCheck,
   },
 ];
+
+/** 백서 전문 (요약 없음) */
+const whitepaperSections = [
+  {
+    n: 1,
+    title: 'Abstract',
+    paragraphs: [
+      'Web3Star is a decentralized Web3 utility ecosystem designed to make cryptocurrency-powered creative platforms accessible to everyone.',
+      'By combining Web 3.0 social media, DAO governance, and smart contract functionality, Web3Star delivers a decentralized economy to billions of mobile users worldwide.',
+    ],
+  },
+  {
+    n: 2,
+    title: 'Introduction',
+    paragraphs: [
+      'Web3Star transforms into a blockchain-powered Web3 creative platform. Through our cloud-based mobile mining app, users can earn Web3Star utility tokens without specialized skills or expensive hardware.',
+      'By lowering entry barriers with a social media–driven Web3 creative platform, we take the first step toward a more inclusive future for Web 3.0 content creation.',
+    ],
+  },
+  {
+    n: 3,
+    title: 'The Web3Star Solution',
+    bullets: [
+      'Users activate mining sessions by tapping a button every 4 hours.',
+      'All mining operations are securely simulated and managed on our cloud backend.',
+      'This ensures no impact on device performance, battery life, or data usage.',
+      'Free access: The app is free to download and use.',
+      'Anyone with a smartphone can mine Web3Star utility tokens.',
+      'Tokens will be airdropped to users who complete KYC verification after mining points.',
+      'Web3 integration: Beyond mining, the app serves as a gateway to token utility, social features, and future DAO governance.',
+    ],
+  },
+  {
+    n: 4,
+    title: 'Our Vision',
+    paragraphs: [
+      'Our long-term vision is to establish Web3Star as the core of a dynamic, creator-driven Web3 social ecosystem.',
+      'Web3Star enables decentralized social applications for creators.',
+      '$W3S tokens can be used for in-app transactions.',
+      'Community-driven growth allows creators to issue their own tokens, expanding networks between creators and fans.',
+      'Fans can hold creator tokens, evolving into decentralized autonomous organizations (DAOs).',
+    ],
+  },
+  {
+    n: 5,
+    title: 'Tokenomics',
+    lines: [
+      'Name: Web3Star',
+      'Symbol: $W3S (planned)',
+      'Total Supply: 100,000,000,000 $W3S (100 billion)',
+      'Blockchain: Solana (planned)',
+    ],
+  },
+  {
+    n: 6,
+    title: 'Distribution',
+    lines: [
+      '40–45% — Mobile mining rewards (40–45B $W3S)',
+      '15–20% — Ecosystem & partnerships (15–20B $W3S)',
+      '15% — Core team (vested, 15B $W3S)',
+      '10% — Community growth (10B $W3S)',
+      '7–10% — Development reserve (7–10B $W3S)',
+    ],
+  },
+  {
+    n: 7,
+    title: 'Halving & Mining Rate Reduction',
+    paragraphs: [
+      'Mining sessions occur every 4 hours. To reward early adopters, $W3S follows a fixed time-based halving schedule that gradually reduces mining rates.',
+    ],
+  },
+  {
+    n: 8,
+    title: 'Security',
+    paragraphs: [
+      'Security and trust are paramount. Our multi-layered security model protects both the network and users.',
+    ],
+    bullets: [
+      'Bot prevention: Advanced verification, device fingerprinting, and Captcha systems ensure fair mining by real users.',
+      'Account integrity: Mandatory KYC before mainnet withdrawals prevents duplicate accounts and Sybil attacks.',
+      'Data security: End-to-end encryption for all user data and communications.',
+      'Smart contract audits: $W3S contracts and future protocols are audited by third-party security firms.',
+    ],
+  },
+  {
+    n: 9,
+    title: 'Contact & Community',
+    paragraphs: ['Join our growing community and stay updated on progress.'],
+    contacts: [
+      { label: 'Web', href: 'https://web3star.org', display: 'web3star.org' },
+      { label: 'Twitter/X', href: 'https://x.com/Web3starOrg', display: 'x.com/Web3starOrg' },
+      { label: 'Email', href: 'mailto:support@web3star.org', display: 'support@web3star.org' },
+    ],
+  },
+] as const;
+
+function WhitepaperDocument() {
+  return (
+    <section
+      id="whitepaper"
+      className="scroll-mt-24 rounded-3xl border border-gray-800 bg-[#090909] shadow-[0_0_40px_rgba(6,182,212,0.06)]"
+    >
+      <div className="border-b border-gray-800/80 px-4 py-4 md:px-6 md:py-5">
+        <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-cyan-400">Official document</p>
+        <h2 className="mt-1.5 text-xl font-bold text-white md:text-2xl">Web3Star Whitepaper</h2>
+        <p className="mt-1.5 max-w-3xl text-left text-xs leading-snug text-gray-400 md:text-sm">
+          Full text below. Informational only — development scope and schedule may change.
+        </p>
+      </div>
+
+      <div className="px-4 py-4 md:px-6 md:py-5">
+        <div className="w-full space-y-2">
+          {whitepaperSections.map((sec) => (
+            <article
+              key={sec.n}
+              className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#0c0c0c] p-3.5 shadow-[0_0_24px_rgba(6,182,212,0.04)] md:p-4 before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-gradient-to-b before:from-cyan-400/60 before:via-sky-500/35 before:to-blue-600/25"
+            >
+              <h3 className="pr-2 text-left text-sm font-semibold leading-snug text-white md:text-base">
+                <span className="tabular-nums text-cyan-400/95">{sec.n}.</span> {sec.title}
+              </h3>
+
+              {'paragraphs' in sec &&
+                sec.paragraphs?.map((p, i) => (
+                  <p
+                    key={`${sec.n}-p-${i}`}
+                    className="mt-2 text-left text-sm leading-relaxed text-gray-300"
+                  >
+                    {p}
+                  </p>
+                ))}
+
+              {'lines' in sec && sec.lines && (
+                <ul className="mt-2 space-y-1 border-l border-cyan-500/15 pl-3 text-left">
+                  {sec.lines.map((line) => (
+                    <li key={line} className="text-sm leading-relaxed text-gray-300">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {'bullets' in sec &&
+                sec.bullets?.map((b) => (
+                  <div key={b} className="mt-2 flex gap-2 text-left text-sm leading-relaxed text-gray-300">
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-cyan-400/55" aria-hidden />
+                    <span>{b}</span>
+                  </div>
+                ))}
+
+              {'contacts' in sec &&
+                sec.contacts && (
+                  <ul className="mt-3 space-y-2 text-left">
+                    {sec.contacts.map((c) => (
+                      <li key={c.label} className="flex flex-wrap items-baseline gap-x-2 text-sm text-gray-300">
+                        <span className="min-w-[5.5rem] font-medium text-cyan-400/85">{c.label}</span>
+                        {c.href.startsWith('mailto:') ? (
+                          <a
+                            href={c.href}
+                            className="text-cyan-300 underline decoration-cyan-500/40 underline-offset-2 transition-colors hover:text-cyan-200"
+                          >
+                            {c.display}
+                          </a>
+                        ) : (
+                          <a
+                            href={c.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyan-300 underline decoration-cyan-500/40 underline-offset-2 transition-colors hover:text-cyan-200"
+                          >
+                            {c.display}
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BenefitsSection() {
+  return (
+    <section
+      id="benefits"
+      className="scroll-mt-24 rounded-3xl border border-gray-800 bg-[#090909] shadow-[0_0_40px_rgba(6,182,212,0.06)]"
+    >
+      <div className="border-b border-gray-800/80 px-4 py-6 md:px-8 md:py-7">
+        <p className="text-xs font-medium uppercase tracking-[0.35em] text-cyan-400">Why Web3Star</p>
+        <h2 className="mt-2 text-2xl font-bold text-white md:text-3xl">Benefits</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-snug text-gray-400">
+          How the platform is designed for creators, miners, and long-term community ownership.
+        </p>
+      </div>
+      <div className="px-4 py-6 md:px-8 md:py-7">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {benefitCards.map((card) => (
+            <article
+              key={card.title}
+              className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#0c0c0c] p-5 shadow-[0_0_24px_rgba(6,182,212,0.04)] before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-gradient-to-b before:from-cyan-400/70 before:via-sky-500/40 before:to-blue-600/30"
+            >
+              <div className="flex items-start gap-3 pl-1">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-500/25 bg-cyan-500/[0.08] text-cyan-300">
+                  <card.Icon className="h-5 w-5" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold leading-snug text-white md:text-base">{card.title}</h3>
+                  <p className="mt-2 text-xs leading-relaxed text-gray-400 md:text-sm">{card.desc}</p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HeroSection() {
+  const wrapRef = React.useRef<HTMLElement>(null);
+  const rafRef = React.useRef(0);
+  const pendingRef = React.useRef({ xPct: 50, yPct: 45, px: 0, py: 0 });
+  const [spotlight, setSpotlight] = React.useState({ xPct: 50, yPct: 45 });
+  const [parallax, setParallax] = React.useState({ px: 0, py: 0 });
+
+  const flush = React.useCallback(() => {
+    rafRef.current = 0;
+    const p = pendingRef.current;
+    setSpotlight({ xPct: p.xPct, yPct: p.yPct });
+    setParallax({ px: p.px, py: p.py });
+  }, []);
+
+  const onHeroMove = React.useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      const el = wrapRef.current;
+      if (!el) return;
+      if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+      }
+      const r = el.getBoundingClientRect();
+      const xPct = ((e.clientX - r.left) / Math.max(r.width, 1)) * 100;
+      const yPct = ((e.clientY - r.top) / Math.max(r.height, 1)) * 100;
+      const nx = (e.clientX - r.left - r.width / 2) / Math.max(r.width / 2, 1);
+      const ny = (e.clientY - r.top - r.height / 2) / Math.max(r.height / 2, 1);
+      pendingRef.current = {
+        xPct,
+        yPct,
+        px: Math.max(-1, Math.min(1, nx)),
+        py: Math.max(-1, Math.min(1, ny)),
+      };
+      if (!rafRef.current) {
+        rafRef.current = requestAnimationFrame(flush);
+      }
+    },
+    [flush],
+  );
+
+  const onHeroLeave = React.useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = 0;
+    pendingRef.current = { xPct: 50, yPct: 45, px: 0, py: 0 };
+    setSpotlight({ xPct: 50, yPct: 45 });
+    setParallax({ px: 0, py: 0 });
+  }, []);
+
+  React.useEffect(
+    () => () => {
+      cancelAnimationFrame(rafRef.current);
+    },
+    [],
+  );
+
+  const { px, py } = parallax;
+  const dx = (m: number) => px * m;
+  const dy = (m: number) => py * m;
+
+  return (
+    <section
+      ref={wrapRef}
+      onMouseMove={onHeroMove}
+      onMouseLeave={onHeroLeave}
+      className="relative scroll-mt-24 overflow-hidden border-b border-white/[0.06]"
+    >
+      <div className="web3star-hero-mesh" aria-hidden />
+      <div className="web3star-hero-grain" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-0 z-[1] mix-blend-soft-light"
+        style={{
+          background: `radial-gradient(680px circle at ${spotlight.xPct}% ${spotlight.yPct}%, rgba(255,255,255,0.09), rgba(255,255,255,0.02) 28%, transparent 55%)`,
+        }}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 z-[1] opacity-50"
+        style={{
+          background: `radial-gradient(420px circle at ${spotlight.xPct}% ${spotlight.yPct}%, rgba(34,211,238,0.06), transparent 50%)`,
+        }}
+        aria-hidden
+      />
+
+      <div className="relative z-10 mx-auto max-w-7xl px-4 pt-8 pb-10 md:px-10 md:pt-12 md:pb-14">
+        <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
+          <div className="order-2 flex flex-col justify-center lg:order-1 lg:col-span-4">
+            <div
+              className="mb-5 h-px w-14 bg-gradient-to-r from-cyan-400/70 via-cyan-400/30 to-transparent"
+              aria-hidden
+            />
+            <p className="text-[10px] font-medium uppercase tracking-[0.42em] text-cyan-400/75 md:text-[11px]">
+              Web3 creation
+            </p>
+            <h1 className="mt-4 text-4xl font-light leading-[1.08] text-white md:text-5xl md:leading-[1.06]">
+              <span className="block bg-gradient-to-b from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent tracking-[0.03em] md:tracking-[0.05em]">
+                Creator-first
+              </span>
+              <span className="mt-1 block bg-gradient-to-b from-cyan-100 via-cyan-200/90 to-cyan-600/80 bg-clip-text text-transparent tracking-[0.02em] md:tracking-[0.035em]">
+                digital economy
+              </span>
+            </h1>
+            <p className="mt-4 font-serif text-base italic leading-relaxed text-stone-400/95 md:text-lg">
+              Your content, your power, your future.
+            </p>
+            <p className="mt-5 max-w-sm text-sm leading-relaxed text-gray-500">
+              Mining, tokens, and community — one ecosystem built for ownership, not rent.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link
+                to="/app/login"
+                className="btn-glow-primary rounded-full bg-white px-7 py-3.5 text-sm font-medium tracking-wide text-black hover:bg-stone-100"
+              >
+                Start with Web3Star
+              </Link>
+              <a
+                href="#whitepaper"
+                className="btn-glow-outline rounded-full border border-white/20 bg-transparent px-7 py-3.5 text-sm font-medium tracking-wide text-stone-200 hover:border-cyan-400/45 hover:text-white"
+              >
+                Read Whitepaper
+              </a>
+            </div>
+          </div>
+
+          <div className="order-1 lg:order-2 lg:col-span-8">
+            <div className="relative rounded-[1.65rem] border border-white/[0.12] bg-white/[0.04] p-2 shadow-[0_4px_48px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1),0_0_0_1px_rgba(255,255,255,0.03)] backdrop-blur-xl md:rounded-[1.85rem] md:p-2.5">
+              <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-black/35 ring-1 ring-black/40 md:rounded-[1.4rem]">
+                <div className="pointer-events-none absolute inset-0 z-[2] bg-gradient-to-br from-cyan-500/[0.07] via-transparent to-blue-600/[0.06]" aria-hidden />
+
+                <div className="pointer-events-none absolute inset-0 z-[3] overflow-hidden" aria-hidden>
+                  <div
+                    className="web3star-hero-parallax absolute -right-6 top-6 h-28 w-40 rounded-xl border border-cyan-400/20 bg-gradient-to-br from-cyan-500/15 to-transparent opacity-80 blur-[0.5px] transition-transform duration-500 ease-out will-change-transform md:h-32 md:w-48"
+                    style={{ transform: `translate3d(${dx(14)}px, ${dy(10)}px, 0)` }}
+                  />
+                  <div
+                    className="web3star-hero-parallax absolute bottom-10 left-2 h-20 w-32 rounded-lg border border-sky-500/18 bg-sky-500/8 transition-transform duration-500 ease-out will-change-transform md:bottom-14 md:left-5 md:h-24 md:w-36"
+                    style={{ transform: `translate3d(${dx(-10)}px, ${dy(-8)}px, 0)` }}
+                  />
+                  <div
+                    className="web3star-hero-parallax absolute left-1/2 top-1/2 h-[120%] w-[120%] opacity-[0.15] transition-transform duration-700 ease-out will-change-transform"
+                    style={{
+                      transform: `translate3d(calc(-50% + ${dx(6)}px), calc(-50% + ${dy(5)}px), 0) rotate(-8deg)`,
+                      background:
+                        'repeating-linear-gradient(90deg, transparent, transparent 48px, rgba(34,211,238,0.12) 48px, rgba(34,211,238,0.12) 49px)',
+                    }}
+                  />
+                </div>
+
+                <img
+                  src={heroImage}
+                  alt="Web3Star — crystal W logo, skyline silhouettes, and data visualization; tagline Your Content, Your Power, Your Future"
+                  className="web3star-hero-parallax relative z-[1] w-full object-cover object-center transition-transform duration-500 ease-out will-change-transform"
+                  style={{ transform: `translate3d(${dx(7)}px, ${dy(5)}px, 0) scale(1.02)` }}
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
+                />
+
+                <div
+                  className="web3star-hero-parallax pointer-events-none absolute inset-0 z-[4] transition-transform duration-500 ease-out will-change-transform"
+                  style={{
+                    transform: `translate3d(${dx(-4)}px, ${dy(-3)}px, 0)`,
+                    background:
+                      'linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.04) 52%, rgba(255,255,255,0.07) 58%, transparent 70%)',
+                  }}
+                  aria-hidden
+                />
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-24 bg-gradient-to-t from-[#030308]/95 via-[#030308]/40 to-transparent md:h-20"
+                  aria-hidden
+                />
+              </div>
+            </div>
+            <p className="mt-3 text-center text-[10px] tracking-wide text-gray-500 md:text-left">
+              Official key visual · Web3Star
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function Homepage() {
   const navigate = useNavigate();
@@ -473,151 +1091,42 @@ export default function Homepage() {
               href="https://x.com/Web3starOrg"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-9 h-9 rounded-full border border-gray-700 hover:border-cyan-400 hover:text-cyan-400 flex items-center justify-center transition-colors"
+              className="btn-glow-icon flex h-9 w-9 items-center justify-center rounded-full border border-gray-700 hover:border-cyan-400 hover:text-cyan-400"
               aria-label="Open X"
             >
-              <Twitter className="w-4 h-4" />
+              <Twitter className="h-4 w-4" />
             </a>
             <button
               type="button"
-              className="w-9 h-9 rounded-full border border-gray-700 text-gray-500 flex items-center justify-center"
+              className="btn-glow-icon flex h-9 w-9 items-center justify-center rounded-full border border-gray-700 text-gray-500 hover:border-cyan-500/40 hover:text-cyan-400/80"
               aria-label="Telegram coming soon"
             >
-              <Send className="w-4 h-4" />
+              <Send className="h-4 w-4" />
             </button>
             <button
               type="button"
-              className="w-9 h-9 rounded-full border border-gray-700 text-gray-500 flex items-center justify-center"
+              className="btn-glow-icon flex h-9 w-9 items-center justify-center rounded-full border border-gray-700 text-gray-500 hover:border-cyan-500/40 hover:text-cyan-400/80"
               aria-label="Discord coming soon"
             >
-              <MessageCircle className="w-4 h-4" />
+              <MessageCircle className="h-4 w-4" />
             </button>
           </div>
         </div>
       </header>
 
-      <main id="top" className="max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12 space-y-16">
-        <section className="grid lg:grid-cols-[1.15fr_1fr] gap-8 items-center scroll-mt-24">
-          <div className="space-y-5">
-            <p className="text-cyan-400 text-xs tracking-[0.35em] uppercase">The New Era of Web3 Creation</p>
-            <h1 className="text-4xl md:text-6xl font-semibold leading-tight">
-              Your Dream,
-              <br />
-              Your Contents,
-              <br />
-              Your Future.
-            </h1>
-            <p className="text-gray-300 text-lg md:text-xl leading-relaxed max-w-2xl">
-              Web3Star is building a creator-first crypto platform where content, community, and
-              token utility become a real digital economy.
-            </p>
-            <div className="flex flex-wrap gap-3 pt-2">
-              <Link
-                to="/app/login"
-                className="px-5 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold hover:from-cyan-400 hover:to-blue-400 transition-colors"
-              >
-                Start with Web3Star
-              </Link>
-              <a
-                href="#whitepaper"
-                className="px-5 py-3 rounded-full border border-gray-700 text-gray-200 hover:border-cyan-400 hover:text-cyan-400 transition-colors"
-              >
-                Read Whitepaper
-              </a>
-            </div>
-          </div>
-          <div className="rounded-3xl border border-gray-800 bg-gradient-to-br from-[#0c0c0c] to-[#060606] p-2 shadow-2xl shadow-cyan-500/10">
-            <img src={heroImage} alt="Web3Star hero banner" className="w-full h-auto rounded-2xl object-contain" />
-          </div>
-        </section>
+      <main id="top" className="scroll-smooth">
+        <HeroSection />
 
-        <ProcessRoadmapTimeline />
+        <div className="mx-auto max-w-6xl space-y-16 px-4 py-10 md:px-8 md:py-14">
+          <ProcessRoadmapTimeline />
 
-        <section id="whitepaper" className="scroll-mt-24 rounded-3xl border border-gray-800 bg-[#090909] p-6 md:p-8 space-y-6">
-          <h2 className="text-3xl md:text-4xl font-bold">Whitepaper</h2>
-          <div className="grid md:grid-cols-2 gap-6 text-gray-300 leading-7">
-            <div className="space-y-3">
-              <p><strong>Abstract:</strong> A decentralized utility ecosystem designed for mass creator adoption.</p>
-              <p><strong>Solution:</strong> 4-hour cloud mining sessions and token utility with low entry barriers.</p>
-              <p><strong>Vision:</strong> Creator tokens, fan economies, and community-driven governance.</p>
-              <p><strong>Security:</strong> Anti-bot systems, KYC checks, encryption, and external audits.</p>
-            </div>
-            <div className="space-y-3">
-              <p><strong>KR 비전:</strong> 창작자가 경제의 주체가 되고 광고 수익을 투명하게 배분받는 구조.</p>
-              <p><strong>EN Vision:</strong> Creator rights and profits are maximized through direct fan connection.</p>
-              <p><strong>Token:</strong> Web3Star ($W3S, planned), supply 100,000,000,000.</p>
-              <p className="text-sm text-gray-500">
-                This document is informational only and development schedule may change.
-              </p>
-            </div>
-          </div>
-        </section>
+          <WhitepaperDocument />
 
-        <TokenomicsInfographic />
-
-        <section id="benefits" className="scroll-mt-24 space-y-6">
-          <h2 className="text-3xl md:text-4xl font-bold">Benefits</h2>
-          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-            {benefitCards.map((card) => (
-              <article key={card.title} className="rounded-2xl border border-gray-800 bg-[#090909] p-5">
-                <h3 className="text-lg font-semibold mb-2">{card.title}</h3>
-                <p className="text-sm text-gray-300 leading-6">{card.desc}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section id="download" className="scroll-mt-24 grid md:grid-cols-2 gap-6">
-          <article className="rounded-3xl border border-gray-800 bg-[#090909] p-6 md:p-8 space-y-4">
-            <h2 className="text-3xl md:text-4xl font-bold">Download</h2>
-            <p className="text-gray-300">Install Web3Star and start mining in three steps:</p>
-            <ol className="space-y-2 text-gray-300">
-              <li>1. Download Android app package</li>
-              <li>2. Sign up and add referral code (optional)</li>
-              <li>3. Activate mining every 4 hours and complete KYC</li>
-            </ol>
-            <div className="flex flex-wrap gap-3 pt-2">
-              <button
-                type="button"
-                className="px-5 py-3 rounded-full bg-cyan-500/70 text-black/90 font-semibold cursor-not-allowed"
-                title="Google Play release coming soon"
-              >
-                Android Download
-              </button>
-              <button
-                type="button"
-                className="px-5 py-3 rounded-full border border-indigo-500/40 bg-indigo-500/10 text-indigo-200 font-semibold cursor-not-allowed"
-                title="App Store release coming soon"
-              >
-                iOS Download
-              </button>
-              <a href="#process" className="px-5 py-3 rounded-full border border-gray-700 text-gray-200 hover:border-cyan-400 hover:text-cyan-400 transition-colors">
-                Installation Guide
-              </a>
-            </div>
-          </article>
-
-          <article id="community" className="scroll-mt-24 rounded-3xl border border-gray-800 bg-[#090909] p-6 md:p-8 space-y-5">
-            <h2 className="text-3xl md:text-4xl font-bold">Community</h2>
-            <div className="space-y-3 text-gray-300">
-              <p>
-                Web:{' '}
-                <a href="https://web3star.org" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline">
-                  web3star.org
-                </a>
-              </p>
-              <p>
-                X (Twitter):{' '}
-                <a href="https://x.com/Web3starOrg" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline">
-                  x.com/Web3starOrg
-                </a>
-              </p>
-              <p>Email: support@web3star.org</p>
-              <p>Telegram: Coming soon</p>
-              <p>Discord: Coming soon</p>
-            </div>
-          </article>
-        </section>
+          <TokenomicsSection />
+          <BenefitsSection />
+          <DownloadSection />
+          <CommunitySection />
+        </div>
       </main>
 
       <footer className="mt-20 border-t border-cyan-900/30 bg-[radial-gradient(circle_at_20%_0%,rgba(6,182,212,0.12),transparent_45%),radial-gradient(circle_at_80%_20%,rgba(59,130,246,0.12),transparent_40%),linear-gradient(180deg,#05060a_0%,#020307_100%)]">
@@ -684,14 +1193,14 @@ export default function Homepage() {
               <button
                 type="button"
                 onClick={() => setIsPrivacyPolicyOpen(true)}
-                className="px-3 py-1.5 rounded-full bg-indigo-500/15 border border-indigo-400/30 text-indigo-200 hover:bg-indigo-500/25 hover:border-indigo-300/40 transition-colors"
+                className="btn-glow-indigo rounded-full border border-indigo-400/30 bg-indigo-500/15 px-3 py-1.5 text-indigo-200 hover:border-indigo-300/45 hover:bg-indigo-500/25"
               >
                 Privacy Policy
               </button>
               <button
                 type="button"
                 onClick={() => setIsTermsOpen(true)}
-                className="px-3 py-1.5 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-200 hover:bg-cyan-500/25 hover:border-cyan-300/40 transition-colors"
+                className="btn-glow-soft rounded-full border border-cyan-400/30 bg-cyan-500/15 px-3 py-1.5 text-cyan-200 hover:border-cyan-300/45 hover:bg-cyan-500/25"
               >
                 Terms of Service
               </button>
