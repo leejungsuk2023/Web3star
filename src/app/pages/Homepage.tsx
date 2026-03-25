@@ -1,6 +1,7 @@
 import React from 'react';
 import { MessageCircle, Send, Twitter } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
+import { toast } from 'sonner';
 import heroImage from '../../assets/web3star-home-hero.png';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
@@ -116,6 +117,16 @@ export default function Homepage() {
       navigate('/app/login', { replace: true });
     }
   }, [location.hash, navigate]);
+
+  React.useEffect(() => {
+    const q = new URLSearchParams(location.search);
+    if (q.get('app') !== '1') return;
+    toast.message('Mining and full features are in the Web3Star mobile app.', {
+      description: 'Use the Download section below to get the app.',
+      duration: 6500,
+    });
+    navigate({ pathname: '/', search: '' }, { replace: true });
+  }, [location.search, navigate]);
 
   return (
     <div className="min-h-screen bg-black text-white scroll-smooth">

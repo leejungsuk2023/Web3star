@@ -6,6 +6,7 @@ import { supabase, getAuthRedirectUrl, isLikelyNativePlatform } from '../../lib/
 import { googleNativeIdToken } from '../../lib/socialLogin';
 import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
+import { getPostAuthPath } from '../../lib/deployTarget';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
 
@@ -77,7 +78,7 @@ export default function Signup() {
     }
 
     localStorage.setItem(TERMS_AGREED_KEY, 'true');
-    navigate('/app');
+    navigate(getPostAuthPath());
   };
 
   const handleGoogleSignup = async () => {
@@ -108,7 +109,7 @@ export default function Signup() {
           await refreshProfile();
         }
         localStorage.setItem(TERMS_AGREED_KEY, 'true');
-        navigate('/app');
+        navigate(getPostAuthPath());
         return;
       }
 

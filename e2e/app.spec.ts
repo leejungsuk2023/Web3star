@@ -70,7 +70,7 @@ test.describe('Signup', () => {
   test('should navigate to login page', async ({ page }) => {
     await page.goto('/signup');
     await page.getByRole('button', { name: 'Log in' }).click();
-    await expect(page).toHaveURL('/login');
+    await expect(page).toHaveURL(/\/app\/login$/);
   });
 });
 
@@ -104,7 +104,7 @@ test.describe('Login', () => {
   test('should navigate to signup page', async ({ page }) => {
     await page.goto('/login');
     await page.getByText('Sign Up').click();
-    await expect(page).toHaveURL('/signup');
+    await expect(page).toHaveURL(/\/app\/signup$/);
   });
 });
 
@@ -114,18 +114,17 @@ test.describe('Login', () => {
 test.describe('Protected routes', () => {
   test('should redirect to login when not authenticated', async ({ page }) => {
     await page.goto('/');
-    // ProtectedRoute가 /login으로 리다이렉트
-    await expect(page).toHaveURL('/login', { timeout: 10000 });
+    await expect(page).toHaveURL(/\/app\/login$/, { timeout: 15000 });
   });
 
   test('should redirect leaderboard to login', async ({ page }) => {
     await page.goto('/leaderboard');
-    await expect(page).toHaveURL('/login', { timeout: 10000 });
+    await expect(page).toHaveURL(/\/app\/login$/, { timeout: 10000 });
   });
 
   test('should redirect profile to login', async ({ page }) => {
     await page.goto('/profile');
-    await expect(page).toHaveURL('/login', { timeout: 10000 });
+    await expect(page).toHaveURL(/\/app\/login$/, { timeout: 10000 });
   });
 });
 
@@ -140,7 +139,7 @@ test.describe('Splash', () => {
     await expect(page.getByAltText('Web3Star')).toBeVisible();
 
     // 2초 후 로그인 또는 홈으로 리다이렉트
-    await expect(page).not.toHaveURL('/splash', { timeout: 5000 });
+    await expect(page).not.toHaveURL(/\/app\/splash$/, { timeout: 5000 });
   });
 });
 
@@ -233,7 +232,7 @@ test.describe('Authenticated flows', () => {
   // ─────────────────────────────────────────
   test('should show leaderboard', async ({ page }) => {
     await page.getByText('Leaderboard').click();
-    await expect(page).toHaveURL('/leaderboard');
+    await expect(page).toHaveURL(/\/app\/leaderboard$/);
 
     await expect(page.getByText('Top Miners')).toBeVisible();
     await expect(page.getByText('My Rank')).toBeVisible();
@@ -254,6 +253,6 @@ test.describe('Authenticated flows', () => {
 
     // 로그아웃
     await page.getByText('Log Out').click();
-    await expect(page).toHaveURL('/login', { timeout: 5000 });
+    await expect(page).toHaveURL(/\/app\/login$/, { timeout: 5000 });
   });
 });

@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 import { RouterProvider } from 'react-router';
+import type { RouterProviderProps } from 'react-router';
 import { Toaster } from 'sonner';
-import { router } from './routes';
 import { AuthProvider } from '../context/AuthContext';
 import { initAdMob } from '../lib/admob';
 import { initSocialLogin } from '../lib/socialLogin';
 
-export default function App() {
+type AppProps = { router: RouterProviderProps['router'] };
+
+export default function App({ router }: AppProps) {
   useEffect(() => {
     initAdMob();
     // Native Google Sign-In (avoids WebView OAuth restrictions on Android)

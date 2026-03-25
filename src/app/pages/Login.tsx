@@ -8,6 +8,7 @@ import { supabase, getAuthRedirectUrl, isLikelyNativePlatform } from '../../lib/
 import { googleNativeIdToken } from '../../lib/socialLogin';
 import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
+import { getPostAuthPath } from '../../lib/deployTarget';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
 
@@ -159,7 +160,7 @@ export default function Login() {
       return;
     }
 
-    navigate('/app');
+    navigate(getPostAuthPath());
   };
 
   const proceedGoogleLogin = async (referralCode = '') => {
@@ -185,7 +186,7 @@ export default function Login() {
           }
           await refreshProfile();
         }
-        navigate('/app');
+        navigate(getPostAuthPath());
         return;
       }
 
@@ -240,7 +241,7 @@ export default function Login() {
   React.useEffect(() => {
     if (authLoading) return;
     if (user) {
-      navigate('/app', { replace: true });
+      navigate(getPostAuthPath(), { replace: true });
     }
   }, [authLoading, user, navigate]);
 

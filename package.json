@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build:web": "vite build",
+    "build:app": "vite build --mode app",
     "dev": "vite",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui",
