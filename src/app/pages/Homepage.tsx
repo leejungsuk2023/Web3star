@@ -72,13 +72,284 @@ const roadmapItems = [
   },
 ];
 
-const tokenomicsItems = [
-  { label: 'Mobile Mining Rewards', value: '40-45%', width: '45%' },
-  { label: 'Ecosystem & Partnerships', value: '15-20%', width: '20%' },
-  { label: 'Core Team (Vested)', value: '15%', width: '15%' },
-  { label: 'Community Growth', value: '10%', width: '10%' },
-  { label: 'Development Reserve', value: '7-10%', width: '10%' },
-];
+/** 도넛 차트용 (합계 100%) — 표기는 기존 레인지와 정합 */
+const tokenomicsSegments = [
+  {
+    label: 'Mobile Mining Rewards',
+    pct: 42,
+    display: '40–45%',
+    color: '#ff6b35',
+    detail: 'Primary incentives for miners & early adopters.',
+  },
+  {
+    label: 'Ecosystem & Partnerships',
+    pct: 18,
+    display: '15–20%',
+    color: '#e056fd',
+    detail: 'Partners, integrations, and ecosystem grants.',
+  },
+  {
+    label: 'Core Team (Vested)',
+    pct: 15,
+    display: '15%',
+    color: '#a855f7',
+    detail: 'Long-term alignment with cliff & vesting.',
+  },
+  {
+    label: 'Community Growth',
+    pct: 12,
+    display: '10%',
+    color: '#ec4899',
+    detail: 'Campaigns, airdrops, and community programs.',
+  },
+  {
+    label: 'Development Reserve',
+    pct: 13,
+    display: '7–10%',
+    color: '#fbbf24',
+    detail: 'Protocol R&D, security, and infrastructure.',
+  },
+] as const;
+
+const roadmapPinColors = ['#ec4899', '#14b8a6', '#a855f7', '#f97316', '#38bdf8', '#f43f5e'] as const;
+
+function buildTokenomicsConicGradient() {
+  let acc = 0;
+  const parts: string[] = [];
+  for (const s of tokenomicsSegments) {
+    const start = (acc / 100) * 360;
+    acc += s.pct;
+    const end = (acc / 100) * 360;
+    parts.push(`${s.color} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`);
+  }
+  return `conic-gradient(from -90deg, ${parts.join(', ')})`;
+}
+
+function ProcessRoadmapTimeline() {
+  const pinLeftPct = [8, 22, 38, 54, 70, 86];
+  const pinTopPct = [58, 28, 62, 26, 58, 30];
+
+  return (
+    <section id="process" className="scroll-mt-24 overflow-hidden rounded-2xl border border-[#b8ba28]/40 shadow-xl">
+      <div className="bg-[#bfc122] py-4 md:py-5 text-center">
+        <h2 className="text-2xl md:text-3xl font-extrabold tracking-[0.2em] text-white uppercase">
+          Process Roadmap
+        </h2>
+        <p className="mt-1 text-sm text-white/90 font-medium">Phase 1 — 6 · Web3Star journey</p>
+      </div>
+
+      <div className="bg-white text-gray-900">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-8 md:py-12">
+          <div className="relative min-h-0 lg:min-h-[340px]">
+            <svg
+              className="absolute inset-x-0 bottom-8 md:bottom-10 w-full h-[200px] md:h-[220px] text-black pointer-events-none hidden lg:block"
+              viewBox="0 0 1000 220"
+              preserveAspectRatio="xMidYMid meet"
+              aria-hidden
+            >
+              <path
+                d="M 0 140 Q 160 55 320 140 T 640 140 T 1000 140"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="52"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 0 140 Q 160 55 320 140 T 640 140 T 1000 140"
+                fill="none"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeDasharray="11 16"
+                strokeLinecap="round"
+                opacity="0.95"
+              />
+            </svg>
+
+            <div className="relative z-10 hidden lg:block h-[300px]">
+              {roadmapItems.map((item, i) => (
+                <div
+                  key={item.phase}
+                  className="absolute flex flex-col items-center w-[15%] min-w-[100px] max-w-[150px] -translate-x-1/2"
+                  style={{ left: `${pinLeftPct[i]}%`, top: `${pinTopPct[i]}%` }}
+                >
+                  <div className="relative mb-2 drop-shadow-md">
+                    <svg width="44" height="56" viewBox="0 0 44 56" aria-hidden>
+                      <path
+                        d="M22 52c-8-10-14-22-14-30a14 14 0 1 1 28 0c0 8-6 20-14 30z"
+                        fill={roadmapPinColors[i]}
+                      />
+                      <circle cx="22" cy="20" r="9" fill="white" />
+                      <text
+                        x="22"
+                        y="24"
+                        textAnchor="middle"
+                        fill="#111"
+                        fontSize="11"
+                        fontWeight="700"
+                        style={{ fontFamily: 'system-ui, sans-serif' }}
+                      >
+                        {i + 1}
+                      </text>
+                    </svg>
+                  </div>
+                  <h3 className="text-center text-sm font-bold text-gray-900 leading-tight">{item.title}</h3>
+                  <ul className="mt-2 text-center text-[11px] md:text-xs text-gray-500 leading-snug space-y-1">
+                    {item.points.map((p) => (
+                      <li key={p}>{p}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <div className="lg:hidden space-y-6 pt-4">
+              {roadmapItems.map((item, i) => (
+                <article key={item.phase} className="flex gap-4">
+                  <div className="shrink-0">
+                    <svg width="40" height="52" viewBox="0 0 44 56" aria-hidden>
+                      <path
+                        d="M22 52c-8-10-14-22-14-30a14 14 0 1 1 28 0c0 8-6 20-14 30z"
+                        fill={roadmapPinColors[i]}
+                      />
+                      <circle cx="22" cy="20" r="9" fill="white" />
+                      <text
+                        x="22"
+                        y="24"
+                        textAnchor="middle"
+                        fill="#111"
+                        fontSize="10"
+                        fontWeight="700"
+                        style={{ fontFamily: 'system-ui, sans-serif' }}
+                      >
+                        {i + 1}
+                      </text>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">{item.title}</h3>
+                    <ul className="mt-2 text-sm text-gray-600 space-y-1.5">
+                      {item.points.map((p) => (
+                        <li key={p}>· {p}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-[#bfc122] py-3 flex justify-center">
+          <span className="rounded-full bg-white/95 px-5 py-1.5 text-xs md:text-sm font-semibold text-gray-800 shadow-sm">
+            web3star.org
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TokenomicsInfographic() {
+  const gradient = buildTokenomicsConicGradient();
+  const mid = Math.ceil(tokenomicsSegments.length / 2);
+  const leftCol = tokenomicsSegments.slice(0, mid);
+  const rightCol = tokenomicsSegments.slice(mid);
+
+  return (
+    <section
+      id="tokenomics"
+      className="scroll-mt-24 relative overflow-hidden rounded-3xl border border-purple-500/20"
+    >
+      <div
+        className="absolute inset-0 bg-gradient-to-br from-[#1a0a2e] via-[#2d1b4e] to-[#0a0518]"
+        aria-hidden
+      />
+      <div
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(140%,800px)] h-[min(140%,800px)] rounded-full bg-fuchsia-600/15 blur-3xl pointer-events-none"
+        aria-hidden
+      />
+
+      <div className="relative z-10 px-4 md:px-8 py-10 md:py-14">
+        <h2 className="text-center text-3xl md:text-4xl font-bold text-white tracking-tight mb-2">
+          Tokenomics
+        </h2>
+        <p className="text-center text-sm text-purple-200/80 mb-10 md:mb-12 max-w-xl mx-auto">
+          Name: Web3Star · Symbol: $W3S (planned) · Illustrative allocation (totals 100%)
+        </p>
+
+        <div className="max-w-5xl mx-auto grid lg:grid-cols-[1fr_minmax(260px,320px)_1fr] gap-8 lg:gap-6 items-center">
+          <ul className="space-y-6 order-2 lg:order-1 flex flex-col items-end lg:items-end">
+            {leftCol.map((s) => (
+              <li key={s.label} className="w-full max-w-[260px] text-right">
+                <p className="text-base font-semibold" style={{ color: s.color }}>
+                  {s.label}
+                </p>
+                <p className="text-lg font-bold text-white">{s.display}</p>
+                <p className="text-xs text-purple-200/70 mt-1 leading-relaxed">{s.detail}</p>
+              </li>
+            ))}
+          </ul>
+
+          <div className="relative flex justify-center order-1 lg:order-2 py-4">
+            <div
+              className="absolute inset-0 m-auto w-[min(85vw,280px)] h-[min(85vw,280px)] md:w-[300px] md:h-[300px] rounded-full bg-white/5 backdrop-blur-md border border-white/10 shadow-[0_0_60px_rgba(236,72,153,0.25)] pointer-events-none scale-110"
+              aria-hidden
+            />
+            <div
+              className="absolute right-0 top-1/4 w-24 h-32 rounded-2xl bg-white/[0.07] backdrop-blur-lg border border-white/15 shadow-lg hidden md:block"
+              aria-hidden
+            />
+            <div
+              className="absolute right-[-8px] bottom-1/4 w-20 h-24 rounded-xl bg-white/[0.06] backdrop-blur-md border border-white/10 hidden md:block"
+              aria-hidden
+            />
+
+            <div className="relative w-[min(78vw,260px)] h-[min(78vw,260px)] md:w-[280px] md:h-[280px]">
+              <div
+                className="absolute inset-0 rounded-full shadow-[0_0_40px_rgba(255,107,53,0.35)]"
+                style={{
+                  background: gradient,
+                  maskImage: 'radial-gradient(circle, transparent 56%, black 56.5%)',
+                  WebkitMaskImage: 'radial-gradient(circle, transparent 56%, black 56.5%)',
+                }}
+              />
+              <div className="absolute inset-[18%] rounded-full bg-gradient-to-b from-[#1f0f3a]/95 to-[#0d0618] border border-purple-500/30 flex flex-col items-center justify-center text-center px-4 shadow-inner">
+                <p className="text-[10px] md:text-xs uppercase tracking-[0.25em] text-purple-300/90 font-semibold">
+                  Allocation
+                </p>
+                <p className="text-2xl md:text-3xl font-bold text-white mt-1">100%</p>
+                <p className="text-[10px] text-purple-300/70 mt-1">$W3S · planned</p>
+              </div>
+            </div>
+          </div>
+
+          <ul className="space-y-6 order-3">
+            {rightCol.map((s) => (
+              <li key={s.label}>
+                <div className="max-w-[240px]">
+                  <p className="text-base font-semibold" style={{ color: s.color }}>
+                    {s.label}
+                  </p>
+                  <p className="text-lg font-bold text-white">{s.display}</p>
+                  <p className="text-xs text-purple-200/70 mt-1 leading-relaxed">{s.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="max-w-3xl mx-auto mt-12 rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm p-5 md:p-6">
+          <h3 className="text-sm font-semibold text-purple-200 mb-2">Distribution principles</h3>
+          <ul className="text-sm text-purple-100/85 space-y-2 leading-relaxed">
+            <li>· Early contributors are rewarded through mining-focused allocation.</li>
+            <li>· Sustainable ecosystem growth via partner and reserve pools.</li>
+            <li>· Community ownership expands over time through governance mechanisms.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 const benefitCards = [
   {
@@ -206,32 +477,7 @@ export default function Homepage() {
           </div>
         </section>
 
-        <section id="process" className="scroll-mt-24 space-y-6">
-          <div className="flex items-end justify-between gap-4">
-            <h2 className="text-3xl md:text-4xl font-bold">Process / Roadmap</h2>
-            <span className="text-gray-400 text-sm">Phase 1 - 6</span>
-          </div>
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {roadmapItems.map((item) => (
-              <article
-                key={item.phase}
-                className="rounded-2xl border border-gray-800 bg-[#090909] p-5 hover:border-cyan-500/60 transition-colors"
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="w-10 h-10 rounded-full bg-cyan-500 text-black font-bold flex items-center justify-center">
-                    {item.phase}
-                  </span>
-                  <h3 className="text-lg font-semibold">{item.title}</h3>
-                </div>
-                <ul className="space-y-2 text-sm text-gray-300 leading-6">
-                  {item.points.map((point) => (
-                    <li key={point}>- {point}</li>
-                  ))}
-                </ul>
-              </article>
-            ))}
-          </div>
-        </section>
+        <ProcessRoadmapTimeline />
 
         <section id="whitepaper" className="scroll-mt-24 rounded-3xl border border-gray-800 bg-[#090909] p-6 md:p-8 space-y-6">
           <h2 className="text-3xl md:text-4xl font-bold">Whitepaper</h2>
@@ -253,33 +499,7 @@ export default function Homepage() {
           </div>
         </section>
 
-        <section id="tokenomics" className="scroll-mt-24 grid lg:grid-cols-[1.2fr_0.8fr] gap-6">
-          <article className="rounded-3xl border border-gray-800 bg-[#090909] p-6 md:p-8 space-y-4">
-            <h2 className="text-3xl md:text-4xl font-bold">Tokenomics</h2>
-            <p className="text-gray-400">Name: Web3Star | Symbol: $W3S (planned) | Chain: Solana (planned)</p>
-            <div className="space-y-4 pt-2">
-              {tokenomicsItems.map((item) => (
-                <div key={item.label}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-300">{item.label}</span>
-                    <span className="text-cyan-400 font-semibold">{item.value}</span>
-                  </div>
-                  <div className="h-3.5 rounded-full bg-gray-800 overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500" style={{ width: item.width }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </article>
-          <article className="rounded-3xl border border-gray-800 bg-gradient-to-br from-[#0d1117] to-[#070809] p-6 md:p-8">
-            <h3 className="text-xl font-semibold mb-3">Distribution Principles</h3>
-            <ul className="space-y-2 text-gray-300 leading-7 text-sm">
-              <li>- Early contributors are rewarded through mining-focused allocation.</li>
-              <li>- Sustainable ecosystem growth via partner and reserve pools.</li>
-              <li>- Community ownership expands over time through governance mechanisms.</li>
-            </ul>
-          </article>
-        </section>
+        <TokenomicsInfographic />
 
         <section id="benefits" className="scroll-mt-24 space-y-6">
           <h2 className="text-3xl md:text-4xl font-bold">Benefits</h2>
