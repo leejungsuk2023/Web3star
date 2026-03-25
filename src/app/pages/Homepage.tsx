@@ -918,6 +918,9 @@ function HeroSection() {
   const { px, py } = parallax;
   const dx = (m: number) => px * m;
   const dy = (m: number) => py * m;
+  const tilt = {
+    transform: `perspective(1400px) rotateX(${(-py * 5).toFixed(2)}deg) rotateY(${(px * 7).toFixed(2)}deg) translate3d(${dx(2)}px, ${dy(2)}px, 0)`,
+  };
 
   return (
     <section
@@ -928,17 +931,18 @@ function HeroSection() {
     >
       <div className="web3star-hero-mesh" aria-hidden />
       <div className="web3star-hero-grain" aria-hidden />
+      <div className="web3star-hero-grid" aria-hidden />
       <div
-        className="pointer-events-none absolute inset-0 z-[1] mix-blend-soft-light"
+        className="pointer-events-none absolute inset-0 z-[1] mix-blend-soft-light transition-[background] duration-300 ease-out"
         style={{
-          background: `radial-gradient(680px circle at ${spotlight.xPct}% ${spotlight.yPct}%, rgba(255,255,255,0.09), rgba(255,255,255,0.02) 28%, transparent 55%)`,
+          background: `radial-gradient(760px circle at ${spotlight.xPct}% ${spotlight.yPct}%, rgba(255,255,255,0.095), rgba(255,255,255,0.025) 28%, transparent 58%)`,
         }}
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-0 z-[1] opacity-50"
+        className="pointer-events-none absolute inset-0 z-[1] opacity-55 transition-[background] duration-300 ease-out"
         style={{
-          background: `radial-gradient(420px circle at ${spotlight.xPct}% ${spotlight.yPct}%, rgba(34,211,238,0.06), transparent 50%)`,
+          background: `radial-gradient(520px circle at ${spotlight.xPct}% ${spotlight.yPct}%, rgba(34,211,238,0.07), transparent 55%)`,
         }}
         aria-hidden
       />
@@ -953,11 +957,11 @@ function HeroSection() {
             <p className="text-[10px] font-medium uppercase tracking-[0.42em] text-cyan-400/75 md:text-[11px]">
               Web3 creation
             </p>
-            <h1 className="mt-4 text-4xl font-light leading-[1.08] text-white md:text-5xl md:leading-[1.06]">
-              <span className="block bg-gradient-to-b from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent tracking-[0.03em] md:tracking-[0.05em]">
+            <h1 className="mt-4 text-4xl leading-[1.08] text-white md:text-5xl md:leading-[1.06]">
+              <span className="block bg-gradient-to-b from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent font-medium tracking-[0.026em] md:tracking-[0.05em]">
                 Creator-first
               </span>
-              <span className="mt-1 block bg-gradient-to-b from-cyan-100 via-cyan-200/90 to-cyan-600/80 bg-clip-text text-transparent tracking-[0.02em] md:tracking-[0.035em]">
+              <span className="mt-1 block bg-gradient-to-b from-cyan-100 via-cyan-200/90 to-cyan-600/80 bg-clip-text text-transparent font-normal tracking-[0.016em] md:tracking-[0.03em]">
                 digital economy
               </span>
             </h1>
@@ -967,16 +971,16 @@ function HeroSection() {
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-gray-500">
               Mining, tokens, and community — one ecosystem built for ownership, not rent.
             </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
+            <div className="mt-8 flex flex-row flex-wrap items-center gap-4">
               <Link
                 to="/app/login"
-                className="btn-glow-primary rounded-full bg-white px-7 py-3.5 text-sm font-medium tracking-wide text-black hover:bg-stone-100"
+                className="hero-btn hero-btn-primary inline-flex h-12 min-w-[220px] items-center justify-center rounded-xl border border-cyan-200/35 px-10 text-center text-sm font-bold tracking-[0.01em] text-white btn-glow-primary"
               >
                 Start with Web3Star
               </Link>
               <a
                 href="#whitepaper"
-                className="btn-glow-outline rounded-full border border-white/20 bg-transparent px-7 py-3.5 text-sm font-medium tracking-wide text-stone-200 hover:border-cyan-400/45 hover:text-white"
+                className="hero-btn hero-btn-secondary inline-flex h-12 min-w-[220px] items-center justify-center rounded-xl border border-white/25 px-10 text-center text-sm font-medium tracking-[0.01em] text-slate-100/95 btn-glow-outline hover:border-white/40"
               >
                 Read Whitepaper
               </a>
@@ -984,7 +988,11 @@ function HeroSection() {
           </div>
 
           <div className="order-1 lg:order-2 lg:col-span-8">
-            <div className="relative rounded-[1.65rem] border border-white/[0.12] bg-white/[0.04] p-2 shadow-[0_4px_48px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1),0_0_0_1px_rgba(255,255,255,0.03)] backdrop-blur-xl md:rounded-[1.85rem] md:p-2.5">
+            <div
+              className="relative rounded-[1.65rem] border border-white/[0.12] bg-white/[0.04] p-2 shadow-[0_4px_48px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1),0_0_0_1px_rgba(255,255,255,0.03)] backdrop-blur-xl transition-transform duration-300 ease-out will-change-transform md:rounded-[1.85rem] md:p-2.5"
+              style={tilt}
+            >
+              <div className="pointer-events-none absolute inset-0 rounded-[1.65rem] border border-cyan-300/18 shadow-[0_0_40px_rgba(34,211,238,0.15),0_0_80px_rgba(59,130,246,0.08)] md:rounded-[1.85rem]" aria-hidden />
               <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-black/35 ring-1 ring-black/40 md:rounded-[1.4rem]">
                 <div className="pointer-events-none absolute inset-0 z-[2] bg-gradient-to-br from-cyan-500/[0.07] via-transparent to-blue-600/[0.06]" aria-hidden />
 
