@@ -285,18 +285,16 @@ export default function Home() {
                 : 'cursor-pointer bg-gradient-to-br from-purple-700/95 via-blue-800/95 to-indigo-900/95 shadow-black/40 hover:scale-[1.02]'
             }`}
           >
-            <div className="relative box-border flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden rounded-full bg-[#000000] p-6 shadow-[inset_0_0_32px_rgba(0,0,0,0.88),inset_0_1px_2px_rgba(255,255,255,0.04)]">
-              <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
-                <img
-                  src={miningCenterLogo}
-                  alt="Web3Star mining logo"
-                  className={`h-full w-full max-h-full max-w-full object-contain object-center transition-all duration-300 ${
-                    centerButtonActive
-                      ? 'saturate-[1.15] contrast-[1.12] brightness-110 drop-shadow-[0_0_28px_rgba(96,165,250,0.5)]'
-                      : 'saturate-[1.08] contrast-[1.08] brightness-[1.04] drop-shadow-[0_0_18px_rgba(129,140,248,0.28)]'
-                  }`}
-                />
-              </div>
+            <div className="relative box-border flex h-full w-full min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-full bg-[#000000] shadow-[inset_0_0_32px_rgba(0,0,0,0.88),inset_0_1px_2px_rgba(255,255,255,0.04)]">
+              <img
+                src={miningCenterLogo}
+                alt="Web3Star mining logo"
+                className={`h-[80%] w-[80%] object-contain object-center mix-blend-screen transition-all duration-300 ${
+                  centerButtonActive
+                    ? 'saturate-[1.15] contrast-[1.12] brightness-110 drop-shadow-[0_0_28px_rgba(96,165,250,0.5)]'
+                    : 'saturate-[1.08] contrast-[1.08] brightness-[1.04] drop-shadow-[0_0_18px_rgba(129,140,248,0.28)]'
+                }`}
+              />
             </div>
             <span
               className={`pointer-events-none absolute inset-[3px] z-[1] rounded-full ring-1 ring-inset transition-colors duration-300 ${
