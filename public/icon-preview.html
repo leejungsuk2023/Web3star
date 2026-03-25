@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web3Star — 아이콘 미리보기</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #0a0a0f;
+        color: #e5e7eb;
+        font-family: system-ui, sans-serif;
+        padding: 2rem 1.5rem 3rem;
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem;
+      }
+      p {
+        margin: 0 0 2rem;
+        color: #9ca3af;
+        font-size: 0.875rem;
+        line-height: 1.5;
+      }
+      .grid {
+        display: grid;
+        gap: 2rem;
+        max-width: 720px;
+      }
+      .card {
+        background: #111118;
+        border: 1px solid #27272f;
+        border-radius: 12px;
+        padding: 1.25rem;
+      }
+      .card h2 {
+        margin: 0 0 1rem;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #6b7280;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        align-items: flex-end;
+      }
+      .sample {
+        text-align: center;
+      }
+      .sample span {
+        display: block;
+        margin-top: 0.5rem;
+        font-size: 0.7rem;
+        color: #6b7280;
+      }
+      .raw img {
+        display: block;
+        image-rendering: crisp-edges;
+      }
+      .mask-circle {
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        overflow: hidden;
+        margin: 0 auto;
+        background: #000;
+        box-shadow: 0 0 0 2px #374151;
+      }
+      .mask-circle img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .mask-squircle {
+        width: 96px;
+        height: 96px;
+        border-radius: 22px;
+        overflow: hidden;
+        margin: 0 auto;
+        background: #000;
+        box-shadow: 0 0 0 2px #374151;
+      }
+      .mask-squircle img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .large .mask-circle,
+      .large .mask-squircle {
+        width: 128px;
+        height: 128px;
+        border-radius: 28px;
+      }
+      .large .mask-circle {
+        border-radius: 50%;
+      }
+      a {
+        color: #22d3ee;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Web3Star 아이콘 미리보기</h1>
+    <p>
+      <code>pwa-icon-*.png</code> · <code>apple-touch-icon.png</code> — 마스크(원형 / 둥근 사각)로 잘림을 시뮬레이션합니다.
+      로컬: <a href="/">홈</a> · <a href="./manifest.webmanifest">manifest</a>
+    </p>
+
+    <div class="grid">
+      <div class="card">
+        <h2>512 × 512 (maskable 용)</h2>
+        <div class="row large">
+          <div class="sample raw">
+            <img src="./pwa-icon-512.png" width="128" height="128" alt="512" />
+            <span>원본 128px 표시</span>
+          </div>
+          <div class="sample">
+            <div class="mask-circle">
+              <img src="./pwa-icon-512.png" alt="" />
+            </div>
+            <span>원형 마스크</span>
+          </div>
+          <div class="sample">
+            <div class="mask-squircle">
+              <img src="./pwa-icon-512.png" alt="" />
+            </div>
+            <span>스쿼클</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>192 × 192</h2>
+        <div class="row">
+          <div class="sample raw">
+            <img src="./pwa-icon-192.png" width="96" height="96" alt="192" />
+            <span>원본</span>
+          </div>
+          <div class="sample">
+            <div class="mask-circle">
+              <img src="./pwa-icon-192.png" alt="" />
+            </div>
+            <span>원형</span>
+          </div>
+          <div class="sample">
+            <div class="mask-squircle">
+              <img src="./pwa-icon-192.png" alt="" />
+            </div>
+            <span>스쿼클</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Apple touch · Favicon</h2>
+        <div class="row">
+          <div class="sample raw">
+            <img src="./apple-touch-icon.png" width="60" height="60" alt="180" />
+            <span>apple-touch 180 (60px 표시)</span>
+          </div>
+          <div class="sample raw">
+            <img src="./pwa-icon-32.png" width="32" height="32" alt="32" />
+            <span>favicon 32</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
