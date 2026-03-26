@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web3Star — 채굴 화면 로고 미리보기</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #0a0a0f;
+        color: #e5e7eb;
+        font-family: system-ui, sans-serif;
+        padding: 2rem 1.25rem 3rem;
+      }
+      h1 {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin: 0 0 0.35rem;
+      }
+      p {
+        margin: 0 0 1.5rem;
+        color: #9ca3af;
+        font-size: 0.8125rem;
+        line-height: 1.55;
+        max-width: 36rem;
+      }
+      code {
+        color: #22d3ee;
+        font-size: 0.8em;
+      }
+      .wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2rem;
+        align-items: flex-start;
+      }
+      .card {
+        background: #111118;
+        border: 1px solid #27272f;
+        border-radius: 12px;
+        padding: 1.25rem;
+      }
+      .card h2 {
+        margin: 0 0 1rem;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #6b7280;
+      }
+      /* 앱 Home.tsx: h-56 w-56 = 14rem */
+      .mine-btn {
+        width: 14rem;
+        height: 14rem;
+        border-radius: 9999px;
+        padding: 3px;
+        background: linear-gradient(to bottom right, #6b21a8, #2563eb, #0891b2);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      }
+      .mine-inner {
+        width: 100%;
+        height: 100%;
+        border-radius: 9999px;
+        background: #000;
+        /* 앱과 동일: 아이콘 CONTENT_BOX_RATIO 0.9 → 캔버스 대비 ~5% 안전 여백 */
+        padding: 5%;
+        box-shadow:
+          inset 0 0 32px rgba(0, 0, 0, 0.88),
+          inset 0 1px 2px rgba(255, 255, 255, 0.04);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .mine-inner img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        object-position: center;
+        mix-blend-mode: screen;
+        filter: saturate(1.08) contrast(1.08) brightness(1.04);
+      }
+      .compare {
+        font-size: 0.7rem;
+        color: #6b7280;
+        margin-top: 0.75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>채굴 화면 로고 (확대 반영)</h1>
+    <p>
+      앱 아이콘 생성기의 <code>CONTENT_BOX_RATIO = 0.9</code>와 맞추기 위해, 원형 버튼 안쪽 여백을
+      <code>p-[5%]</code>로 두고 로고는 가용 영역 전체에 <code>object-fit: contain</code>으로 맞춥니다.
+      실제 앱은 <code>Home.tsx</code> 채굴 버튼과 동일한 비율입니다.
+    </p>
+    <div class="wrap">
+      <div class="card">
+        <h2>현재 스펙 (224×224 기준)</h2>
+        <div class="mine-btn">
+          <div class="mine-inner">
+            <img src="./mining-center-for-preview.png" alt="Mining center logo preview" />
+          </div>
+        </div>
+        <p class="compare">이미지 소스: <code>mining-center-for-preview.png</code> (= 빌드용 <code>mining-center-logo.png</code> 복사본)</p>
+      </div>
+    </div>
+  </body>
+</html>
