@@ -18,6 +18,18 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function isRpcUnavailable(err: { code?: string; message?: string } | null | undefined): boolean {
+  if (!err) return false;
+  const m = (err.message ?? '').toLowerCase();
+  return (
+    err.code === 'PGRST202' ||
+    err.code === '42883' ||
+    m.includes('does not exist') ||
+    m.includes('schema cache') ||
+    m.includes('could not find the function')
+  );
+}
+
 /**
  * Auth 직후 `users` 행이 트리거로 늦게 생길 수 있어 짧게 재시도합니다.
  */
@@ -58,11 +70,13 @@ export type ApplyReferralResult =
   | { ok: true; skipped?: boolean }
   | { ok: false; message: string };
 
+type RpcPayload = { ok: boolean; skipped?: boolean; message?: string };
+
 /**
- * 추천인 코드 적용: 신규 유저 +REFERRAL_BONUS, 추천인 +REFERRAL_BONUS, 마일스톤 보너스.
- * 피추천인: mining_logs에 REFERRAL이 이미 있으면 포인트 중복 없이 스킵(멱등).
+ * REST 경로: 로그인한 사용자 본인 행만 수정 가능한 RLS라면 추천인(타인) 포인트 갱신이 0행이 될 수 있음.
+ * 반드시 `docs/supabase-apply-referral-rewards.sql` RPC를 배포하는 것을 권장합니다.
  */
-export async function applyReferralRewards(
+async function applyReferralRewardsViaRest(
   newUserId: string,
   rawCode: string
 ): Promise<ApplyReferralResult> {
@@ -241,8 +255,46 @@ export async function applyReferralRewards(
     type: 'BONUS',
   });
   if (log3) {
-    console.warn('Referral: milestone log insert failed', log3);
+    console.warn('Referral: milestone log failed', log3);
   }
 
   return { ok: true };
+}
+
+/**
+ * 추천인·피추천인 각 +100 (REFERRAL_BONUS), 마일스톤은 추천인에게만 추가 지급.
+ * 1) Supabase RPC `apply_referral_rewards` (권장, RLS 우회·원자적)
+ * 2) 없으면 REST 다중 update (RLS가 타인 행 수정을 막으면 추천인 쪽 실패 가능)
+ */
+export async function applyReferralRewards(
+  newUserId: string,
+  rawCode: string
+): Promise<ApplyReferralResult> {
+  const referralCode = rawCode.trim();
+  if (!referralCode) return { ok: true, skipped: true };
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const sessionUid = sessionData.session?.user?.id;
+
+  if (sessionUid === newUserId) {
+    const { data: rpcData, error: rpcError } = await supabase.rpc('apply_referral_rewards', {
+      p_invite_code: referralCode,
+    });
+
+    if (!rpcError && rpcData != null && typeof rpcData === 'object' && 'ok' in rpcData) {
+      const p = rpcData as RpcPayload;
+      if (p.ok) return { ok: true, skipped: p.skipped };
+      return { ok: false, message: p.message ?? 'Referral failed.' };
+    }
+
+    if (rpcError && !isRpcUnavailable(rpcError)) {
+      return { ok: false, message: rpcError.message ?? 'Referral request failed.' };
+    }
+
+    if (rpcError && isRpcUnavailable(rpcError)) {
+      console.warn('[referral] RPC unavailable, using REST fallback:', rpcError?.message);
+    }
+  }
+
+  return applyReferralRewardsViaRest(newUserId, rawCode);
 }
