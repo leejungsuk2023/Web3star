@@ -953,11 +953,11 @@ function HeroSection() {
             <p className="text-[10px] font-medium uppercase tracking-[0.42em] text-cyan-400/75 md:text-[11px]">
               Web3 creation
             </p>
-            <h1 className="mt-4 text-4xl leading-[1.08] text-white md:text-5xl md:leading-[1.06]">
-              <span className="block bg-gradient-to-b from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent font-medium tracking-[0.026em] md:tracking-[0.05em]">
+            <h1 className="mt-4 overflow-visible text-4xl leading-[1.2] text-white md:text-5xl md:leading-[1.22]">
+              <span className="block bg-gradient-to-b from-white via-zinc-200 to-zinc-500 bg-clip-text py-px text-transparent font-medium tracking-[0.026em] md:tracking-[0.05em]">
                 Creator-first
               </span>
-              <span className="mt-1 block bg-gradient-to-b from-cyan-100 via-cyan-200/90 to-cyan-600/80 bg-clip-text text-transparent font-normal tracking-[0.016em] md:tracking-[0.03em]">
+              <span className="mt-1 block bg-gradient-to-b from-cyan-100 via-cyan-200/90 to-cyan-600/80 bg-clip-text py-px pb-[0.2em] text-transparent font-normal tracking-[0.016em] md:tracking-[0.03em]">
                 digital economy
               </span>
             </h1>
