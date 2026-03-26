@@ -27,6 +27,14 @@ const navItems = [
   { label: 'Community', href: '#community' },
 ];
 
+/** 스토어 링크 연결 전까지 placeholder. `/TODO-*` 는 클릭해도 이동하지 않음. */
+const ANDROID_STORE_PLACEHOLDER_HREF = '/TODO-ANDROID';
+const IOS_STORE_PLACEHOLDER_HREF = '/TODO-IOS';
+
+function isTodoStoreHref(href: string) {
+  return href.startsWith('/TODO-');
+}
+
 const roadmapItems = [
   {
     phase: '01',
@@ -499,12 +507,6 @@ function TokenomicsSection() {
 }
 
 function DownloadSection() {
-  // TODO: 다운로드 링크는 추후 연결. 현재는 클릭해도 이동하지 않음.
-  const ANDROID_DOWNLOAD_HREF = '/TODO-ANDROID';
-  const IOS_DOWNLOAD_HREF = '/TODO-IOS';
-
-  const isTodoHref = (href: string) => href.startsWith('/TODO-');
-
   return (
     <section
       id="download"
@@ -530,24 +532,24 @@ function DownloadSection() {
         </ol>
         <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-800/80 pt-3">
           <a
-            href={ANDROID_DOWNLOAD_HREF}
+            href={ANDROID_STORE_PLACEHOLDER_HREF}
             aria-label="Download on Android (coming soon)"
             className="btn-glow-soft inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-cyan-500/35 bg-cyan-500/15 px-3 py-2 text-xs font-semibold text-cyan-50 opacity-85 hover:opacity-95"
             title="Google Play release coming soon"
             onClick={(e) => {
-              if (isTodoHref(ANDROID_DOWNLOAD_HREF)) e.preventDefault();
+              if (isTodoStoreHref(ANDROID_STORE_PLACEHOLDER_HREF)) e.preventDefault();
             }}
           >
             <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Android
           </a>
           <a
-            href={IOS_DOWNLOAD_HREF}
+            href={IOS_STORE_PLACEHOLDER_HREF}
             aria-label="Download on iOS (coming soon)"
             className="btn-glow-soft inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-gray-700 bg-[#0c0c0c] px-3 py-2 text-xs font-semibold text-gray-500 hover:border-gray-600"
             title="App Store release coming soon"
             onClick={(e) => {
-              if (isTodoHref(IOS_DOWNLOAD_HREF)) e.preventDefault();
+              if (isTodoStoreHref(IOS_STORE_PLACEHOLDER_HREF)) e.preventDefault();
             }}
           >
             <Apple className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -856,7 +858,6 @@ function BenefitsSection() {
 }
 
 function HeroSection() {
-  const webAppLoginHref = `${import.meta.env.BASE_URL}app/login`;
   const wrapRef = React.useRef<HTMLElement>(null);
   const rafRef = React.useRef(0);
   const pendingRef = React.useRef({ xPct: 50, yPct: 45, px: 0, py: 0 });
@@ -968,18 +969,42 @@ function HeroSection() {
             </p>
             <div className="mt-8 flex flex-row flex-wrap items-center gap-4">
               <a
-                href={webAppLoginHref}
-                className="hero-btn hero-btn-primary inline-flex h-12 min-w-[220px] items-center justify-center rounded-xl border border-cyan-200/35 px-10 text-center text-sm font-bold tracking-[0.01em] text-white btn-glow-primary"
+                href={ANDROID_STORE_PLACEHOLDER_HREF}
+                aria-label="Download for Android (store link coming soon)"
+                title="Google Play — link coming soon"
+                className="hero-btn hero-btn-primary inline-flex h-12 min-w-[220px] cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-cyan-200/35 px-8 text-center text-sm font-bold tracking-[0.01em] text-white btn-glow-primary opacity-95"
+                onClick={(e) => {
+                  if (isTodoStoreHref(ANDROID_STORE_PLACEHOLDER_HREF)) e.preventDefault();
+                }}
               >
-                Start with Web3Star
+                <Download className="h-4 w-4 shrink-0" aria-hidden />
+                Android
               </a>
               <a
-                href="#whitepaper"
-                className="hero-btn hero-btn-secondary inline-flex h-12 min-w-[220px] items-center justify-center rounded-xl border border-white/25 px-10 text-center text-sm font-medium tracking-[0.01em] text-slate-100/95 btn-glow-outline hover:border-white/40"
+                href={IOS_STORE_PLACEHOLDER_HREF}
+                aria-label="Download for iOS (store link coming soon)"
+                title="App Store — link coming soon"
+                className="hero-btn hero-btn-secondary inline-flex h-12 min-w-[220px] cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-white/25 px-8 text-center text-sm font-medium tracking-[0.01em] text-slate-100/95 btn-glow-outline hover:border-white/40"
+                onClick={(e) => {
+                  if (isTodoStoreHref(IOS_STORE_PLACEHOLDER_HREF)) e.preventDefault();
+                }}
               >
-                Read Whitepaper
+                <Apple className="h-4 w-4 shrink-0" aria-hidden />
+                iOS
               </a>
             </div>
+            <p className="mt-3 text-xs text-gray-500">
+              <a
+                href={`${import.meta.env.BASE_URL}app/login`}
+                className="text-cyan-400/85 underline-offset-2 hover:text-cyan-300 hover:underline"
+              >
+                Sign in on the web
+              </a>
+              <span className="text-gray-600"> · </span>
+              <a href="#whitepaper" className="text-gray-400 underline-offset-2 hover:text-gray-300 hover:underline">
+                Read whitepaper
+              </a>
+            </p>
           </div>
 
           <div className="order-1 lg:order-2 lg:col-span-8">
