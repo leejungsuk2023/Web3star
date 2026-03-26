@@ -993,18 +993,6 @@ function HeroSection() {
                 iOS
               </a>
             </div>
-            <p className="mt-3 text-xs text-gray-500">
-              <a
-                href={`${import.meta.env.BASE_URL}app/login`}
-                className="text-cyan-400/85 underline-offset-2 hover:text-cyan-300 hover:underline"
-              >
-                Sign in on the web
-              </a>
-              <span className="text-gray-600"> · </span>
-              <a href="#whitepaper" className="text-gray-400 underline-offset-2 hover:text-gray-300 hover:underline">
-                Read whitepaper
-              </a>
-            </p>
           </div>
 
           <div className="order-1 lg:order-2 lg:col-span-8">
