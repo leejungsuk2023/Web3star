@@ -285,12 +285,12 @@ export default function Home() {
                 : 'cursor-pointer bg-gradient-to-br from-purple-700/95 via-blue-800/95 to-indigo-900/95 shadow-black/40 hover:scale-[1.02]'
             }`}
           >
-            <div className="relative box-border flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden rounded-full bg-[#000000] p-[0.3%] shadow-[inset_0_0_32px_rgba(0,0,0,0.88),inset_0_1px_2px_rgba(255,255,255,0.04)]">
-              <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
+            <div className="relative box-border flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden rounded-full bg-[#000000] p-0 shadow-[inset_0_0_32px_rgba(0,0,0,0.88),inset_0_1px_2px_rgba(255,255,255,0.04)]">
+              <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden">
                 <img
                   src={miningCenterLogo}
                   alt="Web3Star mining logo"
-                  className={`h-full w-full object-contain object-center mix-blend-screen transition-all duration-300 ${
+                  className={`h-full w-full origin-center scale-[1.22] object-contain object-center mix-blend-screen transition-all duration-300 ${
                     centerButtonActive
                       ? 'saturate-[1.15] contrast-[1.12] brightness-110'
                       : 'saturate-[1.08] contrast-[1.08] brightness-[1.04]'

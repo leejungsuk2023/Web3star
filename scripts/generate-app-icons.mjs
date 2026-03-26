@@ -14,11 +14,10 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 
-/** 로고가 들어갈 정사각형 한 변 = 캔버스 × 이 비율 (maskable 안전구역 여유)
- *  여백 비율을 줄이면 아이콘이 더 크게 보이지만, 너무 올리면 일부 소스 여백이 잘릴 수 있습니다.
- *  fit('inside')라서 기본적으로 크롭되진 않지만, 안전하게 약간만 확대합니다.
- */
-const CONTENT_BOX_RATIO = 0.995;
+/** 로고가 들어갈 정사각형 한 변 = 캔버스 × 이 비율 (1 = 가용 면적 전체) */
+const CONTENT_BOX_RATIO = 1;
+/** contain으로 맞춘 뒤 추가 배율 — 원 안을 꽉 채우기 위해 약간 넘치게(가장자리 클리핑) */
+const LOGO_OUTPUT_SCALE = 1.22;
 const BG = { r: 0, g: 0, b: 0, alpha: 1 };
 
 async function renderPaddedSquare(sourcePath, size) {
@@ -33,16 +32,37 @@ async function renderPaddedSquare(sourcePath, size) {
     .ensureAlpha()
     .toBuffer();
 
-  const pipeline = sharp({
+  const meta = await sharp(resized).metadata();
+  const w = meta.width;
+  const h = meta.height;
+  if (!w || !h) throw new Error('Could not read resized dimensions');
+
+  const scaledW = Math.max(1, Math.round(w * LOGO_OUTPUT_SCALE));
+  const scaledH = Math.max(1, Math.round(h * LOGO_OUTPUT_SCALE));
+  const scaled = await sharp(resized)
+    .resize(scaledW, scaledH, { kernel: sharp.kernel.lanczos3 })
+    .ensureAlpha()
+    .toBuffer();
+
+  const side = Math.max(size, scaledW, scaledH);
+  const onSquare = await sharp({
     create: {
-      width: size,
-      height: size,
+      width: side,
+      height: side,
       channels: 4,
       background: BG,
     },
-  }).composite([{ input: resized, gravity: 'center' }]);
+  })
+    .composite([{ input: scaled, gravity: 'center' }])
+    .png()
+    .toBuffer();
 
-  return pipeline.png().toBuffer();
+  const left = Math.floor((side - size) / 2);
+  const top = Math.floor((side - size) / 2);
+  return sharp(onSquare)
+    .extract({ left, top, width: size, height: size })
+    .png()
+    .toBuffer();
 }
 
 async function main() {
@@ -89,7 +109,7 @@ async function main() {
     console.log('Wrote', path.relative(repoRoot, out));
   }
 
-  console.log('Done. CONTENT_BOX_RATIO =', CONTENT_BOX_RATIO);
+  console.log('Done. CONTENT_BOX_RATIO =', CONTENT_BOX_RATIO, 'LOGO_OUTPUT_SCALE =', LOGO_OUTPUT_SCALE);
 }
 
 main().catch((e) => {
