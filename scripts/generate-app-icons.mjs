@@ -23,7 +23,8 @@ const LOGO_OUTPUT_SCALE = 1.22;
  * - 마스크(원/스퀘어클/티어드롭 등)에서 잘림이 발생하므로 PWA보다 보수적으로 넣어야 함
  * - "꽉 차 보이되 안 잘리게"를 위한 safe zone
  */
-const ANDROID_CONTENT_BOX_RATIO = 0.88;
+// Slightly more conservative to avoid clipping on Samsung / Pixel launchers.
+const ANDROID_CONTENT_BOX_RATIO = 0.82;
 const ANDROID_OUTPUT_SCALE = 1.0;
 const BG = { r: 0, g: 0, b: 0, alpha: 1 };
 
