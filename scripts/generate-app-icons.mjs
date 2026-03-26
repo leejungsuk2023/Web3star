@@ -20,9 +20,21 @@ const CONTENT_BOX_RATIO = 1;
 const LOGO_OUTPUT_SCALE = 1.22;
 const BG = { r: 0, g: 0, b: 0, alpha: 1 };
 
+/** Canva export 등으로 남은 검은 테두리 제거 — 안 하면 contain이 여백까지 맞춰 로고가 작아 보임 */
+const TRIM_THRESHOLD = 12;
+
+async function toTrimmedBuffer(sourcePath) {
+  try {
+    return await sharp(sourcePath).trim({ threshold: TRIM_THRESHOLD }).ensureAlpha().toBuffer();
+  } catch {
+    return await sharp(sourcePath).ensureAlpha().toBuffer();
+  }
+}
+
 async function renderPaddedSquare(sourcePath, size) {
+  const trimmed = await toTrimmedBuffer(sourcePath);
   const inner = Math.max(1, Math.round(size * CONTENT_BOX_RATIO));
-  const resized = await sharp(sourcePath)
+  const resized = await sharp(trimmed)
     .resize({
       width: inner,
       height: inner,

@@ -290,7 +290,7 @@ export default function Home() {
                 <img
                   src={miningCenterLogo}
                   alt="Web3Star mining logo"
-                  className={`h-full w-full origin-center scale-[1.22] object-contain object-center mix-blend-screen transition-all duration-300 ${
+                  className={`h-full w-full object-contain object-center mix-blend-screen transition-all duration-300 ${
                     centerButtonActive
                       ? 'saturate-[1.15] contrast-[1.12] brightness-110'
                       : 'saturate-[1.08] contrast-[1.08] brightness-[1.04]'
