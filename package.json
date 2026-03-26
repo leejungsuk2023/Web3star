@@ -8,6 +8,7 @@
     "build:web": "vite build",
     "build:app": "vite build --mode app",
     "dev": "vite",
+    "test": "vitest run",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui",
     "test:e2e:headed": "npx playwright test --headed",
@@ -87,7 +88,8 @@
     "@vitejs/plugin-react": "4.7.0",
     "sharp": "^0.34.5",
     "tailwindcss": "4.1.12",
-    "vite": "6.3.5"
+    "vite": "6.3.5",
+    "vitest": "^3.2.4"
   },
   "peerDependencies": {
     "react": "18.3.1",

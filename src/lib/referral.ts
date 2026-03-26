@@ -40,13 +40,27 @@ async function waitForUserRow(
   return null;
 }
 
+/**
+ * PRD/DB에선 referred_by가 "초대 코드 문자열"일 수 있고, 클라이언트는 UUID(추천인 id)로 통일해 저장합니다.
+ * DB 트리거가 가입 직후 referred_by만 채우면, 예전 로직(if referred_by)이 전체를 스킵해 피추천인 100pt가 누락됐습니다.
+ */
+export function isConflictingExistingReferral(
+  referredBy: string | null | undefined,
+  enteredCode: string,
+  referrerId: string
+): boolean {
+  const rb = referredBy?.trim() || '';
+  if (!rb) return false;
+  return rb !== enteredCode.trim() && rb !== referrerId;
+}
+
 export type ApplyReferralResult =
   | { ok: true; skipped?: boolean }
   | { ok: false; message: string };
 
 /**
  * 추천인 코드 적용: 신규 유저 +REFERRAL_BONUS, 추천인 +REFERRAL_BONUS, 마일스톤 보너스.
- * 이미 referred_by가 있으면 스킵(중복 지급 방지).
+ * 피추천인: mining_logs에 REFERRAL이 이미 있으면 포인트 중복 없이 스킵(멱등).
  */
 export async function applyReferralRewards(
   newUserId: string,
@@ -57,7 +71,7 @@ export async function applyReferralRewards(
 
   const { data: referrer, error: refErr } = await supabase
     .from('users')
-    .select('id, point')
+    .select('id, point, invite_code')
     .eq('invite_code', referralCode)
     .single();
 
@@ -77,23 +91,56 @@ export async function applyReferralRewards(
     };
   }
 
-  if (row.referred_by) {
+  if (isConflictingExistingReferral(row.referred_by, referralCode, referrer.id)) {
+    return {
+      ok: false,
+      message: 'A different referral is already registered on your account.',
+    };
+  }
+
+  const { data: selfRefLog } = await supabase
+    .from('mining_logs')
+    .select('id')
+    .eq('user_id', newUserId)
+    .eq('type', 'REFERRAL')
+    .limit(1)
+    .maybeSingle();
+
+  if (selfRefLog) {
+    if (row.referred_by !== referrer.id) {
+      const { error: fixRb } = await supabase
+        .from('users')
+        .update({ referred_by: referrer.id })
+        .eq('id', newUserId)
+        .select('id');
+      if (fixRb) {
+        console.warn('Referral: normalize referred_by failed', fixRb);
+      }
+    }
     return { ok: true, skipped: true };
   }
 
   const newPoint = (row.point ?? 0) + REFERRAL_BONUS;
 
-  const { error: u1 } = await supabase
+  const { data: updatedSelf, error: u1 } = await supabase
     .from('users')
     .update({
       referred_by: referrer.id,
       point: newPoint,
     })
-    .eq('id', newUserId);
+    .eq('id', newUserId)
+    .select('id');
 
   if (u1) {
     console.error('Referral: update new user failed', u1);
     return { ok: false, message: u1.message };
+  }
+  if (!updatedSelf?.length) {
+    console.error('Referral: update new user affected 0 rows (RLS or missing row)');
+    return {
+      ok: false,
+      message: 'Could not apply referral reward to your account. Please contact support.',
+    };
   }
 
   const { error: log1 } = await supabase.from('mining_logs').insert({
@@ -116,16 +163,24 @@ export async function applyReferralRewards(
     return { ok: false, message: refFetchErr?.message ?? 'Referrer fetch failed.' };
   }
 
-  const { error: u2 } = await supabase
+  const { data: updatedRef, error: u2 } = await supabase
     .from('users')
     .update({
       point: (freshRef.point ?? 0) + REFERRAL_BONUS,
     })
-    .eq('id', referrer.id);
+    .eq('id', referrer.id)
+    .select('id');
 
   if (u2) {
     console.error('Referral: update referrer failed', u2);
     return { ok: false, message: u2.message };
+  }
+  if (!updatedRef?.length) {
+    console.error('Referral: update referrer affected 0 rows (RLS)');
+    return {
+      ok: false,
+      message: 'Could not credit the referrer. Please contact support.',
+    };
   }
 
   const { error: log2 } = await supabase.from('mining_logs').insert({
@@ -137,10 +192,17 @@ export async function applyReferralRewards(
     console.warn('Referral: mining_logs (referrer) insert failed', log2);
   }
 
-  const { count: totalReferrals, error: cntErr } = await supabase
-    .from('users')
-    .select('id', { count: 'exact', head: true })
-    .eq('referred_by', referrer.id);
+  const ic = referrer.invite_code?.trim();
+  const countRes = ic
+    ? await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .or(`referred_by.eq.${referrer.id},referred_by.eq.${ic}`)
+    : await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('referred_by', referrer.id);
+  const { count: totalReferrals, error: cntErr } = countRes;
 
   if (cntErr) {
     console.warn('Referral: milestone count failed', cntErr);
