@@ -1093,16 +1093,18 @@ export default function Homepage() {
         <div className="max-w-6xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
           <a
             href="#top"
-            className="flex items-center gap-2.5 text-xl font-bold tracking-tight"
+            className="flex items-center gap-2.5 text-xl font-bold leading-none tracking-tight"
           >
-            <img
-              src={`${import.meta.env.BASE_URL}pwa-icon-192.png`}
-              width={36}
-              height={36}
-              decoding="async"
-              alt=""
-              className="h-9 w-9 shrink-0 rounded-lg bg-black object-contain object-center ring-1 ring-white/10"
-            />
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-visible rounded-lg bg-black p-1 ring-1 ring-white/10">
+              <img
+                src={`${import.meta.env.BASE_URL}pwa-icon-192.png`}
+                width={192}
+                height={192}
+                decoding="async"
+                alt=""
+                className="h-full w-full max-h-full max-w-full object-contain object-center"
+              />
+            </span>
             <span className="text-white">Web3</span>
             <span className="text-cyan-400">Star</span>
           </a>

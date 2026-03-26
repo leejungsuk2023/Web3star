@@ -6,6 +6,8 @@
   "scripts": {
     "build": "vite build",
     "build:web": "vite build",
+    "build:gh-pages": "vite build --base /Web3star/",
+    "preview:gh-pages": "npm run build:gh-pages && vite preview --base /Web3star/",
     "build:app": "vite build --mode app",
     "dev": "vite",
     "test": "vitest run",
