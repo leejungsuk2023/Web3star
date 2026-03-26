@@ -46,13 +46,13 @@ export default function Layout() {
         </div>
       </header>
 
-      {/* Page Content */}
-      <div className="relative z-10 min-h-0 flex-1 flex flex-col">
+      {/* Page Content — scroll on short viewports so bottom cards aren’t clipped above the tab bar */}
+      <div className="relative z-10 min-h-0 flex-1 flex flex-col overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
         <Outlet />
       </div>
 
       {/* Bottom Navigation Bar */}
-      <nav className="relative z-10 bg-gradient-to-t from-gray-900/95 to-gray-900/80 backdrop-blur-md border-t border-gray-800 px-6 py-4">
+      <nav className="relative z-10 shrink-0 bg-gradient-to-t from-gray-900/95 to-gray-900/80 backdrop-blur-md border-t border-gray-800 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
         <div className="flex items-center justify-around max-w-sm mx-auto">
           <button
             onClick={() => navigate('/app')}

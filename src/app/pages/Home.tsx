@@ -263,11 +263,11 @@ export default function Home() {
   };
 
   return (
-    <div className="flex-1 flex flex-col">
-      {/* Center Hero Section */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
+    <div className="flex min-h-full w-full flex-col">
+      {/* Center Hero Section — min-h-0 so this flex child can shrink when the page scrolls */}
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 py-2">
         {/* Glowing Circular Button */}
-        <div className="relative mb-8">
+        <div className="relative mb-4 max-[380px]:mb-3 sm:mb-8">
           <div className={`absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 blur-3xl scale-125 animate-pulse transition-opacity duration-500 ${
             centerButtonActive ? 'opacity-30' : 'opacity-10'
           }`}></div>
@@ -279,7 +279,7 @@ export default function Home() {
             onClick={handleCenterButtonClick}
             disabled={centerButtonActive || isMining}
             aria-label={centerButtonActive ? 'Mining in progress' : 'Start Mining'}
-            className={`relative h-56 w-56 overflow-hidden rounded-full p-[3px] shadow-2xl transition-all duration-300 ${
+            className={`relative h-48 w-48 max-[380px]:h-44 max-[380px]:w-44 sm:h-56 sm:w-56 overflow-hidden rounded-full p-[3px] shadow-2xl transition-all duration-300 ${
               centerButtonActive
                 ? 'bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 shadow-blue-500/45 hover:scale-105 active:scale-95'
                 : 'cursor-pointer bg-gradient-to-br from-purple-700/95 via-blue-800/95 to-indigo-900/95 shadow-black/40 hover:scale-[1.02]'
@@ -317,7 +317,7 @@ export default function Home() {
       </div>
 
       {/* Bottom Section - Ad Slots */}
-      <div className="px-6 pb-6">
+      <div className="shrink-0 px-6 pb-4 pt-1">
         <div className="bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm rounded-2xl p-4 border border-gray-800">
           <div className="flex items-center justify-between mb-3">
             <div>
