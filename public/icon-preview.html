@@ -1,154 +1,3 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Web3Star Icon Preview</title>
-    <style>
-      :root {
-        --bg: #05060a;
-        --card: rgba(255, 255, 255, 0.06);
-        --text: rgba(255, 255, 255, 0.92);
-        --muted: rgba(255, 255, 255, 0.62);
-        --line: rgba(255, 255, 255, 0.12);
-      }
-      body {
-        margin: 0;
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji",
-          "Segoe UI Emoji";
-        background: radial-gradient(1200px 600px at 30% 10%, rgba(34, 211, 238, 0.22), transparent 55%),
-          radial-gradient(1200px 600px at 80% 40%, rgba(167, 139, 250, 0.18), transparent 52%), var(--bg);
-        color: var(--text);
-      }
-      .wrap {
-        max-width: 980px;
-        margin: 0 auto;
-        padding: 24px 16px 48px;
-      }
-      h1 {
-        margin: 0;
-        font-size: 18px;
-        letter-spacing: 0.01em;
-      }
-      p {
-        margin: 10px 0 0;
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.45;
-      }
-      .grid {
-        margin-top: 18px;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 14px;
-      }
-      .card {
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        padding: 14px;
-      }
-      .label {
-        font-size: 12px;
-        color: var(--muted);
-        letter-spacing: 0.02em;
-      }
-      .iconRow {
-        margin-top: 12px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .icon {
-        width: 96px;
-        height: 96px;
-        background: #000;
-        border-radius: 18px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        overflow: hidden;
-        flex: 0 0 auto;
-      }
-      .icon img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        display: block;
-      }
-      .maskCircle {
-        border-radius: 999px;
-      }
-      .maskAndroid {
-        /* Approximate Android adaptive icon circle-ish mask */
-        border-radius: 24px;
-      }
-      .hint {
-        margin-top: 10px;
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .mono {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
-          monospace;
-        font-size: 12px;
-      }
-      .kv {
-        margin-top: 10px;
-        display: grid;
-        grid-template-columns: 90px 1fr;
-        row-gap: 6px;
-        column-gap: 10px;
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .kv b {
-        color: rgba(255, 255, 255, 0.86);
-        font-weight: 600;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <h1>Web3Star icon preview</h1>
-      <p>
-        This page helps verify the logo is <b>not clipped</b> and still feels <b>full</b> inside common masks.
-        If the Android preview is clipped on-device, reduce the Android safe-zone ratio in the generator.
-      </p>
-
-      <div class="grid">
-        <div class="card">
-          <div class="label">PWA / iOS (pwa-icon-512.png)</div>
-          <div class="iconRow">
-            <div class="icon">
-              <img src="./pwa-icon-512.png" alt="pwa-icon-512" />
-            </div>
-            <div class="icon maskCircle">
-              <img src="./pwa-icon-512.png" alt="pwa-icon-512 (circle mask)" />
-            </div>
-          </div>
-          <div class="hint mono">Source: public/pwa-icon-512.png</div>
-        </div>
-
-        <div class="card">
-          <div class="label">Android adaptive foreground (preview)</div>
-          <div class="iconRow">
-            <div class="icon maskAndroid">
-              <img src="./android-ic_launcher_foreground-preview.png" alt="android adaptive foreground preview" />
-            </div>
-            <div class="icon maskCircle">
-              <img src="./android-ic_launcher_foreground-preview.png" alt="android adaptive foreground preview (circle mask)" />
-            </div>
-          </div>
-          <div class="hint mono">Source: public/android-ic_launcher_foreground-preview.png</div>
-          <div class="kv">
-            <b>Goal</b><span>Fill the mask without clipping on Galaxy launchers.</span>
-            <b>Note</b><span>Real launcher masks vary; the on-device result is the source of truth.</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </body>
-</html>
-
 <!DOCTYPE html>
 <html lang="ko">
   <head>
@@ -227,7 +76,8 @@
       .mask-circle img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
+        object-position: center;
       }
       .mask-squircle {
         width: 96px;
@@ -241,7 +91,8 @@
       .mask-squircle img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
+        object-position: center;
       }
       .large .mask-circle,
       .large .mask-squircle {
@@ -251,6 +102,36 @@
       }
       .large .mask-circle {
         border-radius: 50%;
+      }
+      .android-preview .row {
+        align-items: center;
+      }
+      .android-preview .raw img {
+        width: 100%;
+        height: 100%;
+      }
+      .android-preview .raw-box {
+        width: 188px;
+        height: 188px;
+        margin: 0 auto;
+        overflow: hidden;
+        background: #000;
+        box-shadow: 0 0 0 2px #374151;
+      }
+      .android-preview .mask-circle,
+      .android-preview .mask-squircle {
+        width: 188px;
+        height: 188px;
+        border-radius: 38px;
+      }
+      .android-preview .mask-circle {
+        border-radius: 50%;
+      }
+      .android-preview .mask-circle img,
+      .android-preview .mask-squircle img,
+      .android-preview .raw-box img {
+        transform: scale(1.55);
+        transform-origin: center;
       }
       a {
         color: #22d3ee;
@@ -265,22 +146,24 @@
     </p>
 
     <div class="grid">
-      <div class="card">
-        <h2>512 × 512 (maskable 용)</h2>
-        <div class="row large">
+      <div class="card android-preview">
+        <h2>Android foreground preview (512)</h2>
+        <div class="row">
           <div class="sample raw">
-            <img src="./pwa-icon-512.png" width="128" height="128" alt="512" />
+            <div class="raw-box">
+              <img src="./android-ic_launcher_foreground-preview.png" width="188" height="188" alt="android foreground 512" />
+            </div>
             <span>원본 128px 표시</span>
           </div>
           <div class="sample">
             <div class="mask-circle">
-              <img src="./pwa-icon-512.png" alt="" />
+              <img src="./android-ic_launcher_foreground-preview.png" alt="" />
             </div>
             <span>원형 마스크</span>
           </div>
           <div class="sample">
             <div class="mask-squircle">
-              <img src="./pwa-icon-512.png" alt="" />
+              <img src="./android-ic_launcher_foreground-preview.png" alt="" />
             </div>
             <span>스쿼클</span>
           </div>
@@ -288,7 +171,7 @@
       </div>
 
       <div class="card">
-        <h2>192 × 192</h2>
+        <h2>PWA 192 × 192 (참고)</h2>
         <div class="row">
           <div class="sample raw">
             <img src="./pwa-icon-192.png" width="96" height="96" alt="192" />

@@ -264,8 +264,11 @@ export default function Home() {
 
   return (
     <div className="flex min-h-full w-full flex-col">
-      {/* Center Hero Section — min-h-0 so this flex child can shrink when the page scrolls */}
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 py-2">
+      {/* Center Hero Section
+          flex-1 + justify-center은 하단 카드와의 사이 여백을 크게 만들 수 있어,
+          이제 히어로는 컨텐츠 높이만큼만 쓰고(스크롤용 컨테이너는 Layout이 담당),
+          노란 여백이 줄어들게 합니다. */}
+      <div className="flex flex-col items-center px-6 py-2">
         {/* Glowing Circular Button */}
         <div className="relative mb-4 max-[380px]:mb-3 sm:mb-8">
           <div className={`absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 blur-3xl scale-125 animate-pulse transition-opacity duration-500 ${

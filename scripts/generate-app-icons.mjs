@@ -14,43 +14,83 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 
-/** PWA/iOS 아이콘: 로고가 들어갈 정사각형 한 변 = 캔버스 × 이 비율 (1 = 가용 면적 전체) */
-const CONTENT_BOX_RATIO = 1;
-/** PWA/iOS: contain으로 맞춘 뒤 추가 배율 — 원 안을 꽉 채우기 위해 약간 넘치게(가장자리 클리핑) */
-const LOGO_OUTPUT_SCALE = 1.22;
+/** PWA/iOS 아이콘: 정렬/가독성 중심 기본값 */
+const CONTENT_BOX_RATIO = 0.92;
+const LOGO_OUTPUT_SCALE = 1.0;
 /**
  * Android adaptive icon foreground:
  * - 마스크(원/스퀘어클/티어드롭 등)에서 잘림이 발생하므로 PWA보다 보수적으로 넣어야 함
  * - "꽉 차 보이되 안 잘리게"를 위한 safe zone
  */
-// Slightly more conservative to avoid clipping on Samsung / Pixel launchers.
-const ANDROID_CONTENT_BOX_RATIO = 0.82;
+// Android adaptive icon foreground:
+// 우측/상단이 계속 잘리면 trim 과정에서 여백이 과하게 제거된 케이스일 수 있어,
+// Android는 trim을 비활성화하고(더 많은 여백 유지) 보수적으로 축소합니다.
+// Reduce further to guarantee no left/right/top/bottom clipping in common launcher masks.
+const ANDROID_CONTENT_BOX_RATIO = 0.68;
 const ANDROID_OUTPUT_SCALE = 1.0;
+const ANDROID_OFFSET_X_RATIO = 0;
+const ANDROID_OFFSET_Y_RATIO = 0;
+// Hard safety margin around raw source to prevent any side clipping.
+const ANDROID_SOURCE_PAD_RATIO = 0.08;
 const BG = { r: 0, g: 0, b: 0, alpha: 1 };
 
 /** Canva export 등으로 남은 검은 테두리 제거 — 안 하면 contain이 여백까지 맞춰 로고가 작아 보임 */
 const TRIM_THRESHOLD = 12;
+const ANDROID_TRIM_DISABLED = true;
 
-async function toTrimmedBuffer(sourcePath) {
+async function toTrimmedBuffer(
+  sourcePath,
+  { useTrim = true, trimThreshold = TRIM_THRESHOLD } = {},
+) {
   try {
-    return await sharp(sourcePath).trim({ threshold: TRIM_THRESHOLD }).ensureAlpha().toBuffer();
+    const img = sharp(sourcePath).ensureAlpha();
+    if (!useTrim) return await img.toBuffer();
+    return await img.trim({ threshold: trimThreshold }).toBuffer();
   } catch {
     return await sharp(sourcePath).ensureAlpha().toBuffer();
   }
 }
 
 async function renderPaddedSquare(sourcePath, size, opts = {}) {
-  const trimmed = await toTrimmedBuffer(sourcePath);
+  const trimThreshold = typeof opts.trimThreshold === 'number' ? opts.trimThreshold : TRIM_THRESHOLD;
+  const useTrim = typeof opts.useTrim === 'boolean' ? opts.useTrim : true;
+  const sourcePadRatio = typeof opts.sourcePadRatio === 'number' ? opts.sourcePadRatio : 0;
+  const trimmed = await toTrimmedBuffer(sourcePath, { useTrim, trimThreshold });
+  const sourceBuffer =
+    sourcePadRatio > 0
+      ? await (async () => {
+          const meta = await sharp(trimmed).metadata();
+          const w = meta.width ?? 0;
+          const h = meta.height ?? 0;
+          if (!w || !h) return trimmed;
+          const pad = Math.max(1, Math.round(Math.max(w, h) * sourcePadRatio));
+          const canvasW = w + pad * 2;
+          const canvasH = h + pad * 2;
+          return sharp({
+            create: {
+              width: canvasW,
+              height: canvasH,
+              channels: 4,
+              background: BG,
+            },
+          })
+            .composite([{ input: trimmed, left: pad, top: pad }])
+            .png()
+            .toBuffer();
+        })()
+      : trimmed;
   /** 브라우저 탭 파비콘(32)은 UI가 살짝 잘라내는 경우가 많아 로고를 작게 넣어 여유를 둠 */
   const faviconSafe = size <= 32;
   const innerRatio = typeof opts.innerRatio === 'number' ? opts.innerRatio : CONTENT_BOX_RATIO;
   const forcedOutputScale = typeof opts.outputScale === 'number' ? opts.outputScale : undefined;
+  const offsetXRatio = typeof opts.offsetXRatio === 'number' ? opts.offsetXRatio : 0;
+  const offsetYRatio = typeof opts.offsetYRatio === 'number' ? opts.offsetYRatio : 0;
   const inner = Math.max(
     1,
     Math.round(size * (faviconSafe ? 0.78 : innerRatio)),
   );
   const outputScale = forcedOutputScale ?? (faviconSafe ? 1.0 : LOGO_OUTPUT_SCALE);
-  const resized = await sharp(trimmed)
+  const resized = await sharp(sourceBuffer)
     .resize({
       width: inner,
       height: inner,
@@ -73,20 +113,24 @@ async function renderPaddedSquare(sourcePath, size, opts = {}) {
     .toBuffer();
 
   const side = Math.max(size, scaledW, scaledH);
-  const onSquare = await sharp({
+  const base = sharp({
     create: {
       width: side,
       height: side,
       channels: 4,
       background: BG,
     },
-  })
-    .composite([{ input: scaled, gravity: 'center' }])
+  });
+  const leftForComposite = Math.round((side - scaledW) / 2 + offsetXRatio * size);
+  const topForComposite = Math.round((side - scaledH) / 2 + offsetYRatio * size);
+  const onSquare = await base
+    .composite([{ input: scaled, left: leftForComposite, top: topForComposite }])
     .png()
     .toBuffer();
 
-  const left = Math.floor((side - size) / 2);
-  const top = Math.floor((side - size) / 2);
+  // Use round instead of floor to avoid 1px center bias (can show up as right/top clipping in preview masks).
+  const left = Math.round((side - size) / 2);
+  const top = Math.round((side - size) / 2);
   return sharp(onSquare)
     .extract({ left, top, width: size, height: size })
     .png()
@@ -135,6 +179,10 @@ async function main() {
     const buf = await renderPaddedSquare(sourcePath, size, {
       innerRatio: ANDROID_CONTENT_BOX_RATIO,
       outputScale: ANDROID_OUTPUT_SCALE,
+      offsetXRatio: ANDROID_OFFSET_X_RATIO,
+      offsetYRatio: ANDROID_OFFSET_Y_RATIO,
+      useTrim: !ANDROID_TRIM_DISABLED,
+      sourcePadRatio: ANDROID_SOURCE_PAD_RATIO,
     });
     fs.writeFileSync(out, buf);
     console.log('Wrote', path.relative(repoRoot, out));
@@ -147,6 +195,10 @@ async function main() {
     await renderPaddedSquare(sourcePath, 512, {
       innerRatio: ANDROID_CONTENT_BOX_RATIO,
       outputScale: ANDROID_OUTPUT_SCALE,
+      offsetXRatio: ANDROID_OFFSET_X_RATIO,
+      offsetYRatio: ANDROID_OFFSET_Y_RATIO,
+      useTrim: !ANDROID_TRIM_DISABLED,
+      sourcePadRatio: ANDROID_SOURCE_PAD_RATIO,
     }),
   );
   console.log('Wrote', path.relative(repoRoot, androidPreview));
@@ -160,6 +212,12 @@ async function main() {
     ANDROID_CONTENT_BOX_RATIO,
     'ANDROID_OUTPUT_SCALE =',
     ANDROID_OUTPUT_SCALE,
+    'ANDROID_OFFSET_X_RATIO =',
+    ANDROID_OFFSET_X_RATIO,
+    'ANDROID_TRIM_DISABLED =',
+    ANDROID_TRIM_DISABLED,
+    'ANDROID_SOURCE_PAD_RATIO =',
+    ANDROID_SOURCE_PAD_RATIO,
   );
 }
 

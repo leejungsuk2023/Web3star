@@ -1,3 +1,4 @@
+import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import { Home, Trophy, User, Bell } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,7 +13,7 @@ export default function Layout() {
   const points = profile?.point ?? 0;
 
   return (
-    <div className="relative h-screen w-full text-white flex flex-col overflow-hidden max-w-md mx-auto">
+    <div className="relative min-h-screen w-full text-white flex flex-col overflow-hidden max-w-md mx-auto">
       <div
         className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-[#101018] via-[#08080f] to-black"
         aria-hidden
@@ -51,8 +52,10 @@ export default function Layout() {
         <Outlet />
       </div>
 
-      {/* Bottom Navigation Bar */}
-      <nav className="relative z-10 shrink-0 bg-gradient-to-t from-gray-900/95 to-gray-900/80 backdrop-blur-md border-t border-gray-800 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
+      {/* Bottom Navigation Bar
+          Galaxy/edge-to-edge에서 시스템 내비(홈버튼/제스처)와 겹치지 않게,
+          bottom 쪽 여유(padding-bottom)를 더 주고 대신 py는 제거해서 탭바가 위로 올라가게 합니다. */}
+      <nav className="relative z-10 shrink-0 bg-gradient-to-t from-gray-900/95 to-gray-900/80 backdrop-blur-md border-t border-gray-800 px-6 pt-4 pb-[max(4rem,env(safe-area-inset-bottom,0px))]">
         <div className="flex items-center justify-around max-w-sm mx-auto">
           <button
             onClick={() => navigate('/app')}
