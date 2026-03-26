@@ -18,7 +18,7 @@ const repoRoot = path.resolve(__dirname, '..');
  *  여백 비율을 줄이면 아이콘이 더 크게 보이지만, 너무 올리면 일부 소스 여백이 잘릴 수 있습니다.
  *  fit('inside')라서 기본적으로 크롭되진 않지만, 안전하게 약간만 확대합니다.
  */
-const CONTENT_BOX_RATIO = 0.97;
+const CONTENT_BOX_RATIO = 0.995;
 const BG = { r: 0, g: 0, b: 0, alpha: 1 };
 
 async function renderPaddedSquare(sourcePath, size) {
