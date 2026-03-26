@@ -499,6 +499,12 @@ function TokenomicsSection() {
 }
 
 function DownloadSection() {
+  // TODO: 다운로드 링크는 추후 연결. 현재는 클릭해도 이동하지 않음.
+  const ANDROID_DOWNLOAD_HREF = '/TODO-ANDROID';
+  const IOS_DOWNLOAD_HREF = '/TODO-IOS';
+
+  const isTodoHref = (href: string) => href.startsWith('/TODO-');
+
   return (
     <section
       id="download"
@@ -523,22 +529,30 @@ function DownloadSection() {
           ))}
         </ol>
         <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-800/80 pt-3">
-          <button
-            type="button"
+          <a
+            href={ANDROID_DOWNLOAD_HREF}
+            aria-label="Download on Android (coming soon)"
             className="btn-glow-soft inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-cyan-500/35 bg-cyan-500/15 px-3 py-2 text-xs font-semibold text-cyan-50 opacity-85 hover:opacity-95"
             title="Google Play release coming soon"
+            onClick={(e) => {
+              if (isTodoHref(ANDROID_DOWNLOAD_HREF)) e.preventDefault();
+            }}
           >
             <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Android
-          </button>
-          <button
-            type="button"
+          </a>
+          <a
+            href={IOS_DOWNLOAD_HREF}
+            aria-label="Download on iOS (coming soon)"
             className="btn-glow-soft inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-gray-700 bg-[#0c0c0c] px-3 py-2 text-xs font-semibold text-gray-500 hover:border-gray-600"
             title="App Store release coming soon"
+            onClick={(e) => {
+              if (isTodoHref(IOS_DOWNLOAD_HREF)) e.preventDefault();
+            }}
           >
             <Apple className="h-3.5 w-3.5 shrink-0" aria-hidden />
             iOS
-          </button>
+          </a>
         </div>
       </div>
     </section>
