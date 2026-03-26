@@ -1139,7 +1139,7 @@ export default function Homepage() {
               <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-cyan-400">Platform Vision</p>
               <h2 className="mt-2 text-2xl font-semibold leading-tight md:text-3xl">
                 <span className="bg-gradient-to-b from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent tracking-[0.03em]">
-                  Web3 Star Vision
+                  Web3Star Vision
                 </span>
               </h2>
               <div className="mt-3 space-y-3 text-sm leading-relaxed text-gray-300/85 md:text-base">
@@ -1150,7 +1150,7 @@ export default function Homepage() {
                   rights and profits that have been overlooked on existing platforms.
                 </p>
                 <p>
-                  Web3 Star will usher in the era of Web3 where personal dreams and creation become assets of the
+                  Web3Star will usher in the era of Web3 where personal dreams and creation become assets of the
                   future.
                 </p>
               </div>
