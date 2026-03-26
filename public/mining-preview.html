@@ -65,8 +65,8 @@
         height: 100%;
         border-radius: 9999px;
         background: #000;
-        /* 앱과 동일: 아이콘 CONTENT_BOX_RATIO 0.94 → 캔버스 대비 ~3% 안전 여백 */
-        padding: 3%;
+        /* 앱과 동일: 아이콘 CONTENT_BOX_RATIO 0.97 → 캔버스 대비 ~1.5% 안전 여백 */
+        padding: 1.5%;
         box-shadow:
           inset 0 0 32px rgba(0, 0, 0, 0.88),
           inset 0 1px 2px rgba(255, 255, 255, 0.04);
@@ -93,8 +93,8 @@
   <body>
     <h1>채굴 화면 로고 (확대 반영)</h1>
     <p>
-      앱 아이콘 생성기의 <code>CONTENT_BOX_RATIO = 0.94</code>와 맞추기 위해, 원형 버튼 안쪽 여백을
-      <code>p-[3%]</code>로 두고 로고는 가용 영역 전체에 <code>object-fit: contain</code>으로 맞춥니다.
+      앱 아이콘 생성기의 <code>CONTENT_BOX_RATIO = 0.97</code>와 맞추기 위해, 원형 버튼 안쪽 여백을
+      <code>p-[1.5%]</code>로 두고 로고는 가용 영역 전체에 <code>object-fit: contain</code>으로 맞춥니다.
       실제 앱은 <code>Home.tsx</code> 채굴 버튼과 동일한 비율입니다.
     </p>
     <div class="wrap">
