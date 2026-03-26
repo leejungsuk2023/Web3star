@@ -33,7 +33,13 @@ async function toTrimmedBuffer(sourcePath) {
 
 async function renderPaddedSquare(sourcePath, size) {
   const trimmed = await toTrimmedBuffer(sourcePath);
-  const inner = Math.max(1, Math.round(size * CONTENT_BOX_RATIO));
+  /** 브라우저 탭 파비콘(32)은 UI가 살짝 잘라내는 경우가 많아 로고를 작게 넣어 여유를 둠 */
+  const faviconSafe = size <= 32;
+  const inner = Math.max(
+    1,
+    Math.round(size * (faviconSafe ? 0.78 : CONTENT_BOX_RATIO)),
+  );
+  const outputScale = faviconSafe ? 1.0 : LOGO_OUTPUT_SCALE;
   const resized = await sharp(trimmed)
     .resize({
       width: inner,
@@ -49,8 +55,8 @@ async function renderPaddedSquare(sourcePath, size) {
   const h = meta.height;
   if (!w || !h) throw new Error('Could not read resized dimensions');
 
-  const scaledW = Math.max(1, Math.round(w * LOGO_OUTPUT_SCALE));
-  const scaledH = Math.max(1, Math.round(h * LOGO_OUTPUT_SCALE));
+  const scaledW = Math.max(1, Math.round(w * outputScale));
+  const scaledH = Math.max(1, Math.round(h * outputScale));
   const scaled = await sharp(resized)
     .resize(scaledW, scaledH, { kernel: sharp.kernel.lanczos3 })
     .ensureAlpha()

@@ -1091,7 +1091,18 @@ export default function Homepage() {
     <div className="min-h-screen bg-black text-white scroll-smooth">
       <header className="sticky top-0 z-40 bg-black/85 backdrop-blur border-b border-gray-900">
         <div className="max-w-6xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-          <a href="#top" className="text-xl font-bold tracking-tight">
+          <a
+            href="#top"
+            className="flex items-center gap-2.5 text-xl font-bold tracking-tight"
+          >
+            <img
+              src={`${import.meta.env.BASE_URL}pwa-icon-192.png`}
+              width={36}
+              height={36}
+              decoding="async"
+              alt=""
+              className="h-9 w-9 shrink-0 rounded-lg bg-black object-contain object-center ring-1 ring-white/10"
+            />
             <span className="text-white">Web3</span>
             <span className="text-cyan-400">Star</span>
           </a>
