@@ -14,10 +14,17 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 
-/** 로고가 들어갈 정사각형 한 변 = 캔버스 × 이 비율 (1 = 가용 면적 전체) */
+/** PWA/iOS 아이콘: 로고가 들어갈 정사각형 한 변 = 캔버스 × 이 비율 (1 = 가용 면적 전체) */
 const CONTENT_BOX_RATIO = 1;
-/** contain으로 맞춘 뒤 추가 배율 — 원 안을 꽉 채우기 위해 약간 넘치게(가장자리 클리핑) */
+/** PWA/iOS: contain으로 맞춘 뒤 추가 배율 — 원 안을 꽉 채우기 위해 약간 넘치게(가장자리 클리핑) */
 const LOGO_OUTPUT_SCALE = 1.22;
+/**
+ * Android adaptive icon foreground:
+ * - 마스크(원/스퀘어클/티어드롭 등)에서 잘림이 발생하므로 PWA보다 보수적으로 넣어야 함
+ * - "꽉 차 보이되 안 잘리게"를 위한 safe zone
+ */
+const ANDROID_CONTENT_BOX_RATIO = 0.88;
+const ANDROID_OUTPUT_SCALE = 1.0;
 const BG = { r: 0, g: 0, b: 0, alpha: 1 };
 
 /** Canva export 등으로 남은 검은 테두리 제거 — 안 하면 contain이 여백까지 맞춰 로고가 작아 보임 */
@@ -31,15 +38,17 @@ async function toTrimmedBuffer(sourcePath) {
   }
 }
 
-async function renderPaddedSquare(sourcePath, size) {
+async function renderPaddedSquare(sourcePath, size, opts = {}) {
   const trimmed = await toTrimmedBuffer(sourcePath);
   /** 브라우저 탭 파비콘(32)은 UI가 살짝 잘라내는 경우가 많아 로고를 작게 넣어 여유를 둠 */
   const faviconSafe = size <= 32;
+  const innerRatio = typeof opts.innerRatio === 'number' ? opts.innerRatio : CONTENT_BOX_RATIO;
+  const forcedOutputScale = typeof opts.outputScale === 'number' ? opts.outputScale : undefined;
   const inner = Math.max(
     1,
-    Math.round(size * (faviconSafe ? 0.78 : CONTENT_BOX_RATIO)),
+    Math.round(size * (faviconSafe ? 0.78 : innerRatio)),
   );
-  const outputScale = faviconSafe ? 1.0 : LOGO_OUTPUT_SCALE;
+  const outputScale = forcedOutputScale ?? (faviconSafe ? 1.0 : LOGO_OUTPUT_SCALE);
   const resized = await sharp(trimmed)
     .resize({
       width: inner,
@@ -122,12 +131,35 @@ async function main() {
     const dir = path.join(resBase, folder);
     fs.mkdirSync(dir, { recursive: true });
     const out = path.join(dir, 'ic_launcher_foreground.png');
-    const buf = await renderPaddedSquare(sourcePath, size);
+    const buf = await renderPaddedSquare(sourcePath, size, {
+      innerRatio: ANDROID_CONTENT_BOX_RATIO,
+      outputScale: ANDROID_OUTPUT_SCALE,
+    });
     fs.writeFileSync(out, buf);
     console.log('Wrote', path.relative(repoRoot, out));
   }
 
-  console.log('Done. CONTENT_BOX_RATIO =', CONTENT_BOX_RATIO, 'LOGO_OUTPUT_SCALE =', LOGO_OUTPUT_SCALE);
+  // Browser preview asset (matches Android adaptive foreground settings)
+  const androidPreview = path.join(publicDir, 'android-ic_launcher_foreground-preview.png');
+  fs.writeFileSync(
+    androidPreview,
+    await renderPaddedSquare(sourcePath, 512, {
+      innerRatio: ANDROID_CONTENT_BOX_RATIO,
+      outputScale: ANDROID_OUTPUT_SCALE,
+    }),
+  );
+  console.log('Wrote', path.relative(repoRoot, androidPreview));
+
+  console.log(
+    'Done. CONTENT_BOX_RATIO =',
+    CONTENT_BOX_RATIO,
+    'LOGO_OUTPUT_SCALE =',
+    LOGO_OUTPUT_SCALE,
+    'ANDROID_CONTENT_BOX_RATIO =',
+    ANDROID_CONTENT_BOX_RATIO,
+    'ANDROID_OUTPUT_SCALE =',
+    ANDROID_OUTPUT_SCALE,
+  );
 }
 
 main().catch((e) => {
