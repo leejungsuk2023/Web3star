@@ -145,8 +145,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
-  const alreadyAgreed = () => localStorage.getItem(TERMS_AGREED_KEY) === 'true';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -229,13 +227,19 @@ export default function Login() {
 
   const handleGoogleLogin = () => {
     if (loading) return;
-    if (alreadyAgreed()) {
-      // Returning user (terms already saved): skip modal
-      proceedGoogleLogin();
-    } else {
-      // First-time flow: show terms + optional referral modal
+    // Some Android devices may restore WebView/localStorage after reinstall.
+    // Always show pre-auth modal on native to avoid stale "agreed" flags skipping referral/consent UI.
+    if (isLikelyNativePlatform()) {
       setShowModal(true);
+      return;
     }
+
+    const alreadyAgreed = localStorage.getItem(TERMS_AGREED_KEY) === 'true';
+    if (alreadyAgreed) {
+      proceedGoogleLogin();
+      return;
+    }
+    setShowModal(true);
   };
 
   React.useEffect(() => {

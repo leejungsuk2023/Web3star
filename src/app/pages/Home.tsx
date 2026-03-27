@@ -8,12 +8,15 @@ import { supabase } from '../../lib/supabase';
 import { showInterstitialAd, showRewardedAd, preloadInterstitialAd } from '../../lib/admob';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 const MINING_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 const MINING_REWARD = 10;
 const AD_REWARD_PER_SLOT = 5;
 const AD_BONUS_ALL_SLOTS = 5;
 const AD_COOLDOWN_SECONDS = 10;
+const MINING_NOTIFICATION_ID = 1001;
+const MINING_NOTIFICATION_CHANNEL_ID = 'mining-reminders-v1';
 
 function getTimeRemaining(lastMinedAt: string | null): { hours: number; minutes: number; seconds: number } {
   if (!lastMinedAt) return { hours: 0, minutes: 0, seconds: 0 };
@@ -39,6 +42,7 @@ export default function Home() {
   const [centerButtonActive, setCenterButtonActive] = useState(false);
   const [isMining, setIsMining] = useState(false);
   const [adCooldown, setAdCooldown] = useState(0); // seconds remaining between ads
+  const exactAlarmPromptedRef = useRef(false);
 
   // Initialize state from profile
   useEffect(() => {
@@ -98,10 +102,20 @@ export default function Home() {
 
   const formatTime = (value: number) => String(value).padStart(2, '0');
 
-  // 채굴 완료 4시간 뒤 로컬 알림 예약
-  const scheduleMiningNotification = useCallback(async () => {
+  // 채굴 리마인더 알림 예약(남은 시간 기준)
+  const scheduleMiningNotification = useCallback(async (triggerAt: Date) => {
     if (!Capacitor.isNativePlatform()) return;
     try {
+      // Ensure Android notifications use a stable high-importance channel.
+      await LocalNotifications.createChannel({
+        id: MINING_NOTIFICATION_CHANNEL_ID,
+        name: 'Mining Reminders',
+        description: '4-hour mining cooldown reminders',
+        importance: 5,
+        visibility: 1,
+        vibration: true,
+      });
+
       let { display } = await LocalNotifications.checkPermissions();
       if (display !== 'granted') {
         await LocalNotifications.requestPermissions();
@@ -111,20 +125,34 @@ export default function Home() {
         toast.warning('Enable notifications in system settings to get 4-hour mining reminders.');
         return;
       }
+
+      // Android 12+ exact alarm setting can differ by device/vendor.
+      // Prompt once per app run if exact alarms are disabled.
+      const exact = await LocalNotifications.checkExactNotificationSetting();
+      if (exact.exact_alarm !== 'granted' && !exactAlarmPromptedRef.current) {
+        exactAlarmPromptedRef.current = true;
+        try {
+          await LocalNotifications.changeExactNotificationSetting();
+        } catch {
+          // Ignore setting redirect failures and continue with best effort schedule.
+        }
+      }
+
       // 기존 채굴 알림 취소 후 재예약
-      await LocalNotifications.cancel({ notifications: [{ id: 1001 }] });
+      await LocalNotifications.cancel({ notifications: [{ id: MINING_NOTIFICATION_ID }] });
       await LocalNotifications.schedule({
         notifications: [
           {
-            id: 1001,
+            id: MINING_NOTIFICATION_ID,
             title: '⛏️ Web3Star — Mining ready',
             body: 'Your 4-hour cooldown has ended. Open the app and mine to earn PTS!',
             schedule: {
-              at: new Date(Date.now() + MINING_COOLDOWN_MS),
+              at: triggerAt,
               allowWhileIdle: true,
             },
             sound: undefined,
             smallIcon: 'ic_stat_icon_config_sample',
+            channelId: MINING_NOTIFICATION_CHANNEL_ID,
           },
         ],
       });
@@ -132,6 +160,22 @@ export default function Home() {
       console.warn('Local notification scheduling failed:', e);
     }
   }, []);
+
+  // Reconcile reminder whenever app returns foreground (helps after OEM task policies).
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const listenerPromise = App.addListener('resume', async () => {
+      if (!profile?.last_mined_at) return;
+      const minedAt = new Date(profile.last_mined_at).getTime();
+      if (Number.isNaN(minedAt)) return;
+      const dueAt = minedAt + MINING_COOLDOWN_MS;
+      if (dueAt <= Date.now()) return;
+      await scheduleMiningNotification(new Date(dueAt));
+    });
+    return () => {
+      void listenerPromise.then((l) => l.remove());
+    };
+  }, [profile?.last_mined_at, scheduleMiningNotification]);
 
   // Mine: always exactly MINING_REWARD (10) points, no ad bonus
   const handleMine = useCallback(async () => {
@@ -176,7 +220,7 @@ export default function Home() {
     await refreshProfile();
     toast.success(`+${MINING_REWARD} PTS — Mining complete!`);
     // 4시간 뒤 알림 예약
-    await scheduleMiningNotification();
+    await scheduleMiningNotification(new Date(Date.now() + MINING_COOLDOWN_MS));
     setIsMining(false);
   }, [user, isMining, centerButtonActive, profile, refreshProfile, scheduleMiningNotification]);
 
