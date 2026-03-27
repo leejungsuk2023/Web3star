@@ -81,21 +81,21 @@ export default function Profile() {
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto p-6">
+    <div className="flex-1 overflow-y-auto p-5">
       <div className="max-w-md mx-auto">
         {/* Profile Header */}
-        <div className="flex flex-col items-center mb-8">
-          <h2 className="text-white text-xl font-bold mb-1">{profile?.nickname ?? 'User'}</h2>
-          <p className="text-gray-400 text-sm mb-2">{profile?.email ?? ''}</p>
-          <p className="text-gray-500 text-xs mb-3">Joined {formatDate(profile?.created_at)}</p>
-          <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-1.5 rounded-full">
-            <span className="text-sm font-medium">Level 1 Miner</span>
+        <div className="flex flex-col items-center mb-5">
+          <h2 className="text-white text-xl font-bold mb-0.5">{profile?.nickname ?? 'User'}</h2>
+          <p className="text-gray-400 text-sm mb-1.5">{profile?.email ?? ''}</p>
+          <p className="text-gray-500 text-xs mb-2">Joined {formatDate(profile?.created_at)}</p>
+          <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1 rounded-full">
+            <span className="text-xs font-medium">Level 1 Miner</span>
           </div>
         </div>
 
         {/* Invite Section */}
-        <div className="bg-[#1a1a1a] rounded-2xl p-5 mb-6 border border-gray-800">
-          <h3 className="text-gray-400 text-sm mb-3">Referral Code</h3>
+        <div className="bg-[#1a1a1a] rounded-2xl p-4 mb-4 border border-gray-800">
+          <h3 className="text-gray-400 text-sm mb-2">Referral Code</h3>
           <div className="flex items-center justify-between bg-[#0a0a0a] rounded-lg px-4 py-3 border border-gray-800">
             <span className="text-lg font-mono tracking-wider">{referralCode}</span>
             <button
@@ -125,7 +125,7 @@ export default function Profile() {
                   handleMenuClick(item.label);
                 }}
                 disabled={item.comingSoon}
-                className={`w-full flex items-center px-5 py-4 transition-colors ${
+                className={`w-full flex items-center px-5 py-3.5 transition-colors ${
                   item.comingSoon
                     ? 'cursor-default opacity-75'
                     : 'hover:bg-[#252525]'
