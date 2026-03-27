@@ -100,7 +100,7 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex min-h-full w-full flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-zinc-900 px-6 py-6 border-b border-zinc-800 flex items-center justify-between">
         <div className="w-10" />
@@ -135,7 +135,7 @@ export default function Leaderboard() {
 
       {/* Leaderboard List */}
       <div className="flex-1 overflow-y-auto px-4 pt-4">
-        <div className="space-y-3 pb-4">
+        <div className="space-y-3 pb-20">
           {leaderboardData.map((user) => (
             <div
               key={user.rank}
