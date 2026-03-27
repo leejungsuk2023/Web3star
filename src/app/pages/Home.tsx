@@ -372,7 +372,7 @@ export default function Home() {
       </div>
 
       {/* Bottom Section - Ad Slots */}
-      <div className="mt-auto shrink-0 translate-y-20 px-6 pb-0 pt-0">
+      <div className="mt-auto shrink-0 translate-y-28 px-6 pb-0 pt-0">
         <div className="bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm rounded-2xl p-4 border border-gray-800">
           <div className="flex items-center justify-between mb-3">
             <div>

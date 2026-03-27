@@ -81,7 +81,7 @@ export default function Profile() {
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto p-6">
+    <div className="flex-1 overflow-y-auto p-6 pb-24">
       <div className="max-w-md mx-auto">
         {/* Profile Header */}
         <div className="flex flex-col items-center mb-8">
