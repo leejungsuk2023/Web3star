@@ -11,8 +11,7 @@ import ActivityHistoryModal from '../components/ActivityHistoryModal';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 
-// Use explicit index.html + hash to improve deep-link reliability in in-app/browser contexts.
-const WHITEPAPER_URL = 'https://leejungsuk2023.github.io/Web3star/index.html#whitepaper';
+const WHITEPAPER_URL = 'https://leejungsuk2023.github.io/Web3star/#whitepaper';
 
 export default function Profile() {
   const navigate = useNavigate();

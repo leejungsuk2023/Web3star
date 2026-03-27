@@ -1087,6 +1087,27 @@ export default function Homepage() {
     navigate({ pathname: '/', search: '' }, { replace: true });
   }, [location.search, navigate]);
 
+  React.useEffect(() => {
+    const targetId = (location.hash || '').replace('#', '').trim();
+    if (!targetId) return;
+
+    let retries = 0;
+    const maxRetries = 12;
+    const tryScroll = () => {
+      const target = document.getElementById(targetId);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      retries += 1;
+      if (retries < maxRetries) {
+        window.setTimeout(tryScroll, 120);
+      }
+    };
+
+    window.setTimeout(tryScroll, 0);
+  }, [location.hash]);
+
   return (
     <div className="min-h-screen bg-black text-white scroll-smooth">
       <header className="sticky top-0 z-40 bg-black/85 backdrop-blur border-b border-gray-900">
