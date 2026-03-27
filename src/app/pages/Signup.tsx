@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import logoImage from '../../assets/signup-hero-new.png';
 import { useNavigate } from 'react-router';
 import GoogleIcon from '../components/GoogleIcon';
@@ -25,6 +25,33 @@ export default function Signup() {
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const onResize = () => {
+      const keyboardHeight = window.innerHeight - vv.height;
+      setIsKeyboardOpen(keyboardHeight > 120);
+    };
+
+    onResize();
+    vv.addEventListener('resize', onResize);
+    return () => vv.removeEventListener('resize', onResize);
+  }, []);
+
+  useEffect(() => {
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+      window.setTimeout(() => {
+        target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 120);
+    };
+    document.addEventListener('focusin', onFocusIn);
+    return () => document.removeEventListener('focusin', onFocusIn);
+  }, []);
 
   const termsAgreed = agreedToTerms && agreedToPrivacy;
 
@@ -140,7 +167,10 @@ export default function Signup() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6">
+        <div
+          className="flex-1 overflow-y-auto px-5 pt-5"
+          style={{ paddingBottom: isKeyboardOpen ? 16 : 24 }}
+        >
         {/* Logo Section */}
         <div className="flex flex-col items-center mb-8">
           <img
@@ -296,6 +326,7 @@ export default function Signup() {
         </div>
 
         {/* Bottom Action Area */}
+        {!isKeyboardOpen && (
         <div className="z-10 shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] backdrop-blur">
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -315,6 +346,7 @@ export default function Signup() {
             </button>
           </div>
         </div>
+        )}
 
         <PrivacyPolicyModal
           isOpen={isPrivacyPolicyOpen}

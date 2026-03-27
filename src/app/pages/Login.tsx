@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import logoImage from '../../assets/signup-hero-new.png';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -136,6 +136,68 @@ function PreAuthModal({
   );
 }
 
+function ResetPasswordModal({
+  isOpen,
+  loading,
+  email,
+  onEmailChange,
+  onClose,
+  onSubmit,
+}: {
+  isOpen: boolean;
+  loading: boolean;
+  email: string;
+  onEmailChange: (value: string) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm px-4 pb-4">
+      <div className="w-full max-w-md bg-[#13131e] border border-gray-700 rounded-2xl p-6 space-y-4 shadow-2xl">
+        <h2 className="text-white font-bold text-lg text-center">Reset password</h2>
+        <p className="text-xs text-gray-500 text-center">
+          Enter your account email. We will send a password reset link.
+        </p>
+
+        <div>
+          <label htmlFor="reset-email" className="block text-sm text-gray-400 mb-2">
+            Email
+          </label>
+          <input
+            id="reset-email"
+            type="email"
+            value={email}
+            onChange={(e) => onEmailChange(e.target.value)}
+            className="w-full px-4 py-3 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors text-sm"
+            placeholder="Enter your email"
+            autoFocus
+          />
+        </div>
+
+        <div className="flex gap-3 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-3 border border-gray-700 text-gray-400 hover:text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={loading || !email.trim()}
+            className="flex-1 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Sending...' : 'Send link'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Login() {
   const { user, loading: authLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
@@ -144,6 +206,35 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const onResize = () => {
+      const keyboardHeight = window.innerHeight - vv.height;
+      setIsKeyboardOpen(keyboardHeight > 120);
+    };
+
+    onResize();
+    vv.addEventListener('resize', onResize);
+    return () => vv.removeEventListener('resize', onResize);
+  }, []);
+
+  useEffect(() => {
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+      window.setTimeout(() => {
+        target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 120);
+    };
+    document.addEventListener('focusin', onFocusIn);
+    return () => document.removeEventListener('focusin', onFocusIn);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,6 +333,28 @@ export default function Login() {
     setShowModal(true);
   };
 
+  const handlePasswordReset = async () => {
+    const targetEmail = resetEmail.trim();
+    if (!targetEmail) {
+      setError('Please enter your email first.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(targetEmail, {
+      redirectTo: getAuthRedirectUrl(),
+    });
+    setLoading(false);
+
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+
+    toast.success('Password reset email sent. Check your inbox.');
+    setIsResetModalOpen(false);
+  };
+
   React.useEffect(() => {
     if (authLoading) return;
     if (user) {
@@ -252,7 +365,10 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col overflow-hidden">
-        <div className="overflow-y-auto px-4 pt-4 pb-8">
+        <div
+          className="overflow-y-auto px-4 pt-4"
+          style={{ paddingBottom: isKeyboardOpen ? 16 : 32 }}
+        >
           {/* Logo Section */}
           <div className="mb-7 flex flex-col items-center">
             <img
@@ -324,6 +440,7 @@ export default function Login() {
         </div>
 
         {/* Bottom Action Area */}
+        {!isKeyboardOpen && (
         <div className="z-10 shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-4 pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur">
           {Capacitor.isNativePlatform() && (
             <button
@@ -355,25 +472,16 @@ export default function Login() {
 
           <button
             type="button"
-            onClick={async () => {
-              if (!email) {
-                setError('Please enter your email first.');
-                return;
-              }
-              const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: getAuthRedirectUrl(),
-              });
-              if (resetError) {
-                setError(resetError.message);
-              } else {
-                toast.success('Password reset email sent. Check your inbox.');
-              }
+            onClick={() => {
+              setResetEmail(email);
+              setIsResetModalOpen(true);
             }}
             className="mt-2 w-full text-center text-sm text-gray-400 hover:text-cyan-400 transition-colors"
           >
             Forgot Password?
           </button>
         </div>
+        )}
       </div>
 
       {/* Pre-auth modal */}
@@ -383,6 +491,14 @@ export default function Login() {
           onCancel={() => setShowModal(false)}
         />
       )}
+      <ResetPasswordModal
+        isOpen={isResetModalOpen}
+        loading={loading}
+        email={resetEmail}
+        onEmailChange={setResetEmail}
+        onClose={() => setIsResetModalOpen(false)}
+        onSubmit={handlePasswordReset}
+      />
     </div>
   );
 }
