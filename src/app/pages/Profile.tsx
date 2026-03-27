@@ -11,7 +11,7 @@ import ActivityHistoryModal from '../components/ActivityHistoryModal';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 
-const WHITEPAPER_URL = 'https://leejungsuk2023.github.io/Web3star/#whitepaper';
+const WHITEPAPER_URL = 'https://leejungsuk2023.github.io/Web3star/?section=whitepaper#whitepaper';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -54,7 +54,7 @@ export default function Profile() {
         await Browser.open({ url: WHITEPAPER_URL });
         return;
       }
-      window.open(WHITEPAPER_URL, '_blank', 'noopener,noreferrer');
+      window.location.assign(WHITEPAPER_URL);
     } catch (e) {
       console.warn('Failed to open whitepaper URL:', e);
     }

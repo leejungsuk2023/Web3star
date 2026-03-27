@@ -1088,7 +1088,9 @@ export default function Homepage() {
   }, [location.search, navigate]);
 
   React.useEffect(() => {
-    const targetId = (location.hash || '').replace('#', '').trim();
+    const q = new URLSearchParams(location.search);
+    const sectionFromQuery = (q.get('section') || '').trim().toLowerCase();
+    const targetId = ((location.hash || '').replace('#', '').trim() || sectionFromQuery).toLowerCase();
     if (!targetId) return;
 
     let retries = 0;
