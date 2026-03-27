@@ -68,13 +68,17 @@ export default function Signup() {
     }
 
     if (signUpData?.user?.id && referralCode.trim()) {
+      // Keep pending code so AuthContext can retry after session/profile is fully ready.
+      sessionStorage.setItem('pending_referral_code', referralCode.trim());
+
+      // Try immediate apply when session exists; if it fails, do not block signup flow.
       const refRes = await applyReferralRewards(signUpData.user.id, referralCode);
-      if (!refRes.ok) {
-        setError(refRes.message);
-        setLoading(false);
-        return;
+      if (refRes.ok) {
+        sessionStorage.removeItem('pending_referral_code');
+        await refreshProfile();
+      } else {
+        console.warn('[referral] immediate signup apply failed, deferred retry:', refRes.message);
       }
-      await refreshProfile();
     }
 
     localStorage.setItem(TERMS_AGREED_KEY, 'true');

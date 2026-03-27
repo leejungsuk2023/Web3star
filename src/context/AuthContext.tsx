@@ -133,12 +133,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user?.id) return;
     const code = sessionStorage.getItem('pending_referral_code');
     if (!code?.trim()) return;
-    sessionStorage.removeItem('pending_referral_code');
     void applyReferralRewards(user.id, code).then(async (res) => {
       if (!res.ok) {
-        console.warn('[referral] pending_referral_code apply failed:', res.message);
+        // Keep the code for retry on next auth/profile cycle.
+        console.warn('[referral] pending_referral_code apply failed (will retry):', res.message);
         return;
       }
+      sessionStorage.removeItem('pending_referral_code');
       await fetchProfile(user.id);
     });
   }, [user?.id, fetchProfile]);

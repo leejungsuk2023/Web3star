@@ -3,18 +3,20 @@ import type { LucideIcon } from 'lucide-react';
 import { Copy, ClipboardCheck, History, FileText, Lock, Mail, LogOut, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import ComingSoonModal from '../components/ComingSoonModal';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import ContactSupportModal from '../components/ContactSupportModal';
 import ActivityHistoryModal from '../components/ActivityHistoryModal';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 
+const WHITEPAPER_URL = 'https://leejungsuk2023.github.io/Web3star/#whitepaper';
+
 export default function Profile() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [copied, setCopied] = useState(false);
-  const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
   const [isPrivacyPolicyOpen, setIsPrivacyPolicyOpen] = useState(false);
   const [isContactSupportOpen, setIsContactSupportOpen] = useState(false);
   const [isActivityHistoryOpen, setIsActivityHistoryOpen] = useState(false);
@@ -46,9 +48,21 @@ export default function Profile() {
     navigate('/app/login');
   };
 
+  const openWhitepaper = async () => {
+    try {
+      if (Capacitor.isNativePlatform()) {
+        await Browser.open({ url: WHITEPAPER_URL });
+        return;
+      }
+      window.open(WHITEPAPER_URL, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      console.warn('Failed to open whitepaper URL:', e);
+    }
+  };
+
   const handleMenuClick = (label: string) => {
     if (label === 'White Paper') {
-      setIsComingSoonOpen(true);
+      void openWhitepaper();
     } else if (label === 'Privacy Policy') {
       setIsPrivacyPolicyOpen(true);
     } else if (label === 'Activity History') {
@@ -144,10 +158,6 @@ export default function Profile() {
         </div>
 
         {/* Modals */}
-        <ComingSoonModal
-          isOpen={isComingSoonOpen}
-          onClose={() => setIsComingSoonOpen(false)}
-        />
         <PrivacyPolicyModal
           isOpen={isPrivacyPolicyOpen}
           onClose={() => setIsPrivacyPolicyOpen(false)}
