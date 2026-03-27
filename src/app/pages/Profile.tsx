@@ -3,15 +3,12 @@ import type { LucideIcon } from 'lucide-react';
 import { Copy, ClipboardCheck, History, FileText, Lock, Mail, LogOut, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import ContactSupportModal from '../components/ContactSupportModal';
 import ActivityHistoryModal from '../components/ActivityHistoryModal';
+import WhitepaperModal from '../components/WhitepaperModal';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
-
-const WHITEPAPER_URL = 'https://leejungsuk2023.github.io/Web3star/?section=whitepaper#whitepaper';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -20,6 +17,7 @@ export default function Profile() {
   const [isPrivacyPolicyOpen, setIsPrivacyPolicyOpen] = useState(false);
   const [isContactSupportOpen, setIsContactSupportOpen] = useState(false);
   const [isActivityHistoryOpen, setIsActivityHistoryOpen] = useState(false);
+  const [isWhitepaperOpen, setIsWhitepaperOpen] = useState(false);
 
   const referralCode = profile?.invite_code ?? '------';
 
@@ -48,21 +46,9 @@ export default function Profile() {
     navigate('/app/login');
   };
 
-  const openWhitepaper = async () => {
-    try {
-      if (Capacitor.isNativePlatform()) {
-        await Browser.open({ url: WHITEPAPER_URL });
-        return;
-      }
-      window.location.assign(WHITEPAPER_URL);
-    } catch (e) {
-      console.warn('Failed to open whitepaper URL:', e);
-    }
-  };
-
   const handleMenuClick = (label: string) => {
     if (label === 'White Paper') {
-      void openWhitepaper();
+      setIsWhitepaperOpen(true);
     } else if (label === 'Privacy Policy') {
       setIsPrivacyPolicyOpen(true);
     } else if (label === 'Activity History') {
@@ -169,6 +155,10 @@ export default function Profile() {
         <ActivityHistoryModal
           isOpen={isActivityHistoryOpen}
           onClose={() => setIsActivityHistoryOpen(false)}
+        />
+        <WhitepaperModal
+          isOpen={isWhitepaperOpen}
+          onClose={() => setIsWhitepaperOpen(false)}
         />
       </div>
     </div>
