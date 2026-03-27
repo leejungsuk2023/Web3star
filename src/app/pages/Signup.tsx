@@ -138,10 +138,11 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-[#0a0a0f] text-white">
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6">
         {/* Logo Section */}
-        <div className="flex flex-col items-center mb-10">
+        <div className="flex flex-col items-center mb-8">
           <img
             src={logoImage}
             alt="Web3Star Logo"
@@ -244,7 +245,7 @@ export default function Signup() {
           </div>
 
           {/* Email/Password/Nickname Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form id="signup-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm text-gray-400 mb-2">
                 Email
@@ -290,23 +291,25 @@ export default function Signup() {
               />
             </div>
 
+          </form>
+        </div>
+        </div>
+
+        {/* Bottom Action Area */}
+        <div className="z-10 shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] backdrop-blur">
+          <div className="grid grid-cols-2 gap-3">
             <button
               type="submit"
+              form="signup-form"
               disabled={loading || !termsAgreed}
-              className="w-full mt-4 px-6 py-4 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg transition-all duration-200 shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3.5 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg transition-all duration-200 shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing up...' : 'Start mining'}
             </button>
-          </form>
-        </div>
-
-        {/* Login Link */}
-        <div className="text-center mt-6">
-          <div className="text-sm text-gray-400">
-            Already have an account?{' '}
             <button
+              type="button"
               onClick={() => navigate('/app/login')}
-              className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
+              className="w-full px-4 py-3.5 border border-cyan-500/50 text-cyan-300 hover:text-cyan-200 hover:border-cyan-400 rounded-lg font-semibold transition-colors"
             >
               Log in
             </button>

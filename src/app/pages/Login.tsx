@@ -250,97 +250,109 @@ export default function Login() {
   }, [authLoading, user, navigate]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
-        {/* Logo Section */}
-        <div className="flex flex-col items-center mb-12">
-          <img
-            src={logoImage}
-            alt="Web3Star Logo"
-            className="w-full mb-4 mix-blend-screen opacity-90"
-          />
+    <div className="min-h-screen bg-[#0a0a0f] text-white">
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col overflow-hidden">
+        <div className="overflow-y-auto px-4 pt-4 pb-8">
+          {/* Logo Section */}
+          <div className="mb-7 flex flex-col items-center">
+            <img
+              src={logoImage}
+              alt="Web3Star Logo"
+              className="w-full mb-4 mix-blend-screen opacity-90"
+            />
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div role="alert" aria-live="polite" className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">
+              {error}
+            </div>
+          )}
+
+          {/* Form Section */}
+          <form id="login-form" onSubmit={handleSubmit} className="space-y-4">
+            {/* Google Login Button */}
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full px-6 py-3.5 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-3 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <GoogleIcon className="w-5 h-5" />
+              Continue with Google
+            </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-4 my-4">
+              <div className="flex-1 h-px bg-gray-800"></div>
+              <span className="text-sm text-gray-500">or</span>
+              <div className="flex-1 h-px bg-gray-800"></div>
+            </div>
+
+            {/* Email Input */}
+            <div>
+              <label htmlFor="email" className="block text-sm text-gray-400 mb-2">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+
+            {/* Password Input */}
+            <div>
+              <label htmlFor="password" className="block text-sm text-gray-400 mb-2">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+          </form>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div role="alert" aria-live="polite" className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">
-            {error}
-          </div>
-        )}
-
-        {/* Form Section */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Google Login Button */}
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full px-6 py-4 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-3 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <GoogleIcon className="w-5 h-5" />
-            Continue with Google
-          </button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-4 my-6">
-            <div className="flex-1 h-px bg-gray-800"></div>
-            <span className="text-sm text-gray-500">or</span>
-            <div className="flex-1 h-px bg-gray-800"></div>
-          </div>
-
-          {/* Email Input */}
-          <div>
-            <label htmlFor="email" className="block text-sm text-gray-400 mb-2">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3.5 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
-              placeholder="Enter your email"
-              required
-            />
-          </div>
-
-          {/* Password Input */}
-          <div>
-            <label htmlFor="password" className="block text-sm text-gray-400 mb-2">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3.5 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
-              placeholder="Enter your password"
-              required
-            />
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-8 px-6 py-4 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg transition-all duration-200 shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-
-        {/* Links */}
-        <div className="flex flex-col items-center gap-4 mt-6">
+        {/* Bottom Action Area */}
+        <div className="z-10 shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-4 pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur">
           {Capacitor.isNativePlatform() && (
             <button
               type="button"
               onClick={() => navigate('/app/admob-test')}
-              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              className="mb-1 w-full text-center text-xs text-gray-500 hover:text-gray-300 transition-colors"
             >
               AdMob Test (Android/iOS)
             </button>
           )}
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="submit"
+              form="login-form"
+              disabled={loading}
+              className="w-full px-4 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg transition-all duration-200 shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/app/signup')}
+              className="w-full px-4 py-3 border border-cyan-500/50 text-cyan-300 hover:text-cyan-200 hover:border-cyan-400 rounded-lg font-semibold transition-colors"
+            >
+              Sign Up
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={async () => {
@@ -357,19 +369,10 @@ export default function Login() {
                 toast.success('Password reset email sent. Check your inbox.');
               }
             }}
-            className="text-sm text-gray-400 hover:text-cyan-400 transition-colors"
+            className="mt-2 w-full text-center text-sm text-gray-400 hover:text-cyan-400 transition-colors"
           >
             Forgot Password?
           </button>
-          <div className="text-sm text-gray-400">
-            Don't have an account?{' '}
-            <button
-              onClick={() => navigate('/app/signup')}
-              className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
-            >
-              Sign Up
-            </button>
-          </div>
         </div>
       </div>
 
