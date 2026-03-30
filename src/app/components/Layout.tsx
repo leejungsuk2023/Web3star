@@ -22,8 +22,8 @@ export default function Layout() {
         className="pointer-events-none absolute -left-24 -top-10 z-0 h-72 w-72 rounded-full bg-gradient-to-br from-blue-500/35 via-indigo-500/30 to-purple-600/25 blur-[56px]"
         aria-hidden
       />
-      {/* Top Header */}
-      <header className="relative z-10 flex shrink-0 items-center justify-between px-6 pb-4 pt-[max(1.5rem,env(safe-area-inset-top,0px)+0.5rem)]">
+      {/* Top Header — shrink-0 h-14 band; extra top padding when env inset is large */}
+      <header className="relative z-10 flex min-h-14 shrink-0 items-center justify-between px-6 pb-2 pt-[max(0.5rem,env(safe-area-inset-top,24px))]">
         <button
           onClick={() => navigate('/app/profile')}
           className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/30 hover:scale-105 transition-transform active:scale-95"
@@ -52,8 +52,8 @@ export default function Layout() {
         <Outlet />
       </div>
 
-      {/* Bottom nav: safe-area + modest padding so height stays consistent across devices */}
-      <nav className="relative z-10 shrink-0 border-t border-gray-800 bg-gradient-to-t from-gray-900/95 to-gray-900/80 px-6 pb-[max(0.75rem,calc(0.5rem+env(safe-area-inset-bottom,0px)))] pt-3 backdrop-blur-md">
+      {/* Bottom tab bar — h-16 band + safe-area bottom */}
+      <nav className="relative z-10 flex min-h-16 shrink-0 items-end border-t border-gray-800 bg-gradient-to-t from-gray-900/95 to-gray-900/80 px-6 pb-[max(0.75rem,calc(0.5rem+env(safe-area-inset-bottom,24px)))] pt-3 backdrop-blur-md">
         <div className="flex items-center justify-around max-w-sm mx-auto">
           <button
             onClick={() => navigate('/app')}

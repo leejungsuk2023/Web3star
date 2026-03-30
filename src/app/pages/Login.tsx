@@ -353,124 +353,129 @@ export default function Login() {
   return (
     <div className="flex min-h-dvh flex-col bg-[#0a0a0f] text-white">
       <div className="mx-auto flex h-dvh max-h-dvh min-h-0 w-full max-w-md flex-col overflow-hidden">
-        <div
-          data-auth-scroll-root
-          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-[max(1rem,env(safe-area-inset-top,0px))] [-webkit-overflow-scrolling:touch]"
-          style={{ paddingBottom: isKeyboardOpen ? 12 : 32 }}
-        >
-          {/* Logo Section */}
-          <div className="mb-7 flex flex-col items-center">
-            <img
-              src={logoImage}
-              alt="Web3Star Logo"
-              className="w-full mb-4 mix-blend-screen opacity-90"
-            />
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div role="alert" aria-live="polite" className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">
-              {error}
-            </div>
-          )}
-
-          {/* Form Section */}
-          <form id="login-form" onSubmit={handleSubmit} className="space-y-4">
-            {/* Google Login Button */}
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="w-full px-6 py-3.5 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-3 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <GoogleIcon className="w-5 h-5" />
-              Continue with Google
-            </button>
-
-            {/* Divider */}
-            <div className="flex items-center gap-4 my-4">
-              <div className="flex-1 h-px bg-gray-800"></div>
-              <span className="text-sm text-gray-500">or</span>
-              <div className="flex-1 h-px bg-gray-800"></div>
-            </div>
-
-            {/* Email Input */}
-            <div>
-              <label htmlFor="email" className="block text-sm text-gray-400 mb-2">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
-                placeholder="Enter your email"
-                required
-              />
-            </div>
-
-            {/* Password Input */}
-            <div>
-              <label htmlFor="password" className="block text-sm text-gray-400 mb-2">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
-                placeholder="Enter your password"
-                required
-              />
-            </div>
-          </form>
-        </div>
-
-        {/* Bottom Action Area */}
-        {!isKeyboardOpen && (
-        <div className="z-10 shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-4 pt-4 pb-[max(0.75rem,calc(0.5rem+env(safe-area-inset-bottom,0px)))] backdrop-blur">
-          {Capacitor.isNativePlatform() && (
-            <button
-              type="button"
-              onClick={() => navigate('/app/admob-test')}
-              className="mb-1 w-full text-center text-xs text-gray-500 hover:text-gray-300 transition-colors"
-            >
-              AdMob Test (Android/iOS)
-            </button>
-          )}
-
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="submit"
-              form="login-form"
-              disabled={loading}
-              className="w-full px-4 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg transition-all duration-200 shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Logging in...' : 'Login'}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/app/signup')}
-              className="w-full px-4 py-3 border border-cyan-500/50 text-cyan-300 hover:text-cyan-200 hover:border-cyan-400 rounded-lg font-semibold transition-colors"
-            >
-              Sign Up
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setResetEmail(email);
-              setIsResetModalOpen(true);
-            }}
-            className="mt-2 w-full text-center text-sm text-gray-400 hover:text-cyan-400 transition-colors"
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <div
+            data-auth-scroll-root
+            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+            style={{ paddingBottom: isKeyboardOpen ? 12 : 0 }}
           >
-            Forgot Password?
-          </button>
+            <div className="flex min-h-full flex-col px-6 pt-[max(1rem,env(safe-area-inset-top,24px))]">
+              {/* Center block: logo, Google, email/password (space-y keeps fields tight) */}
+              <div className="flex flex-1 flex-col items-center justify-center space-y-8">
+                <div className="flex w-full flex-col items-center">
+                  <img
+                    src={logoImage}
+                    alt="Web3Star Logo"
+                    className="mb-4 w-full mix-blend-screen opacity-90"
+                  />
+                </div>
+
+                {error && (
+                  <div
+                    role="alert"
+                    aria-live="polite"
+                    className="w-full rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-center text-sm text-red-400"
+                  >
+                    {error}
+                  </div>
+                )}
+
+                <div className="w-full space-y-4">
+                  <form id="login-form" onSubmit={handleSubmit} className="space-y-4">
+                    <button
+                      type="button"
+                      onClick={handleGoogleLogin}
+                      disabled={loading}
+                      className="flex w-full items-center justify-center gap-3 rounded-lg bg-white px-6 py-3.5 font-semibold text-gray-800 shadow-lg transition-all duration-200 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <GoogleIcon className="h-5 w-5" />
+                      Continue with Google
+                    </button>
+
+                    <div className="my-4 flex items-center gap-4">
+                      <div className="h-px flex-1 bg-gray-800" />
+                      <span className="text-sm text-gray-500">or</span>
+                      <div className="h-px flex-1 bg-gray-800" />
+                    </div>
+
+                    <div>
+                      <label htmlFor="email" className="mb-2 block text-sm text-gray-400">
+                        Email
+                      </label>
+                      <input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                        placeholder="Enter your email"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="password" className="mb-2 block text-sm text-gray-400">
+                        Password
+                      </label>
+                      <input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                        placeholder="Enter your password"
+                        required
+                      />
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {!isKeyboardOpen && (
+            <div className="mt-auto w-full shrink-0 space-y-4 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-6 pt-4 pb-[max(0.75rem,calc(0.5rem+env(safe-area-inset-bottom,24px)))] backdrop-blur">
+              {Capacitor.isNativePlatform() && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/app/admob-test')}
+                  className="mb-1 w-full text-center text-xs text-gray-500 transition-colors hover:text-gray-300"
+                >
+                  AdMob Test (Android/iOS)
+                </button>
+              )}
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="submit"
+                  form="login-form"
+                  disabled={loading}
+                  className="w-full rounded-lg bg-cyan-500 px-4 py-3 font-semibold text-black shadow-[0_0_20px_rgba(34,211,238,0.3)] transition-all duration-200 hover:bg-cyan-400 hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? 'Logging in...' : 'Login'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/app/signup')}
+                  className="w-full rounded-lg border border-cyan-500/50 px-4 py-3 font-semibold text-cyan-300 transition-colors hover:border-cyan-400 hover:text-cyan-200"
+                >
+                  Sign Up
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setResetEmail(email);
+                  setIsResetModalOpen(true);
+                }}
+                className="w-full text-center text-sm text-gray-400 transition-colors hover:text-cyan-400"
+              >
+                Forgot Password?
+              </button>
+            </div>
+          )}
         </div>
-        )}
       </div>
 
       {/* Pre-auth modal */}
