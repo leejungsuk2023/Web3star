@@ -125,9 +125,11 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    /* Solid dark base so long pages / backdrop-blur never reveal default --background (white) */
     min-height: 100dvh;
     overflow-x: hidden;
+    background-color: #000000;
+    color: #e4e4e7;
     -webkit-text-size-adjust: 100%;
   }
 
