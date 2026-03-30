@@ -13,9 +13,9 @@ export const LAYOUT_ROOT_CLASS =
     ? 'relative mx-auto flex h-full min-h-0 w-full max-w-md flex-col overflow-hidden text-white'
     : 'relative mx-auto flex h-dvh max-h-dvh min-h-0 w-full max-w-md flex-col overflow-hidden text-white';
 
-/** WebView top inset (MainActivity) + small inner gap */
+/** Native: extra padding below status bar so header isn’t glued to the top */
 export const LAYOUT_HEADER_PT_CLASS = native
-  ? 'pt-2'
+  ? 'pt-4'
   : 'pt-[max(0.5rem,env(safe-area-inset-top,24px))]';
 
 /** Extra lift under tab row if system inset is still 0 in WebView (env rarely works on Android) */

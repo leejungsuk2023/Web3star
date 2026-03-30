@@ -46,6 +46,10 @@ export default function Home() {
   const [isMining, setIsMining] = useState(false);
   const [adCooldown, setAdCooldown] = useState(0); // seconds remaining between ads
   const exactAlarmPromptedRef = useRef(false);
+  /** Avoid spamming the system permission dialog when schedule runs often (ads, resume). */
+  const notificationPermissionPromptedRef = useRef(false);
+  /** Show the settings nudge at most once per app session if permission stays denied. */
+  const miningNotifPermissionToastShownRef = useRef(false);
 
   // Initialize state from profile — rewarded slots only count during post-mine cooldown (after logo tap).
   useEffect(() => {
@@ -120,12 +124,19 @@ export default function Home() {
       });
 
       let { display } = await LocalNotifications.checkPermissions();
-      if (display !== 'granted') {
+      if (display !== 'granted' && !notificationPermissionPromptedRef.current) {
+        notificationPermissionPromptedRef.current = true;
         await LocalNotifications.requestPermissions();
         ({ display } = await LocalNotifications.checkPermissions());
       }
       if (display !== 'granted') {
-        toast.warning('Enable notifications in system settings to get 4-hour mining reminders.');
+        if (!miningNotifPermissionToastShownRef.current) {
+          miningNotifPermissionToastShownRef.current = true;
+          toast.warning('Enable notifications in system settings to get 4-hour mining reminders.', {
+            id: 'web3star-mining-notif-permission',
+            duration: 6000,
+          });
+        }
         return;
       }
 
@@ -325,12 +336,9 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-full min-h-full w-full flex-col">
-      {/* Center Hero Section
-          flex-1 + justify-center은 하단 카드와의 사이 여백을 크게 만들 수 있어,
-          이제 히어로는 컨텐츠 높이만큼만 쓰고(스크롤용 컨테이너는 Layout이 담당),
-          노란 여백이 줄어들게 합니다. */}
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-start px-6 pt-8 min-[400px]:pt-12 sm:pt-16">
+    <div className="flex h-full min-h-0 w-full flex-col">
+      {/* Hero: shrink-0 only — no flex-1 here; flex-1 + mt-auto on the card was creating a huge empty band */}
+      <div className="flex shrink-0 flex-col items-center px-6 pt-4 min-[400px]:pt-6 sm:pt-8">
         {/* Glowing Circular Button */}
         <div className="relative mb-4 max-[380px]:mb-3">
           <div className={`absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 blur-3xl scale-125 animate-pulse transition-opacity duration-500 ${
@@ -377,12 +385,12 @@ export default function Home() {
           <div className="text-4xl font-mono font-bold tracking-wider bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
             {formatTime(time.hours)}:{formatTime(time.minutes)}:{formatTime(time.seconds)}
           </div>
-          <div className="text-xs text-gray-500 mt-2 uppercase tracking-widest">Next Mining Cycle</div>
+          <div className="mt-2 text-xs uppercase tracking-widest text-gray-500">Next Mining Cycle</div>
         </div>
       </div>
 
-      {/* Bottom Section - Ad Slots */}
-      <div className="mt-auto shrink-0 px-6 pb-1 pt-2">
+      {/* Ad card: fixed gap under timer (not mt-auto) so it sits higher above the tab bar */}
+      <div className="mt-6 shrink-0 px-6 pb-3 pt-1 sm:mt-7">
         <div className="bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm rounded-2xl p-4 border border-gray-800">
           <div className="flex items-center justify-between mb-3">
             <div>
