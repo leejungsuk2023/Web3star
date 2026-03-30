@@ -66,7 +66,7 @@ public class MainActivity extends BridgeActivity {
                     float d = v.getResources().getDisplayMetrics().density;
                     // Some devices report 0 for bars while drawing edge-to-edge; lift UI off nav / status
                     if (top == 0) {
-                        top = Math.round(28f * d);
+                        top = Math.round(40f * d);
                     }
                     if (bottom == 0) {
                         bottom = Math.round(48f * d);

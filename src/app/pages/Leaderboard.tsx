@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Crown, Medal, Trophy, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -25,13 +25,13 @@ function getRankBadge(rank: number) {
 function getRankStyles(rank: number) {
   switch (rank) {
     case 1:
-      return 'bg-gradient-to-r from-yellow-400/20 to-yellow-600/20 border-yellow-400/30';
+      return 'border border-amber-400/35 bg-gradient-to-r from-amber-500/12 via-yellow-500/10 to-amber-600/12';
     case 2:
-      return 'bg-gradient-to-r from-gray-300/20 to-gray-400/20 border-gray-300/30';
+      return 'border border-zinc-400/30 bg-gradient-to-r from-zinc-500/15 to-zinc-600/10';
     case 3:
-      return 'bg-gradient-to-r from-amber-500/20 to-amber-700/20 border-amber-500/30';
+      return 'border border-orange-400/30 bg-gradient-to-r from-orange-600/12 to-amber-700/12';
     default:
-      return 'bg-zinc-800/50 border-zinc-700/50';
+      return 'border border-gray-800 bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm';
   }
 }
 
@@ -101,45 +101,42 @@ export default function Leaderboard() {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
-      {/* Header */}
-      <div className="bg-zinc-900 px-6 py-6 border-b border-zinc-800 flex items-center justify-between">
+      <div className="flex shrink-0 items-center justify-between border-b border-gray-800/90 bg-gradient-to-b from-zinc-900/60 to-zinc-900/30 px-6 py-4 backdrop-blur-sm">
         <div className="w-10" />
-        <h1 className="text-2xl font-bold text-center bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+        <h1 className="text-center text-xl font-bold tracking-tight sm:text-2xl bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
           Top Miners
         </h1>
         <button
           onClick={fetchLeaderboard}
           disabled={loading}
           aria-label="Refresh leaderboard"
-          className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors disabled:opacity-50"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-800 bg-gray-900/60 transition-colors hover:bg-gray-800/80 disabled:opacity-50"
         >
-          <RefreshCw className={`w-4 h-4 text-zinc-400 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 text-zinc-400 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
-      {/* Sticky My Rank Bar */}
-      <div className="bg-zinc-900/95 backdrop-blur-sm border-b border-zinc-800 px-6 py-4">
+      <div className="shrink-0 border-b border-gray-800/90 bg-gradient-to-r from-gray-900/40 to-gray-800/30 px-6 py-4 backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-zinc-400 text-sm">My Rank</span>
-            <div className="text-2xl font-bold text-blue-400">#{myRank ?? '-'}</div>
+            <span className="text-xs text-zinc-500 sm:text-sm">My Rank</span>
+            <div className="text-2xl font-bold tabular-nums text-cyan-400/95">#{myRank ?? '-'}</div>
           </div>
           <div className="text-right">
-            <span className="text-zinc-400 text-sm">My Points</span>
-            <div className="text-2xl font-bold text-white">
+            <span className="text-xs text-zinc-500 sm:text-sm">My Points</span>
+            <div className="text-2xl font-bold tabular-nums text-white">
               {(profile?.point ?? 0).toLocaleString()}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Leaderboard List */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-4 [-webkit-overflow-scrolling:touch]">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-3 [-webkit-overflow-scrolling:touch]">
         <div className="space-y-3 pb-28">
           {leaderboardData.map((user) => (
             <div
               key={user.rank}
-              className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${getRankStyles(user.rank)}`}
+              className={`flex items-center gap-4 rounded-2xl p-4 transition-all ${getRankStyles(user.rank)}`}
             >
               {/* Rank Number with Badge */}
               <div className="flex flex-col items-center gap-1 min-w-[40px]">
@@ -156,10 +153,10 @@ export default function Leaderboard() {
 
               {/* Points */}
               <div className="text-right">
-                <p className="text-lg font-bold text-blue-400">
+                <p className="text-lg font-bold tabular-nums text-cyan-400/95">
                   {user.points.toLocaleString()}
                 </p>
-                <p className="text-xs text-zinc-500">points</p>
+                <p className="text-xs text-zinc-500">pts</p>
               </div>
             </div>
           ))}

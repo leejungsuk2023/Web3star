@@ -1,4 +1,5 @@
 import { createBrowserRouter, redirect } from 'react-router';
+import AppRouteRoot from './components/AppRouteRoot';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Leaderboard from './pages/Leaderboard';
@@ -16,33 +17,51 @@ const routerBase = import.meta.env.BASE_URL;
  */
 export const router = createBrowserRouter(
   [
-    { path: '/', loader: () => redirect('/app/splash') },
-    { path: '/app/splash', Component: Splash },
-    { path: '/app/login', Component: Login },
-    { path: '/app/signup', Component: Signup },
-    { path: '/app/admob-test', Component: AdMobTest },
     {
-      path: '/app',
-      Component: ProtectedRoute,
+      Component: AppRouteRoot,
       children: [
+        { path: '/', loader: () => redirect('/app/splash') },
+        { path: '/app/splash', Component: Splash },
+        { path: '/app/login', Component: Login },
+        { path: '/app/signup', Component: Signup },
+        { path: '/app/admob-test', Component: AdMobTest },
+        ...(import.meta.env.DEV
+          ? [
+              {
+                path: '/app/__preview/mobile',
+                loader: () => redirect('/app/__preview/home?nativePreview=1'),
+              },
+              {
+                path: '/app/__preview/home',
+                Component: Layout,
+                children: [{ index: true, Component: Home }],
+              },
+            ]
+          : []),
         {
-          Component: Layout,
+          path: '/app',
+          Component: ProtectedRoute,
           children: [
-            { index: true, Component: Home },
-            { path: 'leaderboard', Component: Leaderboard },
-            { path: 'profile', Component: Profile },
+            {
+              Component: Layout,
+              children: [
+                { index: true, Component: Home },
+                { path: 'leaderboard', Component: Leaderboard },
+                { path: 'profile', Component: Profile },
+              ],
+            },
           ],
         },
+        { path: '/login', loader: () => redirect('/app/login') },
+        { path: '/signup', loader: () => redirect('/app/signup') },
+        { path: '/splash', loader: () => redirect('/app/splash') },
+        { path: '/leaderboard', loader: () => redirect('/app/leaderboard') },
+        { path: '/profile', loader: () => redirect('/app/profile') },
+        { path: '/admob-test', loader: () => redirect('/app/admob-test') },
+        { path: '/homepage', loader: () => redirect('/app/splash') },
+        { path: '*', loader: () => redirect('/app/splash') },
       ],
     },
-    { path: '/login', loader: () => redirect('/app/login') },
-    { path: '/signup', loader: () => redirect('/app/signup') },
-    { path: '/splash', loader: () => redirect('/app/splash') },
-    { path: '/leaderboard', loader: () => redirect('/app/leaderboard') },
-    { path: '/profile', loader: () => redirect('/app/profile') },
-    { path: '/admob-test', loader: () => redirect('/app/admob-test') },
-    { path: '/homepage', loader: () => redirect('/app/splash') },
-    { path: '*', loader: () => redirect('/app/splash') },
   ],
   { basename: routerBase },
 );

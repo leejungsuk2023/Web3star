@@ -19,8 +19,60 @@ import {
 import { useKeyboardOpen } from '../../lib/useKeyboardOpen';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
+import type { AuthError } from '@supabase/supabase-js';
 
 const TERMS_AGREED_KEY = 'web3star_terms_agreed';
+
+function getLoginErrorMessage(err: AuthError): string {
+  const msg = (err.message ?? '').toLowerCase();
+  const code = err.code ?? '';
+  if (
+    code === 'invalid_credentials' ||
+    msg.includes('invalid login') ||
+    msg.includes('invalid credentials') ||
+    msg.includes('wrong password') ||
+    msg.includes('user not found')
+  ) {
+    return 'The email or password you entered is incorrect. Please try again.';
+  }
+  if (msg.includes('email not confirmed')) {
+    return 'Please confirm your email address before signing in.';
+  }
+  if (msg.includes('too many requests') || code === 'over_request_rate_limit') {
+    return 'Too many sign-in attempts. Please wait a moment and try again.';
+  }
+  return err.message?.trim() || 'Unable to sign in. Please try again.';
+}
+
+function LoginErrorModal({ isOpen, message, onClose }: { isOpen: boolean; message: string; onClose: () => void }) {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain bg-black/70 px-4 py-6 backdrop-blur-sm [-webkit-overflow-scrolling:touch]"
+      data-modal-scroll-root
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="login-error-title"
+    >
+      <div className="flex min-h-[100dvh] min-h-[100%] w-full items-end justify-center pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:py-8">
+        <div className="w-full max-w-md space-y-4 rounded-2xl border border-gray-700 bg-[#13131e] p-6 shadow-2xl">
+          <h2 id="login-error-title" className="text-center text-lg font-bold text-white">
+            Sign-in failed
+          </h2>
+          <p className="text-center text-sm leading-relaxed text-gray-300">{message}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-lg bg-cyan-500 py-3 text-sm font-semibold text-black transition-all hover:bg-cyan-400"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function PreAuthModal({
   onConfirm,
@@ -225,6 +277,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [loginErrorModalOpen, setLoginErrorModalOpen] = useState(false);
+  const [loginErrorModalMessage, setLoginErrorModalMessage] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const isKeyboardOpen = useKeyboardOpen();
 
@@ -500,6 +554,11 @@ export default function Login() {
         onEmailChange={setResetEmail}
         onClose={() => setIsResetModalOpen(false)}
         onSubmit={handlePasswordReset}
+      />
+      <LoginErrorModal
+        isOpen={loginErrorModalOpen}
+        message={loginErrorModalMessage}
+        onClose={() => setLoginErrorModalOpen(false)}
       />
     </div>
   );

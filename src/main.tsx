@@ -6,6 +6,12 @@ import './styles/index.css';
 
 if (Capacitor.isNativePlatform()) {
   document.documentElement.classList.add('cap-native');
+} else if (
+  import.meta.env.DEV &&
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('nativePreview') === '1'
+) {
+  document.documentElement.classList.add('cap-native', 'native-preview');
 }
 
 const routesModule =

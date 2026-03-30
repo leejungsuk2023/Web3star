@@ -81,39 +81,36 @@ export default function Profile() {
   ];
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-5 pb-28 [-webkit-overflow-scrolling:touch]">
-      <div className="max-w-md mx-auto">
-        {/* Profile Header */}
-        <div className="flex flex-col items-center mb-5">
-          <h2 className="text-white text-xl font-bold mb-0.5">{profile?.nickname ?? 'User'}</h2>
-          <p className="text-gray-400 text-sm mb-1.5">{profile?.email ?? ''}</p>
-          <p className="text-gray-500 text-xs mb-2">Joined {formatDate(profile?.created_at)}</p>
-          <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1 rounded-full">
-            <span className="text-xs font-medium">Level 1 Miner</span>
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pb-28 pt-2 [-webkit-overflow-scrolling:touch] sm:px-6">
+      <div className="mx-auto max-w-md">
+        <div className="mb-5 flex flex-col items-center">
+          <h2 className="mb-0.5 text-xl font-bold text-zinc-100">{profile?.nickname ?? 'User'}</h2>
+          <p className="mb-1.5 text-sm text-zinc-400">{profile?.email ?? ''}</p>
+          <p className="mb-2 text-xs text-zinc-500">Joined {formatDate(profile?.created_at)}</p>
+          <div className="rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 px-3 py-1 shadow-lg shadow-purple-500/20">
+            <span className="text-xs font-medium text-white">Level 1 Miner</span>
           </div>
         </div>
 
-        {/* Invite Section */}
-        <div className="bg-[#1a1a1a] rounded-2xl p-4 mb-4 border border-gray-800">
-          <h3 className="text-gray-400 text-sm mb-2">Referral Code</h3>
-          <div className="flex items-center justify-between bg-[#0a0a0a] rounded-lg px-4 py-3 border border-gray-800">
-            <span className="text-lg font-mono tracking-wider">{referralCode}</span>
+        <div className="mb-4 rounded-2xl border border-gray-800 bg-gradient-to-r from-gray-900/50 to-gray-800/50 p-4 backdrop-blur-sm">
+          <h3 className="mb-2 text-sm font-medium text-zinc-400">Referral Code</h3>
+          <div className="flex items-center justify-between rounded-xl border border-gray-800 bg-black/35 px-4 py-3">
+            <span className="text-lg font-mono tracking-wider text-zinc-100">{referralCode}</span>
             <button
               onClick={handleCopy}
-              className="ml-4 p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              className="ml-4 rounded-lg p-2 transition-colors hover:bg-zinc-800/80"
               aria-label="Copy referral code"
             >
               {copied ? (
-                <ClipboardCheck className="w-5 h-5 text-green-500" />
+                <ClipboardCheck className="h-5 w-5 text-cyan-400" />
               ) : (
-                <Copy className="w-5 h-5 text-gray-400" />
+                <Copy className="h-5 w-5 text-zinc-400" />
               )}
             </button>
           </div>
         </div>
 
-        {/* Menu List */}
-        <div className="bg-[#1a1a1a] rounded-2xl overflow-hidden border border-gray-800">
+        <div className="overflow-hidden rounded-2xl border border-gray-800 bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm">
           {menuItems.map((item, index) => {
             const Icon = item.icon;
             return (
@@ -125,18 +122,20 @@ export default function Profile() {
                   handleMenuClick(item.label);
                 }}
                 disabled={item.comingSoon}
-                className={`w-full flex items-center px-5 py-3.5 transition-colors ${
+                className={`flex w-full items-center px-5 py-3.5 transition-colors ${
                   item.comingSoon
                     ? 'cursor-default opacity-75'
-                    : 'hover:bg-[#252525]'
+                    : 'hover:bg-white/[0.04]'
                 } ${index !== menuItems.length - 1 ? 'border-b border-gray-800' : ''}`}
               >
-                <Icon className={`w-5 h-5 mr-4 flex-shrink-0 ${item.danger ? 'text-red-500' : 'text-gray-400'}`} />
-                <span className={`flex-1 text-left ${item.danger ? 'text-red-500' : 'text-gray-200'}`}>
+                <Icon
+                  className={`mr-4 h-5 w-5 shrink-0 ${item.danger ? 'text-red-400' : 'text-zinc-400'}`}
+                />
+                <span className={`flex-1 text-left ${item.danger ? 'text-red-400' : 'text-zinc-200'}`}>
                   {item.label}
                 </span>
                 {item.comingSoon && (
-                  <span className="text-xs text-gray-500 font-medium">Coming soon</span>
+                  <span className="text-xs font-medium text-zinc-500">Coming soon</span>
                 )}
               </button>
             );

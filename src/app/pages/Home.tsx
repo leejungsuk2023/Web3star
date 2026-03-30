@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Zap } from 'lucide-react';
+import { Lock, Timer, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import GetMorePointModal from '../components/GetMorePointModal';
 import miningCenterLogo from '../../assets/mining-center-logo.png';
@@ -322,7 +322,7 @@ export default function Home() {
 
   const getSlotColor = (slot: number) => {
     if (!centerButtonActive) {
-      return 'bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700 opacity-50 cursor-not-allowed';
+      return 'cursor-not-allowed border border-zinc-700/80 bg-zinc-900/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]';
     }
     const isActive = activeSlots.includes(slot);
     if (isActive) {
@@ -331,14 +331,35 @@ export default function Home() {
       if (intensity >= 0.6) return 'bg-gradient-to-br from-cyan-500 to-blue-600 border-2 border-cyan-400 shadow-lg shadow-cyan-500/50';
       return 'bg-gradient-to-br from-cyan-600 to-blue-700 border-2 border-cyan-500 shadow-lg shadow-cyan-500/40';
     }
-    if (adCooldown > 0) return 'bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700 opacity-50 cursor-not-allowed';
+    if (adCooldown > 0) {
+      return 'cursor-not-allowed border border-zinc-700/80 bg-zinc-900/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]';
+    }
     return 'bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700 hover:border-cyan-500/50 cursor-pointer';
   };
 
+  const slotIcon = (slot: number) => {
+    if (!centerButtonActive) {
+      return <Lock className="h-5 w-5 text-zinc-500" aria-hidden strokeWidth={2} />;
+    }
+    if (activeSlots.includes(slot)) {
+      return (
+        <Zap className="h-5 w-5 fill-white text-white transition-colors" aria-hidden />
+      );
+    }
+    if (adCooldown > 0) {
+      return <Timer className="h-5 w-5 text-zinc-500" aria-hidden strokeWidth={2} />;
+    }
+    return (
+      <Zap
+        className="h-5 w-5 text-zinc-500 transition-colors group-hover:text-cyan-400"
+        aria-hidden
+      />
+    );
+  };
+
   return (
-    <div className="flex h-full min-h-0 w-full flex-col">
-      {/* Hero: shrink-0 only — no flex-1 here; flex-1 + mt-auto on the card was creating a huge empty band */}
-      <div className="flex shrink-0 flex-col items-center px-6 pt-4 min-[400px]:pt-6 sm:pt-8">
+    <div className="flex min-h-0 w-full flex-1 flex-col pt-2 pb-1 sm:pt-3 sm:pb-1">
+      <div className="flex shrink-0 flex-col items-center px-6 pt-1 min-[400px]:pt-2 sm:pt-3">
         {/* Glowing Circular Button */}
         <div className="relative mb-4 max-[380px]:mb-3">
           <div className={`absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 blur-3xl scale-125 animate-pulse transition-opacity duration-500 ${
@@ -389,26 +410,31 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Ad card: fixed gap under timer (not mt-auto) so it sits higher above the tab bar */}
-      <div className="mt-6 shrink-0 px-6 pb-3 pt-1 sm:mt-7">
+      <div className="h-6 shrink-0 sm:h-7" aria-hidden />
+
+      <div className="mt-2 shrink-0 px-6 pb-2 pt-0 sm:mt-3 sm:pb-2">
         <div className="bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm rounded-2xl p-4 border border-gray-800">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <span className="text-sm text-gray-400 font-medium">Get More Points</span>
-              <span className="text-xs text-gray-600 ml-2">Watch 1 ad = +5 PTS</span>
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span className="text-sm font-medium text-zinc-300">Get More Points</span>
+                <span className="text-xs text-cyan-500">+5 PTS per ad</span>
+              </div>
               {!centerButtonActive && (
-                <span className="mt-1 block text-[11px] text-amber-400/90">
-                  Tap the center logo to mine first — then these slots unlock.
-                </span>
+                <p className="mt-1 text-[11px] leading-snug text-cyan-500/90">
+                  Mine with the logo above to unlock these slots.
+                </p>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               {adCooldown > 0 && (
-                <span className="text-xs text-amber-400 font-mono font-bold animate-pulse">
+                <span className="rounded-md bg-zinc-800/80 px-1.5 py-0.5 text-[11px] font-mono tabular-nums text-cyan-400/90">
                   {adCooldown}s
                 </span>
               )}
-              <span className="text-xs text-cyan-400">{activeSlots.length}/5</span>
+              <span className="text-xs font-medium text-cyan-400/90 tabular-nums">
+                {activeSlots.length}/5
+              </span>
             </div>
           </div>
 
@@ -416,30 +442,23 @@ export default function Home() {
             {[1, 2, 3, 4, 5].map((slot) => (
               <button
                 key={slot}
+                type="button"
                 onClick={handleSlotClick}
                 disabled={
                   !centerButtonActive || activeSlots.includes(slot) || adCooldown > 0
                 }
                 aria-label={`Ad slot ${slot}${
                   !centerButtonActive
-                    ? ' (mine with logo first)'
+                    ? ', locked until you mine'
                     : activeSlots.includes(slot)
-                      ? ' (watched)'
+                      ? ', completed'
                       : adCooldown > 0
-                        ? ' (cooldown)'
-                        : ''
+                        ? ', on cooldown'
+                        : ', watch ad'
                 }`}
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${getSlotColor(slot)}`}
+                className={`group flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-all ${getSlotColor(slot)}`}
               >
-                <Zap
-                  className={`w-5 h-5 transition-colors ${
-                    activeSlots.includes(slot)
-                      ? 'text-white fill-white'
-                      : adCooldown > 0
-                      ? 'text-gray-600'
-                      : 'text-gray-600 group-hover:text-cyan-500'
-                  }`}
-                />
+                {slotIcon(slot)}
               </button>
             ))}
           </div>
@@ -461,8 +480,9 @@ export default function Home() {
           {/* Cooldown message */}
           {adCooldown > 0 && (
             <div className="mt-3 text-center">
-              <span className="text-xs text-amber-400">
-                Wait <span className="font-mono font-bold">{adCooldown}s</span> until the next ad
+              <span className="text-xs text-zinc-500">
+                Next slot in{' '}
+                <span className="font-mono font-medium text-cyan-400/85">{adCooldown}s</span>
               </span>
             </div>
           )}
