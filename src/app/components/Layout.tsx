@@ -18,7 +18,7 @@ export default function Layout() {
   const points = profile?.point ?? 0;
 
   return (
-    <div className="relative mx-auto flex h-dvh max-h-dvh min-h-0 w-full max-w-md flex-col overflow-hidden text-white">
+    <div className={LAYOUT_ROOT_CLASS}>
       <div
         className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-[#101018] via-[#08080f] to-black"
         aria-hidden
@@ -59,75 +59,102 @@ export default function Layout() {
         <Outlet />
       </div>
 
-      {/* Bottom tab bar — h-16 band + safe-area bottom */}
+      {/* Bottom tab bar — larger tap targets (~56px icon tile + text-sm labels) */}
       <nav
-        className={`relative z-10 flex min-h-16 shrink-0 items-end border-t border-gray-800 bg-gradient-to-t from-gray-900/95 to-gray-900/80 px-6 pt-3 backdrop-blur-md ${LAYOUT_NAV_PB_CLASS}`}
+        className={`relative z-10 flex min-h-[5.25rem] shrink-0 items-center border-t border-gray-800 bg-gradient-to-t from-gray-900/95 to-gray-900/80 px-4 pt-2 backdrop-blur-md ${LAYOUT_NAV_PB_CLASS}`}
       >
-        <div className="flex items-center justify-around max-w-sm mx-auto">
+        <div className="mx-auto flex w-full max-w-sm items-stretch justify-around gap-1">
           <button
+            type="button"
             onClick={() => navigate('/app')}
-            className="flex flex-col items-center gap-1 group"
+            className="group flex min-h-[4.5rem] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-1 active:opacity-90"
           >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-              location.pathname === '/app'
-                ? 'bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30'
-                : 'bg-gray-800/50 group-hover:bg-gray-700/50'
-            }`}>
-              <Home className={`w-5 h-5 transition-colors ${
+            <div
+              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all ${
                 location.pathname === '/app'
-                  ? 'text-white'
-                  : 'text-gray-500 group-hover:text-gray-300'
-              }`} />
+                  ? 'bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30'
+                  : 'bg-gray-800/50 group-hover:bg-gray-700/50'
+              }`}
+            >
+              <Home
+                className={`h-7 w-7 transition-colors ${
+                  location.pathname === '/app'
+                    ? 'text-white'
+                    : 'text-gray-500 group-hover:text-gray-300'
+                }`}
+              />
             </div>
-            <span className={`text-xs transition-colors ${
-              location.pathname === '/app'
-                ? 'text-white font-medium'
-                : 'text-gray-500 group-hover:text-gray-300'
-            }`}>Home</span>
+            <span
+              className={`text-center text-sm leading-tight transition-colors ${
+                location.pathname === '/app'
+                  ? 'font-medium text-white'
+                  : 'text-gray-500 group-hover:text-gray-300'
+              }`}
+            >
+              Home
+            </span>
           </button>
 
           <button
+            type="button"
             onClick={() => navigate('/app/leaderboard')}
-            className="flex flex-col items-center gap-1 group"
+            className="group flex min-h-[4.5rem] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-1 active:opacity-90"
           >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-              location.pathname === '/app/leaderboard'
-                ? 'bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30'
-                : 'bg-gray-800/50 group-hover:bg-gray-700/50'
-            }`}>
-              <Trophy className={`w-5 h-5 transition-colors ${
+            <div
+              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all ${
                 location.pathname === '/app/leaderboard'
-                  ? 'text-white'
-                  : 'text-gray-500 group-hover:text-gray-300'
-              }`} />
+                  ? 'bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30'
+                  : 'bg-gray-800/50 group-hover:bg-gray-700/50'
+              }`}
+            >
+              <Trophy
+                className={`h-7 w-7 transition-colors ${
+                  location.pathname === '/app/leaderboard'
+                    ? 'text-white'
+                    : 'text-gray-500 group-hover:text-gray-300'
+                }`}
+              />
             </div>
-            <span className={`text-xs transition-colors ${
-              location.pathname === '/app/leaderboard'
-                ? 'text-white font-medium'
-                : 'text-gray-500 group-hover:text-gray-300'
-            }`}>Leaderboard</span>
+            <span
+              className={`px-0.5 text-center text-sm leading-snug transition-colors ${
+                location.pathname === '/app/leaderboard'
+                  ? 'font-medium text-white'
+                  : 'text-gray-500 group-hover:text-gray-300'
+              }`}
+            >
+              Leaderboard
+            </span>
           </button>
 
           <button
+            type="button"
             onClick={() => navigate('/app/profile')}
-            className="flex flex-col items-center gap-1 group"
+            className="group flex min-h-[4.5rem] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-1 active:opacity-90"
           >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-              location.pathname === '/app/profile'
-                ? 'bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30'
-                : 'bg-gray-800/50 group-hover:bg-gray-700/50'
-            }`}>
-              <User className={`w-5 h-5 transition-colors ${
+            <div
+              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all ${
                 location.pathname === '/app/profile'
-                  ? 'text-white'
-                  : 'text-gray-500 group-hover:text-gray-300'
-              }`} />
+                  ? 'bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30'
+                  : 'bg-gray-800/50 group-hover:bg-gray-700/50'
+              }`}
+            >
+              <User
+                className={`h-7 w-7 transition-colors ${
+                  location.pathname === '/app/profile'
+                    ? 'text-white'
+                    : 'text-gray-500 group-hover:text-gray-300'
+                }`}
+              />
             </div>
-            <span className={`text-xs transition-colors ${
-              location.pathname === '/app/profile'
-                ? 'text-white font-medium'
-                : 'text-gray-500 group-hover:text-gray-300'
-            }`}>Profile</span>
+            <span
+              className={`text-center text-sm leading-tight transition-colors ${
+                location.pathname === '/app/profile'
+                  ? 'font-medium text-white'
+                  : 'text-gray-500 group-hover:text-gray-300'
+              }`}
+            >
+              Profile
+            </span>
           </button>
         </div>
       </nav>
