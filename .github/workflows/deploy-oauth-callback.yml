@@ -47,7 +47,8 @@ jobs:
         run: npm run build
         env:
           VITE_DEPLOY_TARGET: web
-          VITE_BASE_PATH: /Web3star/
+          # Custom domain (web3star.org) is served at site root; /Web3star/ breaks asset URLs.
+          VITE_BASE_PATH: '/'
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_OAUTH_CALLBACK_URL: ${{ secrets.VITE_OAUTH_CALLBACK_URL }}
