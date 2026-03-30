@@ -24,14 +24,17 @@ import type { AuthError } from '@supabase/supabase-js';
 const TERMS_AGREED_KEY = 'web3star_terms_agreed';
 
 function getLoginErrorMessage(err: AuthError): string {
-  const msg = (err.message ?? '').toLowerCase();
-  const code = err.code ?? '';
+  const msg = (err?.message ?? '').toLowerCase();
+  const code = err?.code ?? '';
   if (
     code === 'invalid_credentials' ||
+    code === 'invalid_grant' ||
     msg.includes('invalid login') ||
     msg.includes('invalid credentials') ||
     msg.includes('wrong password') ||
-    msg.includes('user not found')
+    msg.includes('user not found') ||
+    msg.includes('email address is not valid') ||
+    msg.includes('invalid email')
   ) {
     return 'The email or password you entered is incorrect. Please try again.';
   }
@@ -49,7 +52,7 @@ function LoginErrorModal({ isOpen, message, onClose }: { isOpen: boolean; messag
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain bg-black/70 px-4 py-6 backdrop-blur-sm [-webkit-overflow-scrolling:touch]"
+      className="fixed inset-0 z-[200] overflow-y-auto overscroll-y-contain bg-black/70 px-4 py-6 backdrop-blur-sm [-webkit-overflow-scrolling:touch]"
       data-modal-scroll-root
       role="dialog"
       aria-modal="true"
@@ -292,7 +295,8 @@ export default function Login() {
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (authError) {
-      setError(authError.message);
+      setLoginErrorModalMessage(getLoginErrorMessage(authError));
+      setLoginErrorModalOpen(true);
       setLoading(false);
       return;
     }
