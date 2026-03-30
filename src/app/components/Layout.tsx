@@ -3,6 +3,11 @@ import { Outlet, useNavigate, useLocation } from 'react-router';
 import { Home, Trophy, User, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../context/AuthContext';
+import {
+  LAYOUT_HEADER_PT_CLASS,
+  LAYOUT_NAV_PB_CLASS,
+  LAYOUT_ROOT_CLASS,
+} from '../../lib/nativeLayout';
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -23,7 +28,9 @@ export default function Layout() {
         aria-hidden
       />
       {/* Top Header — shrink-0 h-14 band; extra top padding when env inset is large */}
-      <header className="relative z-10 flex min-h-14 shrink-0 items-center justify-between px-6 pb-2 pt-[max(0.5rem,env(safe-area-inset-top,24px))]">
+      <header
+        className={`relative z-10 flex min-h-14 shrink-0 items-center justify-between px-6 pb-2 ${LAYOUT_HEADER_PT_CLASS}`}
+      >
         <button
           onClick={() => navigate('/app/profile')}
           className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/30 hover:scale-105 transition-transform active:scale-95"
@@ -53,7 +60,9 @@ export default function Layout() {
       </div>
 
       {/* Bottom tab bar — h-16 band + safe-area bottom */}
-      <nav className="relative z-10 flex min-h-16 shrink-0 items-end border-t border-gray-800 bg-gradient-to-t from-gray-900/95 to-gray-900/80 px-6 pb-[max(0.75rem,calc(0.5rem+env(safe-area-inset-bottom,24px)))] pt-3 backdrop-blur-md">
+      <nav
+        className={`relative z-10 flex min-h-16 shrink-0 items-end border-t border-gray-800 bg-gradient-to-t from-gray-900/95 to-gray-900/80 px-6 pt-3 backdrop-blur-md ${LAYOUT_NAV_PB_CLASS}`}
+      >
         <div className="flex items-center justify-around max-w-sm mx-auto">
           <button
             onClick={() => navigate('/app')}

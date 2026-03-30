@@ -10,6 +10,12 @@ import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
 import { getPostAuthPath } from '../../lib/deployTarget';
 import { attachAuthKeyboardScroll } from '../../lib/keyboardLayout';
+import {
+  AUTH_PAGE_INNER_CLASS,
+  AUTH_PAGE_OUTER_CLASS,
+  LOGIN_FOOTER_PB_CLASS,
+  LOGIN_SCROLL_TOP_PT_CLASS,
+} from '../../lib/nativeLayout';
 import { useKeyboardOpen } from '../../lib/useKeyboardOpen';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
@@ -351,8 +357,8 @@ export default function Login() {
   }, [authLoading, user, navigate]);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#0a0a0f] text-white">
-      <div className="mx-auto flex h-dvh max-h-dvh min-h-0 w-full max-w-md flex-col overflow-hidden">
+    <div className={AUTH_PAGE_OUTER_CLASS}>
+      <div className={AUTH_PAGE_INNER_CLASS}>
         <div className="relative flex min-h-0 flex-1 flex-col">
           <div
             data-auth-scroll-root
@@ -434,7 +440,9 @@ export default function Login() {
           </div>
 
           {!isKeyboardOpen && (
-            <div className="mt-auto w-full shrink-0 space-y-4 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-6 pt-4 pb-[max(0.75rem,calc(0.5rem+env(safe-area-inset-bottom,24px)))] backdrop-blur">
+            <div
+              className={`mt-auto w-full shrink-0 space-y-4 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-6 pt-4 backdrop-blur ${LOGIN_FOOTER_PB_CLASS}`}
+            >
               {Capacitor.isNativePlatform() && (
                 <button
                   type="button"

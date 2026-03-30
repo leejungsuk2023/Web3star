@@ -4,6 +4,7 @@ import type { RouterProviderProps } from 'react-router';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '../context/AuthContext';
 import { isWebMarketingBuild } from '../lib/deployTarget';
+import { APP_SHELL_CLASS } from '../lib/nativeLayout';
 import { initAdMob } from '../lib/admob';
 import { initSocialLogin } from '../lib/socialLogin';
 
@@ -25,8 +26,8 @@ export default function App({ router }: AppProps) {
           <Toaster theme="dark" position="top-center" richColors />
         </div>
       ) : (
-        /* Capacitor: lock height so tab bar / keyboard layout stay predictable */
-        <div className="flex h-screen max-h-dvh min-h-0 w-full flex-1 flex-col bg-black">
+        /* Native: h-full inside padded WebView; browser dev: h-screen */
+        <div className={APP_SHELL_CLASS}>
           <div className="flex min-h-0 flex-1 flex-col">
             <RouterProvider router={router} />
           </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import logoImage from 'figma:asset/1abedf885993685a4d6cd6ba7515a93facdfdba3.png';
+import { SPLASH_ROOT_CLASS } from '../../lib/nativeLayout';
 
 export default function Splash() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export default function Splash() {
   }, [user, loading, navigate]);
 
   return (
-    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-[#0a0a0f]">
+    <div className={SPLASH_ROOT_CLASS}>
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}

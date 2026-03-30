@@ -8,6 +8,12 @@ import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
 import { getPostAuthPath } from '../../lib/deployTarget';
 import { attachAuthKeyboardScroll } from '../../lib/keyboardLayout';
+import {
+  AUTH_PAGE_INNER_CLASS,
+  AUTH_PAGE_OUTER_CLASS,
+  SIGNUP_FOOTER_PB_CLASS,
+  SIGNUP_SCROLL_TOP_PT_CLASS,
+} from '../../lib/nativeLayout';
 import { useKeyboardOpen } from '../../lib/useKeyboardOpen';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
@@ -151,11 +157,11 @@ export default function Signup() {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#0a0a0f] text-white">
-      <div className="mx-auto flex h-dvh max-h-dvh min-h-0 w-full max-w-md flex-col overflow-hidden">
+    <div className={AUTH_PAGE_OUTER_CLASS}>
+      <div className={AUTH_PAGE_INNER_CLASS}>
         <div
           data-auth-scroll-root
-          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pt-[max(1.25rem,env(safe-area-inset-top,0px))] [-webkit-overflow-scrolling:touch]"
+          className={`min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 [-webkit-overflow-scrolling:touch] ${SIGNUP_SCROLL_TOP_PT_CLASS}`}
           style={{ paddingBottom: isKeyboardOpen ? 12 : 24 }}
         >
         {/* Logo Section */}
@@ -314,7 +320,9 @@ export default function Signup() {
 
         {/* Bottom Action Area */}
         {!isKeyboardOpen && (
-        <div className="z-10 shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-5 pt-3 pb-[max(0.75rem,calc(0.5rem+env(safe-area-inset-bottom,0px)))] backdrop-blur">
+        <div
+          className={`z-10 shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-5 pt-3 backdrop-blur ${SIGNUP_FOOTER_PB_CLASS}`}
+        >
           <div className="grid grid-cols-2 gap-3">
             <button
               type="submit"

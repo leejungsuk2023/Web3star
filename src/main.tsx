@@ -1,7 +1,12 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { Capacitor } from '@capacitor/core';
 import App from './app/App.tsx';
 import './styles/index.css';
+
+if (Capacitor.isNativePlatform()) {
+  document.documentElement.classList.add('cap-native');
+}
 
 const routesModule =
   import.meta.env.VITE_DEPLOY_TARGET === 'web'
