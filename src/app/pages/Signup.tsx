@@ -7,6 +7,8 @@ import { googleNativeIdToken } from '../../lib/socialLogin';
 import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
 import { getPostAuthPath } from '../../lib/deployTarget';
+import { attachAuthKeyboardScroll } from '../../lib/keyboardLayout';
+import { useKeyboardOpen } from '../../lib/useKeyboardOpen';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
 
@@ -25,33 +27,9 @@ export default function Signup() {
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const isKeyboardOpen = useKeyboardOpen();
 
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    const onResize = () => {
-      const keyboardHeight = window.innerHeight - vv.height;
-      setIsKeyboardOpen(keyboardHeight > 120);
-    };
-
-    onResize();
-    vv.addEventListener('resize', onResize);
-    return () => vv.removeEventListener('resize', onResize);
-  }, []);
-
-  useEffect(() => {
-    const onFocusIn = (event: FocusEvent) => {
-      const target = event.target;
-      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
-      window.setTimeout(() => {
-        target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      }, 120);
-    };
-    document.addEventListener('focusin', onFocusIn);
-    return () => document.removeEventListener('focusin', onFocusIn);
-  }, []);
+  useEffect(() => attachAuthKeyboardScroll(), []);
 
   const termsAgreed = agreedToTerms && agreedToPrivacy;
 
@@ -92,6 +70,14 @@ export default function Signup() {
       setError(authError.message);
       setLoading(false);
       return;
+    }
+
+    // signUp 직후 로컬 세션이 없으면 RPC(auth.uid)가 스킵되고 REST만 타서 추천인 포인트가 RLS에 막힘 → setSession 먼저.
+    if (signUpData?.session?.access_token && signUpData?.session?.refresh_token) {
+      await supabase.auth.setSession({
+        access_token: signUpData.session.access_token,
+        refresh_token: signUpData.session.refresh_token,
+      });
     }
 
     if (signUpData?.user?.id && referralCode.trim()) {
@@ -165,11 +151,12 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col overflow-hidden">
+    <div className="flex min-h-dvh flex-col bg-[#0a0a0f] text-white">
+      <div className="mx-auto flex h-dvh max-h-dvh min-h-0 w-full max-w-md flex-col overflow-hidden">
         <div
-          className="flex-1 overflow-y-auto px-5 pt-5"
-          style={{ paddingBottom: isKeyboardOpen ? 16 : 24 }}
+          data-auth-scroll-root
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pt-[max(1.25rem,env(safe-area-inset-top,0px))] [-webkit-overflow-scrolling:touch]"
+          style={{ paddingBottom: isKeyboardOpen ? 12 : 24 }}
         >
         {/* Logo Section */}
         <div className="flex flex-col items-center mb-8">
@@ -327,7 +314,7 @@ export default function Signup() {
 
         {/* Bottom Action Area */}
         {!isKeyboardOpen && (
-        <div className="z-10 shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] backdrop-blur">
+        <div className="z-10 shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-5 pt-3 pb-[max(0.75rem,calc(0.5rem+env(safe-area-inset-bottom,0px)))] backdrop-blur">
           <div className="grid grid-cols-2 gap-3">
             <button
               type="submit"

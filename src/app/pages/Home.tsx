@@ -9,8 +9,11 @@ import { showInterstitialAd, showRewardedAd, preloadInterstitialAd } from '../..
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
-
-const MINING_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
+import {
+  MINING_COOLDOWN_MS,
+  canOpenRewardedAdSlotModal,
+  effectiveAdSlotsViewed,
+} from '../../lib/miningAdSlots';
 const MINING_REWARD = 10;
 const AD_REWARD_PER_SLOT = 5;
 const AD_BONUS_ALL_SLOTS = 5;
@@ -44,21 +47,20 @@ export default function Home() {
   const [adCooldown, setAdCooldown] = useState(0); // seconds remaining between ads
   const exactAlarmPromptedRef = useRef(false);
 
-  // Initialize state from profile
+  // Initialize state from profile — rewarded slots only count during post-mine cooldown (after logo tap).
   useEffect(() => {
     if (profile) {
       const remaining = getTimeRemaining(profile.last_mined_at);
       setTime(remaining);
 
-      if (profile.last_mined_at) {
+      const inCooldown = (() => {
+        if (!profile.last_mined_at) return false;
         const elapsed = Date.now() - new Date(profile.last_mined_at).getTime();
-        setCenterButtonActive(elapsed < MINING_COOLDOWN_MS);
-      }
+        return elapsed < MINING_COOLDOWN_MS;
+      })();
+      setCenterButtonActive(inCooldown);
 
-      const slots = profile.ad_slots_viewed;
-      if (Array.isArray(slots)) {
-        setActiveSlots(slots);
-      }
+      setActiveSlots(effectiveAdSlotsViewed(profile.last_mined_at, profile.ad_slots_viewed));
     }
   }, [profile]);
 
@@ -71,7 +73,8 @@ export default function Home() {
 
         if (remaining.hours === 0 && remaining.minutes === 0 && remaining.seconds === 0) {
           setCenterButtonActive(false);
-          // 쿨다운 끝 → W 버튼 활성화 → 광고 미리 로딩
+          setActiveSlots([]);
+          // 쿨다운 끝 → 로고(채굴) 전까지 하단 리워드 슬롯 잠금 → 광고 미리 로딩
           preloadInterstitialAd();
         }
       }
@@ -278,7 +281,7 @@ export default function Home() {
     }
     toast.success(`+${AD_REWARD_PER_SLOT} PTS Ad reward! (${newSlots.length}/5)`);
     return true;
-  }, [user, activeSlots, profile, refreshProfile]);
+  }, [user, activeSlots, profile, refreshProfile, centerButtonActive]);
 
   // 항상 최신 handleMine을 참조하도록 ref 유지 (stale closure 방지)
   const handleMineRef = useRef(handleMine);
@@ -297,12 +300,19 @@ export default function Home() {
   }, [centerButtonActive, isMining]);
 
   const handleSlotClick = () => {
-    if (activeSlots.length < 5 && adCooldown === 0) {
+    if (canOpenRewardedAdSlotModal(centerButtonActive, activeSlots.length, adCooldown)) {
       setIsModalOpen(true);
     }
   };
 
+  useEffect(() => {
+    if (!centerButtonActive && isModalOpen) setIsModalOpen(false);
+  }, [centerButtonActive, isModalOpen]);
+
   const getSlotColor = (slot: number) => {
+    if (!centerButtonActive) {
+      return 'bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700 opacity-50 cursor-not-allowed';
+    }
     const isActive = activeSlots.includes(slot);
     if (isActive) {
       const intensity = activeSlots.length / 5;
@@ -320,9 +330,9 @@ export default function Home() {
           flex-1 + justify-center은 하단 카드와의 사이 여백을 크게 만들 수 있어,
           이제 히어로는 컨텐츠 높이만큼만 쓰고(스크롤용 컨테이너는 Layout이 담당),
           노란 여백이 줄어들게 합니다. */}
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-start px-6 pt-20">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-start px-6 pt-8 min-[400px]:pt-12 sm:pt-16">
         {/* Glowing Circular Button */}
-        <div className="relative mb-4 max-[380px]:mb-3 sm:mb-8">
+        <div className="relative mb-4 max-[380px]:mb-3">
           <div className={`absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 blur-3xl scale-125 animate-pulse transition-opacity duration-500 ${
             centerButtonActive ? 'opacity-30' : 'opacity-10'
           }`}></div>
@@ -334,7 +344,7 @@ export default function Home() {
             onClick={handleCenterButtonClick}
             disabled={centerButtonActive || isMining}
             aria-label={centerButtonActive ? 'Mining in progress' : 'Start Mining'}
-            className={`relative h-48 w-48 max-[380px]:h-44 max-[380px]:w-44 sm:h-56 sm:w-56 overflow-hidden rounded-full p-[3px] shadow-2xl transition-all duration-300 ${
+            className={`relative h-48 w-48 max-[380px]:h-44 max-[380px]:w-44 overflow-hidden rounded-full p-[3px] shadow-2xl transition-all duration-300 ${
               centerButtonActive
                 ? 'bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 shadow-blue-500/45 hover:scale-105 active:scale-95'
                 : 'cursor-pointer bg-gradient-to-br from-purple-700/95 via-blue-800/95 to-indigo-900/95 shadow-black/40 hover:scale-[1.02]'
@@ -372,12 +382,17 @@ export default function Home() {
       </div>
 
       {/* Bottom Section - Ad Slots */}
-      <div className="mt-auto shrink-0 translate-y-12 px-6 pb-0 pt-0">
+      <div className="mt-auto shrink-0 px-6 pb-1 pt-2">
         <div className="bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm rounded-2xl p-4 border border-gray-800">
           <div className="flex items-center justify-between mb-3">
             <div>
               <span className="text-sm text-gray-400 font-medium">Get More Points</span>
               <span className="text-xs text-gray-600 ml-2">Watch 1 ad = +5 PTS</span>
+              {!centerButtonActive && (
+                <span className="mt-1 block text-[11px] text-amber-400/90">
+                  Tap the center logo to mine first — then these slots unlock.
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {adCooldown > 0 && (
@@ -394,8 +409,18 @@ export default function Home() {
               <button
                 key={slot}
                 onClick={handleSlotClick}
-                disabled={activeSlots.includes(slot) || adCooldown > 0}
-                aria-label={`Ad slot ${slot}${activeSlots.includes(slot) ? ' (watched)' : adCooldown > 0 ? ' (cooldown)' : ''}`}
+                disabled={
+                  !centerButtonActive || activeSlots.includes(slot) || adCooldown > 0
+                }
+                aria-label={`Ad slot ${slot}${
+                  !centerButtonActive
+                    ? ' (mine with logo first)'
+                    : activeSlots.includes(slot)
+                      ? ' (watched)'
+                      : adCooldown > 0
+                        ? ' (cooldown)'
+                        : ''
+                }`}
                 className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${getSlotColor(slot)}`}
               >
                 <Zap

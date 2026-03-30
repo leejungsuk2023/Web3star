@@ -17,8 +17,12 @@ export default function App({ router }: AppProps) {
 
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
-      <Toaster theme="dark" position="top-center" richColors />
+      <div className="flex min-h-dvh flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">
+          <RouterProvider router={router} />
+        </div>
+        <Toaster theme="dark" position="top-center" richColors />
+      </div>
     </AuthProvider>
   );
 }

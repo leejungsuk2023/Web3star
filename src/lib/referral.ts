@@ -33,6 +33,25 @@ function isRpcUnavailable(err: { code?: string; message?: string } | null | unde
 /**
  * Auth 직후 `users` 행이 트리거로 늦게 생길 수 있어 짧게 재시도합니다.
  */
+/**
+ * signUp 직후 로컬 세션이 아직 없으면 getSession() !== newUserId 가 되어 RPC가 스킵되고,
+ * REST로 떨어지면 RLS 때문에 신규 유저만 +100 되고 추천인 행은 0건 업데이트되는 경우가 반복됨.
+ */
+async function waitForAuthUid(
+  expectedUserId: string,
+  maxAttempts = 32,
+  delayMs = 150
+): Promise<boolean> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id === expectedUserId) return true;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id === expectedUserId) return true;
+    await sleep(delayMs);
+  }
+  return false;
+}
+
 async function waitForUserRow(
   userId: string,
   maxAttempts = 20,
@@ -273,27 +292,41 @@ export async function applyReferralRewards(
   const referralCode = rawCode.trim();
   if (!referralCode) return { ok: true, skipped: true };
 
-  const { data: sessionData } = await supabase.auth.getSession();
-  const sessionUid = sessionData.session?.user?.id;
+  const sessionAligned = await waitForAuthUid(newUserId);
+  let { data: sessionData } = await supabase.auth.getSession();
+  let sessionUid = sessionData.session?.user?.id;
+  if (sessionUid !== newUserId && sessionAligned) {
+    await supabase.auth.refreshSession();
+    ({ data: sessionData } = await supabase.auth.getSession());
+    sessionUid = sessionData.session?.user?.id;
+  }
 
-  if (sessionUid === newUserId) {
-    const { data: rpcData, error: rpcError } = await supabase.rpc('apply_referral_rewards', {
-      p_invite_code: referralCode,
-    });
+  if (sessionUid !== newUserId) {
+    console.warn(
+      '[referral] Auth session is not the new user yet; skipping REST-only path (would credit invitee only under RLS). Retries via pending_referral_code.',
+    );
+    return {
+      ok: false,
+      message: 'Session not ready for referral. It will apply automatically in a moment.',
+    };
+  }
 
-    if (!rpcError && rpcData != null && typeof rpcData === 'object' && 'ok' in rpcData) {
-      const p = rpcData as RpcPayload;
-      if (p.ok) return { ok: true, skipped: p.skipped };
-      return { ok: false, message: p.message ?? 'Referral failed.' };
-    }
+  const { data: rpcData, error: rpcError } = await supabase.rpc('apply_referral_rewards', {
+    p_invite_code: referralCode,
+  });
 
-    if (rpcError && !isRpcUnavailable(rpcError)) {
-      return { ok: false, message: rpcError.message ?? 'Referral request failed.' };
-    }
+  if (!rpcError && rpcData != null && typeof rpcData === 'object' && 'ok' in rpcData) {
+    const p = rpcData as RpcPayload;
+    if (p.ok) return { ok: true, skipped: p.skipped };
+    return { ok: false, message: p.message ?? 'Referral failed.' };
+  }
 
-    if (rpcError && isRpcUnavailable(rpcError)) {
-      console.warn('[referral] RPC unavailable, using REST fallback:', rpcError?.message);
-    }
+  if (rpcError && !isRpcUnavailable(rpcError)) {
+    return { ok: false, message: rpcError.message ?? 'Referral request failed.' };
+  }
+
+  if (rpcError && isRpcUnavailable(rpcError)) {
+    console.warn('[referral] RPC unavailable, using REST fallback:', rpcError?.message);
   }
 
   return applyReferralRewardsViaRest(newUserId, rawCode);

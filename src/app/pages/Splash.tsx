@@ -23,7 +23,7 @@ export default function Splash() {
   }, [user, loading, navigate]);
 
   return (
-    <div className="h-screen w-full bg-[#0a0a0f] flex flex-col items-center justify-center">
+    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-[#0a0a0f]">
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}

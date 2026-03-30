@@ -7,7 +7,7 @@ export default function AdMobTest() {
   const [busy, setBusy] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white flex items-center justify-center p-6">
+    <div className="flex min-h-dvh items-center justify-center bg-[#0a0a0f] p-6 text-white">
       <div className="w-full max-w-md bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl border border-gray-800 p-6">
         <h1 className="text-xl font-bold mb-2">AdMob Test</h1>
         <p className="text-sm text-gray-400 mb-6">

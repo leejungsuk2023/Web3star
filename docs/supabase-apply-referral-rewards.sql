@@ -1,5 +1,8 @@
 -- Web3Star: 추천인·피추천인 각 100pt + 마일스톤 (RLS와 무관하게 한 트랜잭션에서 처리)
 -- Supabase Dashboard → SQL Editor 에서 한 번 실행하세요.
+--
+-- 필수: 클라이언트 RLS는 "타인 users 행 수정"이 막혀 있어, 이 RPC가 없으면 가입자만 +100 되고
+-- 코드 제공자(추천인)에게는 포인트가 안 들어갈 수 있습니다. 반드시 배포 후 동작을 확인하세요.
 
 CREATE OR REPLACE FUNCTION public.apply_referral_rewards(p_invite_code text)
 RETURNS jsonb

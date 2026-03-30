@@ -13,7 +13,7 @@ export default function Layout() {
   const points = profile?.point ?? 0;
 
   return (
-    <div className="relative min-h-screen w-full text-white flex flex-col overflow-hidden max-w-md mx-auto">
+    <div className="relative mx-auto flex h-dvh max-h-dvh min-h-0 w-full max-w-md flex-col overflow-hidden text-white">
       <div
         className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-[#101018] via-[#08080f] to-black"
         aria-hidden
@@ -23,7 +23,7 @@ export default function Layout() {
         aria-hidden
       />
       {/* Top Header */}
-      <header className="relative z-10 flex items-center justify-between px-6 pt-8 pb-4">
+      <header className="relative z-10 flex shrink-0 items-center justify-between px-6 pb-4 pt-[max(1.5rem,env(safe-area-inset-top,0px)+0.5rem)]">
         <button
           onClick={() => navigate('/app/profile')}
           className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/30 hover:scale-105 transition-transform active:scale-95"
@@ -52,10 +52,8 @@ export default function Layout() {
         <Outlet />
       </div>
 
-      {/* Bottom Navigation Bar
-          Galaxy/edge-to-edge에서 시스템 내비(홈버튼/제스처)와 겹치지 않게,
-          bottom 쪽 여유(padding-bottom)를 더 주고 대신 py는 제거해서 탭바가 위로 올라가게 합니다. */}
-      <nav className="relative z-10 shrink-0 bg-gradient-to-t from-gray-900/95 to-gray-900/80 backdrop-blur-md border-t border-gray-800 px-6 pt-4 pb-[max(4rem,env(safe-area-inset-bottom,0px))]">
+      {/* Bottom nav: safe-area + modest padding so height stays consistent across devices */}
+      <nav className="relative z-10 shrink-0 border-t border-gray-800 bg-gradient-to-t from-gray-900/95 to-gray-900/80 px-6 pb-[max(0.75rem,calc(0.5rem+env(safe-area-inset-bottom,0px)))] pt-3 backdrop-blur-md">
         <div className="flex items-center justify-around max-w-sm mx-auto">
           <button
             onClick={() => navigate('/app')}

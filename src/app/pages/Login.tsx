@@ -9,6 +9,8 @@ import { googleNativeIdToken } from '../../lib/socialLogin';
 import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
 import { getPostAuthPath } from '../../lib/deployTarget';
+import { attachAuthKeyboardScroll } from '../../lib/keyboardLayout';
+import { useKeyboardOpen } from '../../lib/useKeyboardOpen';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
 
@@ -30,8 +32,12 @@ function PreAuthModal({
   const canProceed = agreedToTerms && agreedToPrivacy;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm px-4 pb-4">
-      <div className="w-full max-w-md bg-[#13131e] border border-gray-700 rounded-2xl p-6 space-y-5 shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain bg-black/70 px-4 py-6 backdrop-blur-sm [-webkit-overflow-scrolling:touch]"
+      data-modal-scroll-root
+    >
+      <div className="flex min-h-[100dvh] min-h-[100%] w-full items-end justify-center pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:py-8">
+        <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-[#13131e] p-6 shadow-2xl space-y-5">
         <h2 className="text-white font-bold text-lg text-center">Before you continue</h2>
         <p className="text-xs text-gray-500 text-center">
           You can sign in with Google. If you have a referral code, enter it below (optional).
@@ -131,6 +137,7 @@ function PreAuthModal({
           isOpen={isTermsModalOpen}
           onClose={() => setIsTermsModalOpen(false)}
         />
+        </div>
       </div>
     </div>
   );
@@ -154,44 +161,49 @@ function ResetPasswordModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm px-4 pb-4">
-      <div className="w-full max-w-md bg-[#13131e] border border-gray-700 rounded-2xl p-6 space-y-4 shadow-2xl">
-        <h2 className="text-white font-bold text-lg text-center">Reset password</h2>
-        <p className="text-xs text-gray-500 text-center">
-          Enter your account email. We will send a password reset link.
-        </p>
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain bg-black/70 px-4 py-6 backdrop-blur-sm [-webkit-overflow-scrolling:touch]"
+      data-modal-scroll-root
+    >
+      <div className="flex min-h-[100dvh] min-h-[100%] w-full items-end justify-center pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:py-8">
+        <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-[#13131e] p-6 shadow-2xl space-y-4">
+          <h2 className="text-center text-lg font-bold text-white">Reset password</h2>
+          <p className="text-center text-xs text-gray-500">
+            Enter your account email. We will send a password reset link.
+          </p>
 
-        <div>
-          <label htmlFor="reset-email" className="block text-sm text-gray-400 mb-2">
-            Email
-          </label>
-          <input
-            id="reset-email"
-            type="email"
-            value={email}
-            onChange={(e) => onEmailChange(e.target.value)}
-            className="w-full px-4 py-3 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors text-sm"
-            placeholder="Enter your email"
-            autoFocus
-          />
-        </div>
+          <div>
+            <label htmlFor="reset-email" className="mb-2 block text-sm text-gray-400">
+              Email
+            </label>
+            <input
+              id="reset-email"
+              type="email"
+              value={email}
+              onChange={(e) => onEmailChange(e.target.value)}
+              className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-sm text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+              placeholder="Enter your email"
+              autoFocus
+            />
+          </div>
 
-        <div className="flex gap-3 pt-1">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-3 border border-gray-700 text-gray-400 hover:text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={loading || !email.trim()}
-            className="flex-1 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Sending...' : 'Send link'}
-          </button>
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-lg border border-gray-700 py-3 text-sm font-medium text-gray-400 transition-colors hover:text-white"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={loading || !email.trim()}
+              className="flex-1 rounded-lg bg-cyan-500 py-3 text-sm font-semibold text-black transition-all hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {loading ? 'Sending...' : 'Send link'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -208,33 +220,9 @@ export default function Login() {
   const [showModal, setShowModal] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const isKeyboardOpen = useKeyboardOpen();
 
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    const onResize = () => {
-      const keyboardHeight = window.innerHeight - vv.height;
-      setIsKeyboardOpen(keyboardHeight > 120);
-    };
-
-    onResize();
-    vv.addEventListener('resize', onResize);
-    return () => vv.removeEventListener('resize', onResize);
-  }, []);
-
-  useEffect(() => {
-    const onFocusIn = (event: FocusEvent) => {
-      const target = event.target;
-      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
-      window.setTimeout(() => {
-        target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      }, 120);
-    };
-    document.addEventListener('focusin', onFocusIn);
-    return () => document.removeEventListener('focusin', onFocusIn);
-  }, []);
+  useEffect(() => attachAuthKeyboardScroll(), []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -363,11 +351,12 @@ export default function Login() {
   }, [authLoading, user, navigate]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col overflow-hidden">
+    <div className="flex min-h-dvh flex-col bg-[#0a0a0f] text-white">
+      <div className="mx-auto flex h-dvh max-h-dvh min-h-0 w-full max-w-md flex-col overflow-hidden">
         <div
-          className="overflow-y-auto px-4 pt-4"
-          style={{ paddingBottom: isKeyboardOpen ? 16 : 32 }}
+          data-auth-scroll-root
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-[max(1rem,env(safe-area-inset-top,0px))] [-webkit-overflow-scrolling:touch]"
+          style={{ paddingBottom: isKeyboardOpen ? 12 : 32 }}
         >
           {/* Logo Section */}
           <div className="mb-7 flex flex-col items-center">
@@ -441,7 +430,7 @@ export default function Login() {
 
         {/* Bottom Action Area */}
         {!isKeyboardOpen && (
-        <div className="z-10 shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-4 pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur">
+        <div className="z-10 shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-4 pt-4 pb-[max(0.75rem,calc(0.5rem+env(safe-area-inset-bottom,0px)))] backdrop-blur">
           {Capacitor.isNativePlatform() && (
             <button
               type="button"

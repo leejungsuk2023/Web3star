@@ -93,14 +93,14 @@ export default function Leaderboard() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex min-h-0 flex-1 items-center justify-center">
         <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-full w-full flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-zinc-900 px-6 py-6 border-b border-zinc-800 flex items-center justify-between">
         <div className="w-10" />
@@ -134,8 +134,8 @@ export default function Leaderboard() {
       </div>
 
       {/* Leaderboard List */}
-      <div className="flex-1 overflow-y-auto px-4 pt-4">
-        <div className="space-y-3 pb-20">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-4 [-webkit-overflow-scrolling:touch]">
+        <div className="space-y-3 pb-28">
           {leaderboardData.map((user) => (
             <div
               key={user.rank}
