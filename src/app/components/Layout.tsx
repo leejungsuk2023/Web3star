@@ -1,7 +1,7 @@
-import React, { useLayoutEffect, useRef } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import { Capacitor } from '@capacitor/core';
-import { Home, Trophy, User, Bell } from 'lucide-react';
+import { Home, Trophy, User, Bell, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -12,6 +12,7 @@ import {
 
 /** Plain px + !important: some Android WebViews drop invalid calc/max/env on inline styles, so nothing moved. */
 const NATIVE_HEADER_PADDING_TOP_PX = 108;
+const PULL_REFRESH_THRESHOLD_PX = 90;
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -53,6 +54,7 @@ export default function Layout() {
   const pullingRef = useRef(false);
   const pullDeltaYRef = useRef(0);
   const lastReloadAtRef = useRef(0);
+  const [pullRefreshState, setPullRefreshState] = useState<'hidden' | 'pull' | 'ready' | 'refreshing'>('hidden');
 
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!isAndroid) return;
@@ -62,8 +64,10 @@ export default function Layout() {
       touchStartYRef.current = e.touches[0]?.clientY ?? 0;
       pullDeltaYRef.current = 0;
       pullingRef.current = true;
+      setPullRefreshState('pull');
     } else {
       pullingRef.current = false;
+      setPullRefreshState('hidden');
     }
   };
 
@@ -72,25 +76,50 @@ export default function Layout() {
     if (!pullingRef.current) return;
     const y = e.touches[0]?.clientY ?? 0;
     const delta = y - touchStartYRef.current;
-    if (delta > 0) pullDeltaYRef.current = delta;
+    if (delta <= 0) {
+      pullDeltaYRef.current = 0;
+      setPullRefreshState('pull');
+      return;
+    }
+
+    pullDeltaYRef.current = delta;
+    if (delta > PULL_REFRESH_THRESHOLD_PX) {
+      setPullRefreshState('ready');
+    } else if (delta > 16) {
+      setPullRefreshState('pull');
+    }
   };
 
   const onTouchEnd = () => {
     if (!isAndroid) return;
-    if (!pullingRef.current) return;
+    if (!pullingRef.current) {
+      setPullRefreshState('hidden');
+      return;
+    }
     pullingRef.current = false;
 
     const el = scrollRef.current;
     if (!el) return;
-    if (el.scrollTop > 0) return; // still scrolled, ignore
+    if (el.scrollTop > 0) {
+      setPullRefreshState('hidden');
+      return;
+    }
 
     // Threshold tuned for "pull down" feel (pixels in CSS pixels)
-    if (pullDeltaYRef.current > 90) {
+    if (pullDeltaYRef.current > PULL_REFRESH_THRESHOLD_PX) {
       const now = Date.now();
-      if (now - lastReloadAtRef.current < 3000) return; // debounce
+      if (now - lastReloadAtRef.current < 3000) {
+        setPullRefreshState('hidden');
+        return; // debounce
+      }
       lastReloadAtRef.current = now;
-      window.location.reload();
+      setPullRefreshState('refreshing');
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 150);
+      return;
     }
+    setPullRefreshState('hidden');
   };
 
   return (
@@ -131,6 +160,29 @@ export default function Layout() {
           </div>
         </div>
       </header>
+
+      {isAndroid && pullRefreshState !== 'hidden' && (
+        <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2">
+          <div className="flex items-center gap-2 rounded-full border border-cyan-500/30 bg-[#0a0f1c]/85 px-3 py-1.5 backdrop-blur-sm">
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${
+                pullRefreshState === 'refreshing'
+                  ? 'animate-spin text-cyan-300'
+                  : pullRefreshState === 'ready'
+                    ? 'text-cyan-300'
+                    : 'text-zinc-300'
+              }`}
+            />
+            <span className="text-[11px] text-zinc-100">
+              {pullRefreshState === 'ready'
+                ? 'Release to refresh'
+                : pullRefreshState === 'refreshing'
+                  ? 'Refreshing...'
+                  : 'Pull to refresh'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* justify-start: keep hero + card under the timer; avoid vertically centering the whole block (felt “too low” vs tab bar) */}
       <div
