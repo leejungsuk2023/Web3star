@@ -19,6 +19,7 @@ export default function Layout() {
   const { profile } = useAuth();
   const headerBarRef = useRef<HTMLDivElement>(null);
   const platform = Capacitor.getPlatform();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const androidWebViewUa =
     typeof navigator !== 'undefined' && /; wv\)/i.test(navigator.userAgent);
   const devNativePreview =
@@ -44,6 +45,53 @@ export default function Layout() {
   const points = profile?.point ?? 0;
   const onAppHome =
     location.pathname === '/app' || location.pathname.includes('/__preview/home');
+  const isAndroid = platform === 'android' || /Android/i.test(navigator.userAgent);
+
+  // Android: when user pulls down while already at top, trigger a hard refresh.
+  // This helps recover from occasional "stuck/lag" states.
+  const touchStartYRef = useRef(0);
+  const pullingRef = useRef(false);
+  const pullDeltaYRef = useRef(0);
+  const lastReloadAtRef = useRef(0);
+
+  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isAndroid) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    if (el.scrollTop <= 0) {
+      touchStartYRef.current = e.touches[0]?.clientY ?? 0;
+      pullDeltaYRef.current = 0;
+      pullingRef.current = true;
+    } else {
+      pullingRef.current = false;
+    }
+  };
+
+  const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isAndroid) return;
+    if (!pullingRef.current) return;
+    const y = e.touches[0]?.clientY ?? 0;
+    const delta = y - touchStartYRef.current;
+    if (delta > 0) pullDeltaYRef.current = delta;
+  };
+
+  const onTouchEnd = () => {
+    if (!isAndroid) return;
+    if (!pullingRef.current) return;
+    pullingRef.current = false;
+
+    const el = scrollRef.current;
+    if (!el) return;
+    if (el.scrollTop > 0) return; // still scrolled, ignore
+
+    // Threshold tuned for "pull down" feel (pixels in CSS pixels)
+    if (pullDeltaYRef.current > 90) {
+      const now = Date.now();
+      if (now - lastReloadAtRef.current < 3000) return; // debounce
+      lastReloadAtRef.current = now;
+      window.location.reload();
+    }
+  };
 
   return (
     <div className={LAYOUT_ROOT_CLASS}>
@@ -85,7 +133,13 @@ export default function Layout() {
       </header>
 
       {/* justify-start: keep hero + card under the timer; avoid vertically centering the whole block (felt “too low” vs tab bar) */}
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+      <div
+        ref={scrollRef}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+      >
         <div className="flex min-h-full min-w-0 w-full flex-1 flex-col justify-start">
           <Outlet />
         </div>

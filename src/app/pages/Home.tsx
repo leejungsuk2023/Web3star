@@ -45,6 +45,11 @@ export default function Home() {
   const [centerButtonActive, setCenterButtonActive] = useState(false);
   const [isMining, setIsMining] = useState(false);
   const [adCooldown, setAdCooldown] = useState(0); // seconds remaining between ads
+  const [isInterstitialInFlight, setIsInterstitialInFlight] = useState(false);
+
+  // Ads 동시 show 방지용 in-flight 락 (사용자가 연타할 때 중복 호출되는 걸 막음)
+  const interstitialInFlightRef = useRef(false);
+  const rewardedInFlightRef = useRef(false);
   const exactAlarmPromptedRef = useRef(false);
   /** Avoid spamming the system permission dialog when schedule runs often (ads, resume). */
   const notificationPermissionPromptedRef = useRef(false);
@@ -301,16 +306,32 @@ export default function Home() {
   }, [handleMine]);
 
   const handleCenterButtonClick = useCallback(() => {
-    if (centerButtonActive || isMining) return;
-    showInterstitialAd(async () => {
-      await handleMineRef.current();
-    }).catch((e) => {
+    if (centerButtonActive || isMining || interstitialInFlightRef.current) return;
+
+    interstitialInFlightRef.current = true;
+    setIsInterstitialInFlight(true);
+
+    let onDoneCalled = false;
+    const onDone = async () => {
+      if (onDoneCalled) return;
+      onDoneCalled = true;
+      try {
+        await handleMineRef.current();
+      } finally {
+        interstitialInFlightRef.current = false;
+        setIsInterstitialInFlight(false);
+      }
+    };
+
+    showInterstitialAd(onDone).catch((e) => {
       console.warn('Ad failed, mining anyway:', e);
-      handleMineRef.current();
+      void onDone();
     });
   }, [centerButtonActive, isMining]);
 
   const handleSlotClick = () => {
+    // Block slot taps during interstitial / rewarded to avoid ad call stacking.
+    if (isInterstitialInFlight || interstitialInFlightRef.current || rewardedInFlightRef.current) return;
     if (canOpenRewardedAdSlotModal(centerButtonActive, activeSlots.length, adCooldown)) {
       setIsModalOpen(true);
     }
@@ -321,7 +342,7 @@ export default function Home() {
   }, [centerButtonActive, isModalOpen]);
 
   const getSlotColor = (slot: number) => {
-    if (!centerButtonActive) {
+    if (!centerButtonActive || isInterstitialInFlight || interstitialInFlightRef.current) {
       return 'cursor-not-allowed border border-zinc-700/80 bg-zinc-900/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]';
     }
     const isActive = activeSlots.includes(slot);
@@ -371,7 +392,7 @@ export default function Home() {
 
           <button
             onClick={handleCenterButtonClick}
-            disabled={centerButtonActive || isMining}
+            disabled={centerButtonActive || isMining || isInterstitialInFlight}
             aria-label={centerButtonActive ? 'Mining in progress' : 'Start Mining'}
             className={`relative h-48 w-48 max-[380px]:h-44 max-[380px]:w-44 overflow-hidden rounded-full p-[3px] shadow-2xl transition-all duration-300 ${
               centerButtonActive
@@ -445,7 +466,10 @@ export default function Home() {
                 type="button"
                 onClick={handleSlotClick}
                 disabled={
-                  !centerButtonActive || activeSlots.includes(slot) || adCooldown > 0
+                  !centerButtonActive ||
+                  activeSlots.includes(slot) ||
+                  adCooldown > 0 ||
+                  isInterstitialInFlight
                 }
                 aria-label={`Ad slot ${slot}${
                   !centerButtonActive
@@ -494,18 +518,25 @@ export default function Home() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onWatchAd={async () => {
+          // Rewarded ad 중복 show 방지
+          if (rewardedInFlightRef.current) return;
+          rewardedInFlightRef.current = true;
           setIsModalOpen(false);
-          let startCooldownAfterDismiss = false;
-          await showRewardedAd(
-            async () => {
-              startCooldownAfterDismiss = await handleWatchAd();
-            },
-            async () => {
-              if (startCooldownAfterDismiss) {
-                setAdCooldown(AD_COOLDOWN_SECONDS);
+          try {
+            let startCooldownAfterDismiss = false;
+            await showRewardedAd(
+              async () => {
+                startCooldownAfterDismiss = await handleWatchAd();
+              },
+              async () => {
+                if (startCooldownAfterDismiss) {
+                  setAdCooldown(AD_COOLDOWN_SECONDS);
+                }
               }
-            }
-          );
+            );
+          } finally {
+            rewardedInFlightRef.current = false;
+          }
         }}
         triggerSource="slot"
       />

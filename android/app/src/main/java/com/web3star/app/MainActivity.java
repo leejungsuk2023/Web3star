@@ -1,5 +1,6 @@
 package com.web3star.app;
 
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -25,6 +26,9 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("en"));
         super.onCreate(savedInstanceState);
+
+        // Lock to portrait so UI doesn't "transform" on rotation (responsive CSS + viewport changes).
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 

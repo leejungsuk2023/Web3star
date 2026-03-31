@@ -92,6 +92,98 @@ export type ApplyReferralResult =
 type RpcPayload = { ok: boolean; skipped?: boolean; message?: string };
 
 /**
+ * Safety net for rare partial-apply cases seen on some devices:
+ * if referrer got credited but invitee didn't, repair invitee side idempotently.
+ */
+async function ensureInviteeRewardApplied(
+  newUserId: string,
+  rawCode: string
+): Promise<ApplyReferralResult> {
+  const referralCode = rawCode.trim();
+  if (!referralCode) return { ok: true, skipped: true };
+
+  const { data: referrer, error: refErr } = await supabase
+    .from('users')
+    .select('id')
+    .eq('invite_code', referralCode)
+    .single();
+
+  if (refErr || !referrer) {
+    return { ok: false, message: refErr?.message ?? 'Invalid referral code.' };
+  }
+
+  const { data: selfRefLog } = await supabase
+    .from('mining_logs')
+    .select('id')
+    .eq('user_id', newUserId)
+    .eq('type', 'REFERRAL')
+    .limit(1)
+    .maybeSingle();
+
+  if (selfRefLog) return { ok: true, skipped: true };
+
+  const { data: row, error: rowErr } = await supabase
+    .from('users')
+    .select('point, referred_by')
+    .eq('id', newUserId)
+    .single();
+
+  if (rowErr || !row) {
+    return { ok: false, message: rowErr?.message ?? 'Could not read invitee profile.' };
+  }
+
+  if (isConflictingExistingReferral(row.referred_by, referralCode, referrer.id)) {
+    return {
+      ok: false,
+      message: 'A different referral is already registered on your account.',
+    };
+  }
+
+  const referredBy = (row.referred_by ?? '').trim();
+
+  // If referrer id is already linked but log is missing, only backfill the log
+  // to avoid accidental double-credit.
+  if (referredBy === referrer.id) {
+    const { error: logOnlyErr } = await supabase.from('mining_logs').insert({
+      user_id: newUserId,
+      amount: REFERRAL_BONUS,
+      type: 'REFERRAL',
+    });
+    if (logOnlyErr) {
+      return { ok: false, message: logOnlyErr.message };
+    }
+    return { ok: true };
+  }
+
+  const currentPoint = row.point ?? 0;
+  const { data: updatedSelf, error: u1 } = await supabase
+    .from('users')
+    .update({
+      referred_by: referrer.id,
+      point: currentPoint + REFERRAL_BONUS,
+    })
+    .eq('id', newUserId)
+    .select('id');
+
+  if (u1) return { ok: false, message: u1.message };
+  if (!updatedSelf?.length) {
+    return {
+      ok: false,
+      message: 'Could not apply referral reward to your account. Please contact support.',
+    };
+  }
+
+  const { error: logErr } = await supabase.from('mining_logs').insert({
+    user_id: newUserId,
+    amount: REFERRAL_BONUS,
+    type: 'REFERRAL',
+  });
+  if (logErr) return { ok: false, message: logErr.message };
+
+  return { ok: true };
+}
+
+/**
  * REST 경로: 로그인한 사용자 본인 행만 수정 가능한 RLS라면 추천인(타인) 포인트 갱신이 0행이 될 수 있음.
  * 반드시 `docs/supabase-apply-referral-rewards.sql` RPC를 배포하는 것을 권장합니다.
  */
@@ -317,7 +409,12 @@ export async function applyReferralRewards(
 
   if (!rpcError && rpcData != null && typeof rpcData === 'object' && 'ok' in rpcData) {
     const p = rpcData as RpcPayload;
-    if (p.ok) return { ok: true, skipped: p.skipped };
+    if (p.ok) {
+      if (p.skipped) return { ok: true, skipped: true };
+      const repaired = await ensureInviteeRewardApplied(newUserId, referralCode);
+      if (!repaired.ok) return repaired;
+      return { ok: true, skipped: repaired.skipped };
+    }
     return { ok: false, message: p.message ?? 'Referral failed.' };
   }
 
@@ -329,5 +426,9 @@ export async function applyReferralRewards(
     console.warn('[referral] RPC unavailable, using REST fallback:', rpcError?.message);
   }
 
-  return applyReferralRewardsViaRest(newUserId, rawCode);
+  const res = await applyReferralRewardsViaRest(newUserId, rawCode);
+  if (!res.ok || res.skipped) return res;
+  const repaired = await ensureInviteeRewardApplied(newUserId, referralCode);
+  if (!repaired.ok) return repaired;
+  return { ok: true, skipped: repaired.skipped };
 }

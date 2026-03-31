@@ -1,17 +1,33 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Zap } from 'lucide-react';
 
 interface GetMorePointModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onWatchAd: () => void;
+  onWatchAd: () => Promise<void> | void;
   triggerSource?: 'slot' | 'center';
 }
 
 export default function GetMorePointModal({ isOpen, onClose, onWatchAd, triggerSource = 'slot' }: GetMorePointModalProps) {
+  const mountedRef = useRef(true);
+  const watchInFlightRef = useRef(false);
+  const [watching, setWatching] = useState(false);
+
   useEffect(() => {
+    mountedRef.current = true;
     if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [isOpen]);
+
+  const safeOnClose = () => {
+    if (watchInFlightRef.current) return; // don't close while ad is being shown/callback pending
+    onClose();
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') safeOnClose(); };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
@@ -20,16 +36,28 @@ export default function GetMorePointModal({ isOpen, onClose, onWatchAd, triggerS
 
   const isMining = triggerSource === 'center';
 
+  const handleWatchAdClick = async () => {
+    if (watchInFlightRef.current) return;
+    watchInFlightRef.current = true;
+    if (mountedRef.current) setWatching(true);
+    try {
+      await Promise.resolve(onWatchAd());
+    } finally {
+      watchInFlightRef.current = false;
+      if (mountedRef.current) setWatching(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={safeOnClose}
       ></div>
 
       <div className="relative w-full max-w-sm bg-gradient-to-br from-gray-900 to-gray-950 rounded-3xl border border-gray-800 shadow-2xl shadow-cyan-500/20 overflow-hidden">
         <button
-          onClick={onClose}
+          onClick={safeOnClose}
           className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-gray-800/50 hover:bg-gray-700/50 flex items-center justify-center transition-colors"
         >
           <X className="w-5 h-5 text-gray-400" />
@@ -72,8 +100,9 @@ export default function GetMorePointModal({ isOpen, onClose, onWatchAd, triggerS
           )}
 
           <button
-            onClick={onWatchAd}
-            className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 active:scale-95"
+            onClick={handleWatchAdClick}
+            disabled={watching}
+            className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             Watch Ad
           </button>
