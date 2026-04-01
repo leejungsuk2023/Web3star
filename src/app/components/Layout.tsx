@@ -11,8 +11,9 @@ import {
 } from '../../lib/nativeLayout';
 import headerShieldLogo from '../../assets/web3star-header-shield-logo.png';
 
-/** Native status-bar lift; brand sits inside this band. Do not shrink this to “move” Home timer/card — that only shifts main content up. */
-const NATIVE_HEADER_PADDING_TOP_PX = 108;
+/** Preview baseline. Real native already has WebView top inset, so use a smaller extra header lift there. */
+const HEADER_PADDING_TOP_PREVIEW_PX = 108;
+const HEADER_PADDING_TOP_NATIVE_PX = 84;
 const PULL_REFRESH_THRESHOLD_PX = 90;
 
 export default function Layout() {
@@ -33,15 +34,18 @@ export default function Layout() {
     platform === 'ios' ||
     androidWebViewUa ||
     devNativePreview;
+  const headerPaddingTopPx = Capacitor.isNativePlatform()
+    ? HEADER_PADDING_TOP_NATIVE_PX
+    : HEADER_PADDING_TOP_PREVIEW_PX;
 
   useLayoutEffect(() => {
     const el = headerBarRef.current;
     if (!el || !inAppShell) return;
-    el.style.setProperty('padding-top', `${NATIVE_HEADER_PADDING_TOP_PX}px`, 'important');
+    el.style.setProperty('padding-top', `${headerPaddingTopPx}px`, 'important');
     return () => {
       el.style.removeProperty('padding-top');
     };
-  }, [inAppShell]);
+  }, [headerPaddingTopPx, inAppShell]);
 
   const nickname = profile?.nickname ?? 'User';
   const points = profile?.point ?? 0;
@@ -147,7 +151,7 @@ export default function Layout() {
           {/* Brand fills the same padding-top band only (explicit height = pad), centered X+Y like reference mockup */}
           <div
             className={`pointer-events-none absolute inset-x-0 top-0 z-[1] flex items-center justify-center px-3 sm:px-5 ${inAppShell ? '' : 'min-h-[2.75rem] py-1'}`}
-            style={inAppShell ? { height: `${NATIVE_HEADER_PADDING_TOP_PX}px` } : undefined}
+            style={inAppShell ? { height: `${headerPaddingTopPx}px` } : undefined}
           >
             <div className="flex h-full w-max max-w-full flex-nowrap items-center justify-center gap-1 sm:gap-1.5">
               <img
