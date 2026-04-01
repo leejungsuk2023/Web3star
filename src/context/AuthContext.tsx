@@ -65,9 +65,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setSessionFromOAuthUrl = useCallback(async (url: string) => {
     if (!url || !url.includes('access_token')) return;
     if (!url.includes('capacitor://localhost') && !url.includes('com.web3star.app://localhost')) return;
-    const hash = url.split('#')[1];
-    if (!hash) return;
-    const params = new URLSearchParams(hash);
+    let params: URLSearchParams | null = null;
+    try {
+      const parsed = new URL(url);
+      const hash = parsed.hash?.startsWith('#') ? parsed.hash.slice(1) : parsed.hash;
+      if (hash) params = new URLSearchParams(hash);
+      if (!params || !params.get('access_token')) {
+        params = parsed.searchParams;
+      }
+    } catch {
+      const hash = url.split('#')[1];
+      if (hash) params = new URLSearchParams(hash);
+    }
+    if (!params) return;
     const access_token = params.get('access_token');
     const refresh_token = params.get('refresh_token');
     if (access_token && refresh_token) {

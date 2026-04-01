@@ -4,7 +4,12 @@ import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import GoogleIcon from '../components/GoogleIcon';
 import { Capacitor } from '@capacitor/core';
-import { supabase, getAuthRedirectUrl, isLikelyNativePlatform } from '../../lib/supabase';
+import {
+  supabase,
+  getAuthRedirectUrl,
+  getPasswordResetRedirectUrl,
+  isLikelyNativePlatform,
+} from '../../lib/supabase';
 import { googleNativeIdToken } from '../../lib/socialLogin';
 import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
@@ -45,6 +50,20 @@ function getLoginErrorMessage(err: AuthError): string {
     return 'Too many sign-in attempts. Please wait a moment and try again.';
   }
   return err.message?.trim() || 'Unable to sign in. Please try again.';
+}
+
+function getResetPasswordErrorMessage(rawMessage: string): string {
+  const msg = (rawMessage ?? '').toLowerCase();
+  if (msg.includes('email rate limit exceeded') || msg.includes('rate limit')) {
+    return 'Too many reset emails were requested. Please wait about 1 minute and try again.';
+  }
+  if (msg.includes('invalid email')) {
+    return 'Please enter a valid email address.';
+  }
+  if (msg.includes('email not confirmed')) {
+    return 'Please confirm your email address first, then try password reset again.';
+  }
+  return rawMessage?.trim() || 'Could not send reset email. Please try again.';
 }
 
 function LoginErrorModal({ isOpen, message, onClose }: { isOpen: boolean; message: string; onClose: () => void }) {
@@ -207,14 +226,18 @@ function PreAuthModal({
 function ResetPasswordModal({
   isOpen,
   loading,
+  retryCooldownSec,
   email,
+  errorMessage,
   onEmailChange,
   onClose,
   onSubmit,
 }: {
   isOpen: boolean;
   loading: boolean;
+  retryCooldownSec: number;
   email: string;
+  errorMessage: string;
   onEmailChange: (value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
@@ -247,6 +270,15 @@ function ResetPasswordModal({
               autoFocus
             />
           </div>
+          {errorMessage && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300"
+            >
+              {errorMessage}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-1">
             <button
@@ -259,10 +291,86 @@ function ResetPasswordModal({
             <button
               type="button"
               onClick={onSubmit}
-              disabled={loading || !email.trim()}
+              disabled={loading || retryCooldownSec > 0 || !email.trim()}
               className="flex-1 rounded-lg bg-cyan-500 py-3 text-sm font-semibold text-black transition-all hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {loading ? 'Sending...' : 'Send link'}
+              {loading
+                ? 'Sending...'
+                : retryCooldownSec > 0
+                  ? `Retry in ${retryCooldownSec}s`
+                  : 'Send link'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewPasswordModal({
+  isOpen,
+  loading,
+  password,
+  confirmPassword,
+  onPasswordChange,
+  onConfirmPasswordChange,
+  onClose,
+  onSubmit,
+}: {
+  isOpen: boolean;
+  loading: boolean;
+  password: string;
+  confirmPassword: string;
+  onPasswordChange: (value: string) => void;
+  onConfirmPasswordChange: (value: string) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain bg-black/70 px-4 py-6 backdrop-blur-sm [-webkit-overflow-scrolling:touch]"
+      data-modal-scroll-root
+    >
+      <div className="flex min-h-[100dvh] min-h-[100%] w-full items-end justify-center pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:py-8">
+        <div className="w-full max-w-md space-y-4 rounded-2xl border border-gray-700 bg-[#13131e] p-6 shadow-2xl">
+          <h2 className="text-center text-lg font-bold text-white">Set new password</h2>
+          <p className="text-center text-xs text-gray-500">
+            Enter your new password to finish account recovery.
+          </p>
+          <div className="space-y-3">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => onPasswordChange(e.target.value)}
+              className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-sm text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+              placeholder="New password (min 8 chars)"
+              autoFocus
+            />
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => onConfirmPasswordChange(e.target.value)}
+              className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-sm text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+              placeholder="Confirm new password"
+            />
+          </div>
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-lg border border-gray-700 py-3 text-sm font-medium text-gray-400 transition-colors hover:text-white"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={loading || !password.trim() || !confirmPassword.trim()}
+              className="flex-1 rounded-lg bg-cyan-500 py-3 text-sm font-semibold text-black transition-all hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {loading ? 'Saving...' : 'Update'}
             </button>
           </div>
         </div>
@@ -283,6 +391,12 @@ export default function Login() {
   const [loginErrorModalOpen, setLoginErrorModalOpen] = useState(false);
   const [loginErrorModalMessage, setLoginErrorModalMessage] = useState('');
   const [resetEmail, setResetEmail] = useState('');
+  const [resetErrorMessage, setResetErrorMessage] = useState('');
+  const [resetRetryCooldownSec, setResetRetryCooldownSec] = useState(0);
+  const [isNewPasswordModalOpen, setIsNewPasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [recoveryFlowActive, setRecoveryFlowActive] = useState(false);
   const isKeyboardOpen = useKeyboardOpen();
 
   useEffect(() => attachAuthKeyboardScroll(), []);
@@ -291,17 +405,24 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (authError) {
-      setLoginErrorModalMessage(getLoginErrorMessage(authError));
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) {
+        setLoginErrorModalMessage(getLoginErrorMessage(authError));
+        setLoginErrorModalOpen(true);
+        return;
+      }
+      navigate(getPostAuthPath());
+    } catch (e: any) {
+      const message =
+        typeof e?.message === 'string' && e.message.trim()
+          ? e.message
+          : 'Unable to sign in right now. Please try again.';
+      setLoginErrorModalMessage(message);
       setLoginErrorModalOpen(true);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    navigate(getPostAuthPath());
   };
 
   const proceedGoogleLogin = async (referralCode = '') => {
@@ -388,31 +509,107 @@ export default function Login() {
   const handlePasswordReset = async () => {
     const targetEmail = resetEmail.trim();
     if (!targetEmail) {
-      setError('Please enter your email first.');
+      setResetErrorMessage('Please enter your email first.');
       return;
     }
+    if (resetRetryCooldownSec > 0) {
+      setResetErrorMessage(`Please wait ${resetRetryCooldownSec}s and try again.`);
+      return;
+    }
+    setResetErrorMessage('');
     setLoading(true);
     setError('');
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(targetEmail, {
-      redirectTo: getAuthRedirectUrl(),
+      redirectTo: getPasswordResetRedirectUrl(),
     });
     setLoading(false);
 
     if (resetError) {
-      setError(resetError.message);
+      const msg = getResetPasswordErrorMessage(resetError.message ?? '');
+      setResetErrorMessage(msg);
+      toast.error(msg);
+      if ((resetError.message ?? '').toLowerCase().includes('rate limit')) {
+        setResetRetryCooldownSec(60);
+      }
       return;
     }
 
     toast.success('Password reset email sent. Check your inbox.');
+    setResetErrorMessage('');
+    setResetRetryCooldownSec(0);
     setIsResetModalOpen(false);
+  };
+
+  useEffect(() => {
+    if (resetRetryCooldownSec <= 0) return;
+    const t = window.setTimeout(() => setResetRetryCooldownSec((s) => s - 1), 1000);
+    return () => window.clearTimeout(t);
+  }, [resetRetryCooldownSec]);
+
+  const handleUpdateRecoveredPassword = async () => {
+    const pw = newPassword.trim();
+    const pw2 = confirmNewPassword.trim();
+    if (pw.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    if (pw !== pw2) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    const { error: updateError } = await supabase.auth.updateUser({ password: pw });
+    setLoading(false);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    toast.success('Password updated. Please sign in with your new password.');
+    setIsNewPasswordModalOpen(false);
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setRecoveryFlowActive(false);
   };
 
   React.useEffect(() => {
     if (authLoading) return;
+    if (recoveryFlowActive) return;
     if (user) {
       navigate(getPostAuthPath(), { replace: true });
     }
-  }, [authLoading, user, navigate]);
+  }, [authLoading, recoveryFlowActive, user, navigate]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const search = new URLSearchParams(window.location.search);
+    if (search.get('recovery') === '1') {
+      setRecoveryFlowActive(true);
+      setIsNewPasswordModalOpen(true);
+      return;
+    }
+    const hash = window.location.hash || '';
+    const params = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+    const type = params.get('type');
+    const accessToken = params.get('access_token');
+    if (type === 'recovery' && accessToken) {
+      setRecoveryFlowActive(true);
+      setIsNewPasswordModalOpen(true);
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, []);
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryFlowActive(true);
+        setIsNewPasswordModalOpen(true);
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
 
   return (
     <div className={AUTH_PAGE_OUTER_CLASS}>
@@ -533,6 +730,8 @@ export default function Login() {
                 type="button"
                 onClick={() => {
                   setResetEmail(email);
+                  setResetErrorMessage('');
+                  setResetRetryCooldownSec(0);
                   setIsResetModalOpen(true);
                 }}
                 className="w-full text-center text-sm text-gray-400 transition-colors hover:text-cyan-400"
@@ -554,15 +753,34 @@ export default function Login() {
       <ResetPasswordModal
         isOpen={isResetModalOpen}
         loading={loading}
+        retryCooldownSec={resetRetryCooldownSec}
         email={resetEmail}
+        errorMessage={resetErrorMessage}
         onEmailChange={setResetEmail}
-        onClose={() => setIsResetModalOpen(false)}
+        onClose={() => {
+          setIsResetModalOpen(false);
+          setResetErrorMessage('');
+          setResetRetryCooldownSec(0);
+        }}
         onSubmit={handlePasswordReset}
       />
       <LoginErrorModal
         isOpen={loginErrorModalOpen}
         message={loginErrorModalMessage}
         onClose={() => setLoginErrorModalOpen(false)}
+      />
+      <NewPasswordModal
+        isOpen={isNewPasswordModalOpen}
+        loading={loading}
+        password={newPassword}
+        confirmPassword={confirmNewPassword}
+        onPasswordChange={setNewPassword}
+        onConfirmPasswordChange={setConfirmNewPassword}
+        onClose={() => {
+          setIsNewPasswordModalOpen(false);
+          setRecoveryFlowActive(false);
+        }}
+        onSubmit={handleUpdateRecoveredPassword}
       />
     </div>
   );

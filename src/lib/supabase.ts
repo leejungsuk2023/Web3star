@@ -77,6 +77,16 @@ export function getAuthRedirectUrl(): string {
   return redirectUrl;
 }
 
+/** Password recovery redirect: native deep-link first, web fallback keeps recovery modal open. */
+export function getPasswordResetRedirectUrl(): string {
+  if (isLikelyNativePlatform()) {
+    return 'com.web3star.app://localhost/app/login?recovery=1';
+  }
+  const basePath = import.meta.env.BASE_URL || '/';
+  const appBaseUrl = new URL(basePath, window.location.origin);
+  return new URL('app/login?recovery=1', appBaseUrl).toString();
+}
+
 const fallbackSupabaseUrl = 'https://example.supabase.co';
 const fallbackSupabaseAnonKey =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWYiOiJleGFtcGxlIiwicm9sZSI6ImFub24iLCJpYXQiOjAsImV4cCI6MzI1MDM2ODAwMDB9.placeholder';
