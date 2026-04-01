@@ -1128,8 +1128,10 @@ export default function Homepage() {
                 className="h-full w-full max-h-full max-w-full object-contain object-center"
               />
             </span>
-            <span className="text-white">Web3</span>
-            <span className="text-cyan-400">Star</span>
+            <span className="inline-flex items-baseline gap-0">
+              <span className="text-white">Web3</span>
+              <span className="text-cyan-400">Star</span>
+            </span>
           </a>
           <nav className="hidden lg:flex items-center gap-6 text-sm text-gray-300">
             {navItems.map((item) => (
