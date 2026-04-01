@@ -13,7 +13,7 @@ import headerShieldLogo from '../../assets/web3star-header-shield-logo.png';
 
 /** Preview baseline. Real native already has WebView top inset, so use a smaller extra header lift there. */
 const HEADER_PADDING_TOP_PREVIEW_PX = 108;
-const HEADER_PADDING_TOP_NATIVE_PX = 84;
+const HEADER_PADDING_TOP_NATIVE_PX = 96;
 const PULL_REFRESH_THRESHOLD_PX = 90;
 
 export default function Layout() {
