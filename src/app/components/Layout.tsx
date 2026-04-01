@@ -9,8 +9,9 @@ import {
   LAYOUT_NAV_PB_CLASS,
   LAYOUT_ROOT_CLASS,
 } from '../../lib/nativeLayout';
+import headerShieldLogo from '../../assets/web3star-header-shield-logo.png';
 
-/** Plain px + !important: some Android WebViews drop invalid calc/max/env on inline styles, so nothing moved. */
+/** Native status-bar lift; brand sits inside this band. Do not shrink this to “move” Home timer/card — that only shifts main content up. */
 const NATIVE_HEADER_PADDING_TOP_PX = 108;
 const PULL_REFRESH_THRESHOLD_PX = 90;
 
@@ -46,6 +47,12 @@ export default function Layout() {
   const points = profile?.point ?? 0;
   const onAppHome =
     location.pathname === '/app' || location.pathname.includes('/__preview/home');
+  const onAppLeaderboard =
+    location.pathname === '/app/leaderboard' ||
+    location.pathname.includes('/__preview/leaderboard');
+  const onAppProfile =
+    location.pathname === '/app/profile' ||
+    location.pathname.includes('/__preview/profile');
   const isAndroid = platform === 'android' || /Android/i.test(navigator.userAgent);
 
   // Android: when user pulls down while already at top, trigger a hard refresh.
@@ -135,15 +142,38 @@ export default function Layout() {
       <header data-app-header className="relative z-10 shrink-0">
         <div
           ref={headerBarRef}
-          className={`flex min-h-14 w-full items-center justify-between px-6 pb-2 ${inAppShell ? '' : LAYOUT_HEADER_PT_CLASS}`}
+          className={`relative flex min-h-14 w-full items-center justify-between px-6 pb-2 ${inAppShell ? '' : LAYOUT_HEADER_PT_CLASS}`}
         >
+          {/* Brand fills the same padding-top band only (explicit height = pad), centered X+Y like reference mockup */}
+          <div
+            className={`pointer-events-none absolute inset-x-0 top-0 z-[1] flex items-center justify-center px-3 sm:px-5 ${inAppShell ? '' : 'min-h-[2.75rem] py-1'}`}
+            style={inAppShell ? { height: `${NATIVE_HEADER_PADDING_TOP_PX}px` } : undefined}
+          >
+            <div className="flex h-full w-max max-w-full flex-nowrap items-center justify-center gap-1 sm:gap-1.5">
+              <img
+                src={headerShieldLogo}
+                alt="Web3Star"
+                className="h-14 w-auto max-h-14 shrink-0 object-contain mix-blend-screen sm:h-16 sm:max-h-16 md:h-[4.25rem] md:max-h-[4.25rem]"
+                decoding="async"
+              />
+              <p className="-ml-0.5 whitespace-nowrap text-center text-xs font-semibold leading-none tracking-wide text-white sm:-ml-1 sm:text-sm md:text-base lg:text-lg">
+                Your Gateway to Web3 Creation
+              </p>
+            </div>
+          </div>
           <button
-            onClick={() => navigate('/app/profile')}
-            className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/30 hover:scale-105 transition-transform active:scale-95"
+            onClick={() =>
+              navigate(
+                devNativePreview
+                  ? '/app/__preview/profile?nativePreview=1'
+                  : '/app/profile'
+              )
+            }
+            className="relative z-[2] w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/30 hover:scale-105 transition-transform active:scale-95"
           >
             <User className="w-6 h-6 text-white" />
           </button>
-          <div className="flex items-center gap-3">
+          <div className="relative z-[2] flex items-center gap-3">
             <div className="text-right">
               <div className="text-xs text-gray-400">{nickname}</div>
               <div className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
@@ -239,19 +269,25 @@ export default function Layout() {
 
           <button
             type="button"
-            onClick={() => navigate('/app/leaderboard')}
+            onClick={() =>
+              navigate(
+                devNativePreview
+                  ? '/app/__preview/leaderboard?nativePreview=1'
+                  : '/app/leaderboard'
+              )
+            }
             className="group flex min-h-[4.5rem] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-1 active:opacity-90"
           >
             <div
               className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all ${
-                location.pathname === '/app/leaderboard'
+                onAppLeaderboard
                   ? 'bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30'
                   : 'bg-gray-800/50 group-hover:bg-gray-700/50'
               }`}
             >
               <Trophy
                 className={`h-7 w-7 transition-colors ${
-                  location.pathname === '/app/leaderboard'
+                  onAppLeaderboard
                     ? 'text-white'
                     : 'text-gray-500 group-hover:text-gray-300'
                 }`}
@@ -259,7 +295,7 @@ export default function Layout() {
             </div>
             <span
               className={`px-0.5 text-center text-sm leading-snug transition-colors ${
-                location.pathname === '/app/leaderboard'
+                onAppLeaderboard
                   ? 'font-medium text-white'
                   : 'text-gray-500 group-hover:text-gray-300'
               }`}
@@ -270,19 +306,25 @@ export default function Layout() {
 
           <button
             type="button"
-            onClick={() => navigate('/app/profile')}
+            onClick={() =>
+              navigate(
+                devNativePreview
+                  ? '/app/__preview/profile?nativePreview=1'
+                  : '/app/profile'
+              )
+            }
             className="group flex min-h-[4.5rem] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-1 active:opacity-90"
           >
             <div
               className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all ${
-                location.pathname === '/app/profile'
+                onAppProfile
                   ? 'bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-500/30'
                   : 'bg-gray-800/50 group-hover:bg-gray-700/50'
               }`}
             >
               <User
                 className={`h-7 w-7 transition-colors ${
-                  location.pathname === '/app/profile'
+                  onAppProfile
                     ? 'text-white'
                     : 'text-gray-500 group-hover:text-gray-300'
                 }`}
@@ -290,7 +332,7 @@ export default function Layout() {
             </div>
             <span
               className={`text-center text-sm leading-tight transition-colors ${
-                location.pathname === '/app/profile'
+                onAppProfile
                   ? 'font-medium text-white'
                   : 'text-gray-500 group-hover:text-gray-300'
               }`}

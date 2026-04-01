@@ -36,6 +36,16 @@ export const router = createBrowserRouter(
                 Component: Layout,
                 children: [{ index: true, Component: Home }],
               },
+              {
+                path: '/app/__preview/leaderboard',
+                Component: Layout,
+                children: [{ index: true, Component: Leaderboard }],
+              },
+              {
+                path: '/app/__preview/profile',
+                Component: Layout,
+                children: [{ index: true, Component: Profile }],
+              },
             ]
           : []),
         {

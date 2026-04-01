@@ -380,7 +380,9 @@ export default function Home() {
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col pt-2 pb-1 sm:pt-3 sm:pb-1">
-      <div className="flex shrink-0 flex-col items-center px-6 pt-1 min-[400px]:pt-2 sm:pt-3">
+      {/* Mining logo → timer → points card: one block, shift down together */}
+      <div className="mt-6 flex w-full shrink-0 flex-col sm:mt-8">
+        <div className="flex shrink-0 flex-col items-center px-6 pt-1 min-[400px]:pt-2 sm:pt-3">
         {/* Glowing Circular Button */}
         <div className="relative mb-4 max-[380px]:mb-3">
           <div className={`absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 blur-3xl scale-125 animate-pulse transition-opacity duration-500 ${
@@ -429,11 +431,11 @@ export default function Home() {
           </div>
           <div className="mt-2 text-xs uppercase tracking-widest text-gray-500">Next Mining Cycle</div>
         </div>
-      </div>
+        </div>
 
-      <div className="h-6 shrink-0 sm:h-7" aria-hidden />
+        <div className="h-4 shrink-0 sm:h-5" aria-hidden />
 
-      <div className="mt-2 shrink-0 px-6 pb-2 pt-0 sm:mt-3 sm:pb-2">
+        <div className="mt-2 shrink-0 px-6 pb-1 pt-0 sm:pb-1">
         <div className="bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm rounded-2xl p-4 border border-gray-800">
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="min-w-0">
@@ -510,6 +512,7 @@ export default function Home() {
               </span>
             </div>
           )}
+        </div>
         </div>
       </div>
 
