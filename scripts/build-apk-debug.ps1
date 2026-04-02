@@ -22,6 +22,10 @@ if (-not $env:JAVA_HOME -or -not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
 
 $env:Path = "$env:JAVA_HOME\bin;$env:Path"
 
+# Force Vite deploy target for APK builds.
+# (Other terminal sessions may leave `VITE_DEPLOY_TARGET=web` in environment, which breaks the APK routing.)
+$env:VITE_DEPLOY_TARGET = 'app'
+
 npm run build:app
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
