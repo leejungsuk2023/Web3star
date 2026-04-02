@@ -42,9 +42,17 @@ export default function Splash() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.6 }}
-        className="mt-8"
+        className="mt-8 flex flex-col items-center gap-4"
       >
-        <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+        <div className="h-8 w-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+        <p className="text-center text-sm text-gray-500">잠시 후 로그인 화면으로 이동합니다.</p>
+        <button
+          type="button"
+          onClick={() => navigate(user ? '/app' : '/app/login', { replace: true })}
+          className="text-sm font-medium text-cyan-400 underline-offset-4 hover:text-cyan-300 hover:underline"
+        >
+          바로 로그인으로 가기
+        </button>
       </motion.div>
     </div>
   );

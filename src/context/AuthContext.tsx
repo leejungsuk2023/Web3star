@@ -16,12 +16,18 @@ export interface UserProfile {
   last_mined_at: string | null;
   ad_slots_viewed: number[];
   created_at: string;
+  /** docs/supabase-admin-panel.sql 적용 후 */
+  role?: string;
+  account_status?: string;
+  mining_disabled?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
+  /** 세션 확정 후 프로필 fetch 진행 중 */
+  profileLoading: boolean;
   refreshProfile: () => Promise<void>;
 }
 
@@ -29,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   loading: true,
+  profileLoading: false,
   refreshProfile: async () => {},
 });
 
@@ -40,19 +47,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    setProfileLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    if (error) {
-      console.error('Failed to fetch profile:', error);
-      return;
+      if (error) {
+        console.error('Failed to fetch profile:', error);
+        setProfile(null);
+        return;
+      }
+      setProfile(data as UserProfile);
+    } finally {
+      setProfileLoading(false);
     }
-    setProfile(data as UserProfile);
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -129,14 +143,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        void fetchProfile(session.user.id);
       } else {
         setProfile(null);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchProfile]);
 
   // Web Google OAuth: Signup/Login stores referral code before redirect; apply after session exists.
   useEffect(() => {
@@ -155,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user?.id, fetchProfile]);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, profileLoading, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

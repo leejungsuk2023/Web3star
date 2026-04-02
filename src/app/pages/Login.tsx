@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import logoImage from '../../assets/signup-hero-new.png';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import GoogleIcon from '../components/GoogleIcon';
 import { Capacitor } from '@capacitor/core';
@@ -13,7 +13,7 @@ import {
 import { googleNativeIdToken } from '../../lib/socialLogin';
 import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
-import { getPostAuthPath } from '../../lib/deployTarget';
+import { getSafePostLoginPath } from '../../lib/loginRedirect';
 import { attachAuthKeyboardScroll } from '../../lib/keyboardLayout';
 import {
   AUTH_PAGE_INNER_CLASS,
@@ -27,6 +27,30 @@ import TermsOfServiceModal from '../components/TermsOfServiceModal';
 import type { AuthError } from '@supabase/supabase-js';
 
 const TERMS_AGREED_KEY = 'web3star_terms_agreed';
+const PENDING_NEXT_KEY = 'web3star_pending_next';
+const PENDING_NEXT_COOKIE_KEY = 'web3star_pending_next_cookie';
+
+function setPendingNextCookie(value: string) {
+  // OAuth redirect 후에도 유지되도록 cookie로도 저장 (localStorage/sessionStorage가 날아갈 때 대비)
+  // SameSite=Lax로 일반적인 redirect 흐름에서 보장
+  document.cookie = `${PENDING_NEXT_COOKIE_KEY}=${encodeURIComponent(value)}; Path=/; Max-Age=600; SameSite=Lax`;
+}
+
+function getPendingNextCookie(): string | null {
+  try {
+    const cookie = document.cookie ?? '';
+    const parts = cookie.split(';').map((p) => p.trim());
+    const found = parts.find((p) => p.startsWith(`${PENDING_NEXT_COOKIE_KEY}=`));
+    if (!found) return null;
+    return decodeURIComponent(found.split('=').slice(1).join('='));
+  } catch {
+    return null;
+  }
+}
+
+function clearPendingNextCookie() {
+  document.cookie = `${PENDING_NEXT_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
 
 function getLoginErrorMessage(err: AuthError): string {
   const msg = (err?.message ?? '').toLowerCase();
@@ -382,6 +406,8 @@ function NewPasswordModal({
 export default function Login() {
   const { user, loading: authLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const loginNext = searchParams.get('next');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -412,7 +438,7 @@ export default function Login() {
         setLoginErrorModalOpen(true);
         return;
       }
-      navigate(getPostAuthPath());
+      navigate(getSafePostLoginPath(loginNext));
     } catch (e: any) {
       const message =
         typeof e?.message === 'string' && e.message.trim()
@@ -448,12 +474,19 @@ export default function Login() {
           }
           await refreshProfile();
         }
-        navigate(getPostAuthPath());
+        navigate(getSafePostLoginPath(loginNext));
         return;
       }
 
       if (referralCode.trim()) {
         sessionStorage.setItem('pending_referral_code', referralCode.trim());
+      }
+      // OAuth로 이동하면 원래 URL query(`next`)가 사라질 수 있어, 로그인 완료 후 경로 복구용으로 저장합니다.
+      if (loginNext) {
+        // 배포 환경에서는 OAuth 리디렉션으로 인해 sessionStorage가 날아갈 수 있어 localStorage로도 저장합니다.
+        sessionStorage.setItem(PENDING_NEXT_KEY, loginNext);
+        localStorage.setItem(PENDING_NEXT_KEY, loginNext);
+        setPendingNextCookie(loginNext);
       }
       const computedRedirect = getAuthRedirectUrl();
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -467,13 +500,10 @@ export default function Login() {
       if (data?.url) {
         const authUrl = new URL(data.url);
         const returnedRedirectTo = authUrl.searchParams.get('redirect_to');
-        const providerRedirectUri = authUrl.searchParams.get('redirect_uri');
-        const oauthUrlSnapshot = {
-          returnedRedirectTo,
-          providerRedirectUri,
-          authUrlHost: authUrl.host,
-        };
-        if (returnedRedirectTo?.includes('localhost')) {
+        // 배포(예: GitHub Pages)에서 실수로 localhost redirect가 잡히면 막음. 로컬 npm run dev 에서는 정상.
+        const blockLocalhostRedirect =
+          Boolean(returnedRedirectTo?.includes('localhost')) && !import.meta.env.DEV;
+        if (blockLocalhostRedirect) {
           setError(
             `OAuth misconfiguration detected: Supabase returned localhost redirect (${returnedRedirectTo}). ` +
               `Check Supabase Auth URL config (Site URL + Redirect URLs) for GitHub Pages.`,
@@ -578,9 +608,17 @@ export default function Login() {
     if (authLoading) return;
     if (recoveryFlowActive) return;
     if (user) {
-      navigate(getPostAuthPath(), { replace: true });
+      const pendingNext =
+        sessionStorage.getItem(PENDING_NEXT_KEY) ??
+        localStorage.getItem(PENDING_NEXT_KEY) ??
+        getPendingNextCookie();
+      sessionStorage.removeItem(PENDING_NEXT_KEY);
+      localStorage.removeItem(PENDING_NEXT_KEY);
+      clearPendingNextCookie();
+      const effectiveNext = loginNext ?? pendingNext;
+      navigate(getSafePostLoginPath(effectiveNext), { replace: true });
     }
-  }, [authLoading, recoveryFlowActive, user, navigate]);
+  }, [authLoading, recoveryFlowActive, user, navigate, loginNext]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

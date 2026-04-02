@@ -1,4 +1,5 @@
 import { createBrowserRouter, redirect } from 'react-router';
+import { adminRouteObject } from './admin/adminRoutes';
 import AppRouteRoot from './components/AppRouteRoot';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -69,6 +70,7 @@ export const router = createBrowserRouter(
         { path: '/profile', loader: () => redirect('/app/profile') },
         { path: '/admob-test', loader: () => redirect('/app/admob-test') },
         { path: '/homepage', loader: () => redirect('/app/splash') },
+        ...(import.meta.env.DEV ? [adminRouteObject] : []),
         { path: '*', loader: () => redirect('/app/splash') },
       ],
     },

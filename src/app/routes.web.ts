@@ -1,4 +1,5 @@
 import { createBrowserRouter, redirect } from 'react-router';
+import { adminRouteObject } from './admin/adminRoutes';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 
@@ -21,6 +22,7 @@ export const router = createBrowserRouter(
     { path: '/app/admob-test', loader: () => redirect('/') },
     { path: '/app', loader: () => redirect('/?app=1') },
     { path: '/app/*', loader: () => redirect('/?app=1') },
+    adminRouteObject,
     { path: '*', loader: () => redirect('/') },
   ],
   { basename: routerBase },
