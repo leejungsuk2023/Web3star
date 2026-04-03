@@ -157,7 +157,7 @@ export default function Layout() {
               <img
                 src={headerShieldLogo}
                 alt="Web3Star"
-                className="h-14 w-auto max-h-14 shrink-0 object-contain mix-blend-screen sm:h-16 sm:max-h-16 md:h-[4.25rem] md:max-h-[4.25rem]"
+                className="h-14 w-auto max-h-14 shrink-0 object-contain sm:h-16 sm:max-h-16 md:h-[4.25rem] md:max-h-[4.25rem]"
                 decoding="async"
               />
               <p className="-ml-0.5 whitespace-nowrap text-center text-xs font-semibold leading-none tracking-wide text-white sm:-ml-1 sm:text-sm md:text-base lg:text-lg">
