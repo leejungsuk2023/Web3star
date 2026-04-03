@@ -5,6 +5,7 @@ import {
   adminDecideWithdrawal,
   adminListMiningLogs,
   adminListWithdrawals,
+  adminUserDisplayLabel,
   type MiningLogRow,
   type WithdrawalRow,
 } from '../../../lib/adminApi';
@@ -233,7 +234,7 @@ export default function AdminPoints() {
             <thead className="bg-[#0f0f18] text-xs uppercase text-gray-500">
               <tr>
                 <th className="border-b border-gray-800 px-3 py-2">시간</th>
-                <th className="border-b border-gray-800 px-3 py-2">user</th>
+                <th className="border-b border-gray-800 px-3 py-2">사용자</th>
                 <th className="border-b border-gray-800 px-3 py-2">amount</th>
                 <th className="border-b border-gray-800 px-3 py-2">type</th>
               </tr>
@@ -251,8 +252,13 @@ export default function AdminPoints() {
                     <td className="px-3 py-2 text-xs text-gray-400">
                       {new Date(m.created_at).toLocaleString()}
                     </td>
-                    <td className="max-w-[120px] truncate px-3 py-2 font-mono text-xs text-gray-400">
-                      {m.user_id}
+                    <td className="max-w-[220px] px-3 py-2">
+                      <div className="text-sm font-medium text-gray-100">
+                        {adminUserDisplayLabel(m.user_nickname, m.user_email, m.user_id)}
+                      </div>
+                      <div className="truncate font-mono text-[10px] text-gray-600" title={m.user_id}>
+                        ID {m.user_id}
+                      </div>
                     </td>
                     <td className="px-3 py-2 tabular-nums text-white">{m.amount}</td>
                     <td className="px-3 py-2 text-cyan-200/90">{m.type}</td>

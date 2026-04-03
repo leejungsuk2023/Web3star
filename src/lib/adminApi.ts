@@ -11,6 +11,9 @@ export type AdminUserRow = {
   invite_code: string | null;
   created_at: string;
   last_mined_at: string | null;
+  /** MINING 타입 양수 합 — admin_list_users v2 */
+  total_mined?: number;
+  last_log_at?: string | null;
 };
 
 export type MiningLogRow = {
@@ -20,6 +23,16 @@ export type MiningLogRow = {
   type: string;
   slot_number: number | null;
   created_at: string;
+  user_email?: string | null;
+  user_nickname?: string | null;
+};
+
+export type AdminDailyMiningRow = { day: string; total_mined: number };
+export type AdminTopMinerRow = {
+  id: string;
+  email: string | null;
+  nickname: string | null;
+  total_mined: number;
 };
 
 export type WithdrawalRow = {
@@ -42,7 +55,23 @@ export type AuditLogRow = {
   target_user_id: string | null;
   payload: Record<string, unknown>;
   created_at: string;
+  admin_email?: string | null;
+  admin_nickname?: string | null;
+  target_email?: string | null;
+  target_nickname?: string | null;
 };
+
+/** 표시용: 닉네임 → 이메일 → 짧은 ID (UUID만 크게 보이지 않게) */
+export function adminUserDisplayLabel(
+  nickname: string | null | undefined,
+  email: string | null | undefined,
+  userId: string | null | undefined,
+): string {
+  if (nickname?.trim()) return nickname.trim();
+  if (email?.trim()) return email.trim();
+  if (userId && userId.length >= 8) return `사용자 ${userId.slice(0, 8)}…`;
+  return '—';
+}
 
 function rpcError(message: string): { ok: false; message: string } {
   return { ok: false, message };
@@ -182,6 +211,10 @@ export async function adminStatsSummary(): Promise<
       points_positive_sum: number;
       points_negative_abs_sum: number;
       active_users: number;
+      suspended_users: number;
+      total_mining_sum: number;
+      today_mining_sum: number;
+      abnormal_mining_users_24h: number;
     }
   | { ok: false; message: string }
 > {
@@ -193,6 +226,10 @@ export async function adminStatsSummary(): Promise<
     points_positive_sum?: number;
     points_negative_abs_sum?: number;
     active_users?: number;
+    suspended_users?: number;
+    total_mining_sum?: number;
+    today_mining_sum?: number;
+    abnormal_mining_users_24h?: number;
   };
   if (!j?.ok) return rpcError(j?.message ?? 'Request failed');
   return {
@@ -200,7 +237,31 @@ export async function adminStatsSummary(): Promise<
     points_positive_sum: Number(j.points_positive_sum ?? 0),
     points_negative_abs_sum: Number(j.points_negative_abs_sum ?? 0),
     active_users: Number(j.active_users ?? 0),
+    suspended_users: Number(j.suspended_users ?? 0),
+    total_mining_sum: Number(j.total_mining_sum ?? 0),
+    today_mining_sum: Number(j.today_mining_sum ?? 0),
+    abnormal_mining_users_24h: Number(j.abnormal_mining_users_24h ?? 0),
   };
+}
+
+export async function adminMiningDailyStats(
+  days = 14,
+): Promise<{ ok: true; rows: AdminDailyMiningRow[] } | { ok: false; message: string }> {
+  const { data, error } = await supabase.rpc('admin_mining_daily_stats', { p_days: days });
+  if (error) return rpcError(error.message);
+  const j = data as { ok?: boolean; rows?: AdminDailyMiningRow[]; message?: string };
+  if (!j?.ok) return rpcError(j?.message ?? 'Request failed');
+  return { ok: true, rows: j.rows ?? [] };
+}
+
+export async function adminMiningTopMiners(
+  limit = 10,
+): Promise<{ ok: true; rows: AdminTopMinerRow[] } | { ok: false; message: string }> {
+  const { data, error } = await supabase.rpc('admin_mining_top_miners', { p_limit: limit });
+  if (error) return rpcError(error.message);
+  const j = data as { ok?: boolean; rows?: AdminTopMinerRow[]; message?: string };
+  if (!j?.ok) return rpcError(j?.message ?? 'Request failed');
+  return { ok: true, rows: j.rows ?? [] };
 }
 
 export async function adminListAuditLog(

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { adminListAuditLog, type AuditLogRow } from '../../../lib/adminApi';
+import { adminListAuditLog, adminUserDisplayLabel, type AuditLogRow } from '../../../lib/adminApi';
 
 export default function AdminSystem() {
   const [rows, setRows] = useState<AuditLogRow[]>([]);
@@ -28,7 +28,9 @@ export default function AdminSystem() {
           <h1 className="text-2xl font-semibold text-white">시스템·감사</h1>
           <p className="mt-1 text-sm text-gray-500">
             관리자 조작(포인트·역할·환전 결정 등)은 <code className="text-cyan-600">admin_audit_log</code>에
-            기록됩니다. 로그인·앱 에러는 별도 테이블/로깅 서비스 연동을 권장합니다.
+            기록됩니다. 닉네임·이메일은 Supabase에서{' '}
+            <code className="text-cyan-600">supabase-admin-panel-v2.1-audit-user-labels.sql</code> 적용 후
+            채워집니다.
           </p>
         </div>
         <button
@@ -41,11 +43,12 @@ export default function AdminSystem() {
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-800">
-        <table className="w-full min-w-[900px] text-left text-sm">
+        <table className="w-full min-w-[960px] text-left text-sm">
           <thead className="bg-[#0f0f18] text-xs uppercase text-gray-500">
             <tr>
               <th className="border-b border-gray-800 px-3 py-2">시간</th>
               <th className="border-b border-gray-800 px-3 py-2">액션</th>
+              <th className="border-b border-gray-800 px-3 py-2">관리자</th>
               <th className="border-b border-gray-800 px-3 py-2">대상 사용자</th>
               <th className="border-b border-gray-800 px-3 py-2">payload</th>
             </tr>
@@ -53,13 +56,13 @@ export default function AdminSystem() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={4} className="px-3 py-8 text-center text-gray-500">
+                <td colSpan={5} className="px-3 py-8 text-center text-gray-500">
                   불러오는 중…
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-3 py-8 text-center text-gray-500">
+                <td colSpan={5} className="px-3 py-8 text-center text-gray-500">
                   기록 없음
                 </td>
               </tr>
@@ -70,10 +73,32 @@ export default function AdminSystem() {
                     {new Date(a.created_at).toLocaleString()}
                   </td>
                   <td className="px-3 py-2 text-cyan-200/90">{a.action}</td>
-                  <td className="max-w-[120px] truncate px-3 py-2 font-mono text-xs text-gray-500">
-                    {a.target_user_id ?? '—'}
+                  <td className="max-w-[200px] px-3 py-2">
+                    <div className="text-sm text-gray-100">
+                      {adminUserDisplayLabel(a.admin_nickname, a.admin_email, a.admin_id)}
+                    </div>
+                    <div className="truncate font-mono text-[10px] text-gray-600" title={a.admin_id}>
+                      {a.admin_id}
+                    </div>
                   </td>
-                  <td className="max-w-[480px] px-3 py-2 font-mono text-xs text-gray-400 break-all">
+                  <td className="max-w-[200px] px-3 py-2">
+                    {a.target_user_id ? (
+                      <>
+                        <div className="text-sm text-gray-100">
+                          {adminUserDisplayLabel(a.target_nickname, a.target_email, a.target_user_id)}
+                        </div>
+                        <div
+                          className="truncate font-mono text-[10px] text-gray-600"
+                          title={a.target_user_id}
+                        >
+                          {a.target_user_id}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-gray-600">—</span>
+                    )}
+                  </td>
+                  <td className="max-w-[420px] px-3 py-2 font-mono text-xs text-gray-400 break-all">
                     {JSON.stringify(a.payload)}
                   </td>
                 </tr>

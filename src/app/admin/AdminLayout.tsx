@@ -8,7 +8,7 @@ const nav = [
   { to: '/admin', label: '대시보드', end: true },
   { to: '/admin/users', label: '사용자' },
   { to: '/admin/points', label: '포인트·환전' },
-  { to: '/admin/mining', label: '채굴 활동' },
+  { to: '/admin/mining', label: '채굴·활동' },
   { to: '/admin/content', label: '미션·이벤트' },
   { to: '/admin/reports', label: '통계' },
   { to: '/admin/system', label: '시스템·감사' },

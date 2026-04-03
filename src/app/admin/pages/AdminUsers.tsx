@@ -8,6 +8,13 @@ import {
   type AdminUserRow,
 } from '../../../lib/adminApi';
 
+function lastActivityLabel(u: AdminUserRow): string {
+  const tLog = u.last_log_at ? new Date(u.last_log_at).getTime() : 0;
+  const tMine = u.last_mined_at ? new Date(u.last_mined_at).getTime() : 0;
+  const m = Math.max(tLog, tMine);
+  return m > 0 ? new Date(m).toLocaleString() : '—';
+}
+
 export default function AdminUsers() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -57,7 +64,9 @@ export default function AdminUsers() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-white">사용자</h1>
-        <p className="mt-1 text-sm text-gray-500">검색·필터 후 역할·계정 상태·채굴 차단을 변경합니다.</p>
+        <p className="mt-1 text-sm text-gray-500">
+          검색·필터 후 역할·계정·채굴을 변경합니다. 누적 채굴·최근 활동은 채굴·활동 페이지와 동일 RPC 기준입니다.
+        </p>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -114,28 +123,30 @@ export default function AdminUsers() {
       <div className="text-xs text-gray-500">총 {total.toLocaleString()}명 · 표시 {rows.length}명</div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-800">
-        <table className="w-full min-w-[960px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[1040px] border-collapse text-left text-sm">
           <thead className="bg-[#0f0f18] text-xs uppercase text-gray-500">
             <tr>
               <th className="border-b border-gray-800 px-3 py-3">이메일</th>
               <th className="border-b border-gray-800 px-3 py-3">닉네임</th>
+              <th className="border-b border-gray-800 px-3 py-3">누적 채굴</th>
               <th className="border-b border-gray-800 px-3 py-3">포인트</th>
+              <th className="border-b border-gray-800 px-3 py-3">최근 활동</th>
               <th className="border-b border-gray-800 px-3 py-3">역할</th>
               <th className="border-b border-gray-800 px-3 py-3">상태</th>
               <th className="border-b border-gray-800 px-3 py-3">채굴</th>
-              <th className="border-b border-gray-800 px-3 py-3">작업</th>
+              <th className="border-b border-gray-800 px-3 py-3">ID</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-gray-500">
+                <td colSpan={9} className="px-3 py-8 text-center text-gray-500">
                   불러오는 중…
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-gray-500">
+                <td colSpan={9} className="px-3 py-8 text-center text-gray-500">
                   결과 없음
                 </td>
               </tr>
@@ -144,7 +155,11 @@ export default function AdminUsers() {
                 <tr key={u.id} className="border-b border-gray-800/80 hover:bg-white/[0.02]">
                   <td className="max-w-[200px] truncate px-3 py-2 text-gray-300">{u.email ?? '—'}</td>
                   <td className="px-3 py-2 text-gray-300">{u.nickname ?? '—'}</td>
+                  <td className="px-3 py-2 tabular-nums text-violet-300">
+                    {u.total_mined != null ? Number(u.total_mined).toLocaleString() : '—'}
+                  </td>
                   <td className="px-3 py-2 tabular-nums text-white">{Number(u.point).toLocaleString()}</td>
+                  <td className="px-3 py-2 text-xs text-gray-400">{lastActivityLabel(u)}</td>
                   <td className="px-3 py-2">
                     <select
                       value={u.role ?? 'user'}
@@ -195,7 +210,7 @@ export default function AdminUsers() {
                       {u.mining_disabled ? '차단됨' : '허용'}
                     </button>
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500">{u.id.slice(0, 8)}…</td>
+                  <td className="px-3 py-2 font-mono text-[10px] text-gray-500">{u.id.slice(0, 10)}…</td>
                 </tr>
               ))
             )}

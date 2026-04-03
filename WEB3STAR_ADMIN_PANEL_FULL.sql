@@ -217,10 +217,13 @@ BEGIN
     AND (p_role IS NULL OR p_role = '' OR u.role = p_role)
     AND (p_status IS NULL OR p_status = '' OR u.account_status = p_status);
 
-  SELECT coalesce(jsonb_agg(t.*), '[]'::jsonb) INTO rows
+  SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY t.created_at DESC), '[]'::jsonb) INTO rows
   FROM (
     SELECT u.id, u.email, u.nickname, u.point, u.role, u.account_status, u.mining_disabled,
-           u.invite_code, u.created_at, u.last_mined_at
+           u.invite_code, u.created_at, u.last_mined_at,
+           (SELECT COALESCE(SUM(m.amount), 0)::bigint FROM public.mining_logs m
+            WHERE m.user_id = u.id AND m.type = 'MINING' AND m.amount > 0) AS total_mined,
+           (SELECT MAX(m.created_at) FROM public.mining_logs m WHERE m.user_id = u.id) AS last_log_at
     FROM public.users u
     WHERE (p_search IS NULL OR p_search = '' OR u.email ILIKE '%' || p_search || '%' OR u.nickname ILIKE '%' || p_search || '%' OR u.invite_code ILIKE '%' || p_search || '%')
       AND (p_role IS NULL OR p_role = '' OR u.role = p_role)
@@ -382,10 +385,12 @@ BEGIN
   WHERE (p_user_id IS NULL OR m.user_id = p_user_id)
     AND (p_type IS NULL OR p_type = '' OR m.type = p_type);
 
-  SELECT coalesce(jsonb_agg(x.*), '[]'::jsonb) INTO rows
+  SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.created_at DESC), '[]'::jsonb) INTO rows
   FROM (
-    SELECT m.id, m.user_id, m.amount, m.type, m.slot_number, m.created_at
+    SELECT m.id, m.user_id, m.amount, m.type, m.slot_number, m.created_at,
+           u.email AS user_email, u.nickname AS user_nickname
     FROM public.mining_logs m
+    LEFT JOIN public.users u ON u.id = m.user_id
     WHERE (p_user_id IS NULL OR m.user_id = p_user_id)
       AND (p_type IS NULL OR p_type = '' OR m.type = p_type)
     ORDER BY m.created_at DESC
@@ -508,19 +513,41 @@ AS $$
 DECLARE
   issued bigint;
   spent bigint;
-  user_count bigint;
+  user_count_active bigint;
+  user_count_suspended bigint;
+  total_mining bigint;
+  today_mining bigint;
+  abnormal_users bigint;
 BEGIN
   PERFORM public._admin_assert();
 
   SELECT coalesce(sum(amount), 0) INTO issued FROM public.mining_logs WHERE amount > 0;
   SELECT coalesce(sum(-amount), 0) INTO spent FROM public.mining_logs WHERE amount < 0;
-  SELECT count(*) INTO user_count FROM public.users WHERE account_status = 'active';
+  SELECT count(*) INTO user_count_active FROM public.users WHERE account_status = 'active';
+  SELECT count(*) INTO user_count_suspended FROM public.users WHERE account_status = 'suspended';
+  SELECT coalesce(sum(amount), 0) INTO total_mining FROM public.mining_logs WHERE type = 'MINING' AND amount > 0;
+  SELECT coalesce(sum(amount), 0) INTO today_mining
+  FROM public.mining_logs
+  WHERE type = 'MINING' AND amount > 0 AND created_at >= date_trunc('day', now());
+
+  SELECT count(*)::bigint INTO abnormal_users
+  FROM (
+    SELECT 1
+    FROM public.mining_logs m
+    WHERE m.type = 'MINING' AND m.created_at > now() - interval '24 hours'
+    GROUP BY m.user_id
+    HAVING count(*) > 12
+  ) s;
 
   RETURN jsonb_build_object(
     'ok', true,
     'points_positive_sum', issued,
     'points_negative_abs_sum', spent,
-    'active_users', user_count
+    'active_users', user_count_active,
+    'suspended_users', user_count_suspended,
+    'total_mining_sum', total_mining,
+    'today_mining_sum', today_mining,
+    'abnormal_mining_users_24h', abnormal_users
   );
 END;
 $$;
@@ -543,10 +570,22 @@ DECLARE
 BEGIN
   PERFORM public._admin_assert();
 
-  SELECT coalesce(jsonb_agg(t.*), '[]'::jsonb) INTO rows
+  SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY t.created_at DESC), '[]'::jsonb) INTO rows
   FROM (
-    SELECT a.id, a.admin_id, a.action, a.target_user_id, a.payload, a.created_at
+    SELECT
+      a.id,
+      a.admin_id,
+      a.action,
+      a.target_user_id,
+      a.payload,
+      a.created_at,
+      adm.email AS admin_email,
+      adm.nickname AS admin_nickname,
+      tgt.email AS target_email,
+      tgt.nickname AS target_nickname
     FROM public.admin_audit_log a
+    LEFT JOIN public.users adm ON adm.id = a.admin_id
+    LEFT JOIN public.users tgt ON tgt.id = a.target_user_id
     ORDER BY a.created_at DESC
     LIMIT lim OFFSET off
   ) t;
@@ -675,3 +714,64 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.admin_upsert_event(bigint, text, text, int, timestamptz, timestamptz, boolean) TO authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 16) RPC: 일별 채굴(MINING) 추이 · 상위 채굴자 (v2)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.admin_mining_daily_stats(p_days int DEFAULT 14)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  d int := least(greatest(coalesce(p_days, 14), 1), 90);
+  rows jsonb;
+BEGIN
+  PERFORM public._admin_assert();
+
+  SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY t.day ASC), '[]'::jsonb) INTO rows
+  FROM (
+    SELECT (date_trunc('day', m.created_at))::date AS day,
+           coalesce(sum(m.amount), 0)::bigint AS total_mined
+    FROM public.mining_logs m
+    WHERE m.type = 'MINING' AND m.amount > 0
+      AND m.created_at >= date_trunc('day', now()) - make_interval(days => (d - 1))
+    GROUP BY 1
+    ORDER BY 1
+  ) t;
+
+  RETURN jsonb_build_object('ok', true, 'rows', rows);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_mining_daily_stats(int) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.admin_mining_top_miners(p_limit int DEFAULT 10)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  lim int := least(greatest(coalesce(p_limit, 10), 1), 50);
+  rows jsonb;
+BEGIN
+  PERFORM public._admin_assert();
+
+  SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY t.total_mined DESC), '[]'::jsonb) INTO rows
+  FROM (
+    SELECT u.id, u.email, u.nickname,
+           coalesce(sum(m.amount), 0)::bigint AS total_mined
+    FROM public.users u
+    INNER JOIN public.mining_logs m ON m.user_id = u.id AND m.type = 'MINING' AND m.amount > 0
+    GROUP BY u.id, u.email, u.nickname
+    ORDER BY total_mined DESC
+    LIMIT lim
+  ) t;
+
+  RETURN jsonb_build_object('ok', true, 'rows', rows);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_mining_top_miners(int) TO authenticated;
