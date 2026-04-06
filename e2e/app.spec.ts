@@ -1,10 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
-
-async function openPreAuthModal(page: Page) {
-  await page.goto('/login');
-  await page.evaluate(() => localStorage.removeItem('web3star_terms_agreed'));
-  await page.getByRole('button', { name: /Continue with Google/i }).click();
-}
+import { test, expect } from '@playwright/test';
 
 // ─────────────────────────────────────────────
 // 1. /signup → 로그인 리다이렉트
@@ -29,12 +23,14 @@ test.describe('Login', () => {
     await page.goto('/login');
     await expect(page.getByRole('button', { name: /Continue with Google/i })).toBeVisible();
     await expect(page.getByText(/Sign in or create an account with Google/i)).toBeVisible();
+    await expect(page.getByLabel(/Referral code/i)).toBeVisible();
+    await expect(page.getByRole('checkbox')).toHaveCount(2);
     await expect(page.getByLabel('Email')).toHaveCount(0);
     await expect(page.getByLabel('Password')).toHaveCount(0);
   });
 
-  test('should open Terms of Service from pre-auth modal', async ({ page }) => {
-    await openPreAuthModal(page);
+  test('should open Terms of Service from login page', async ({ page }) => {
+    await page.goto('/login');
     await page.getByRole('button', { name: 'Terms of Service' }).click();
     await expect(page.getByRole('heading', { name: 'Web3Star Terms of Service' })).toBeVisible();
     await expect(page.getByText('1. Purpose')).toBeVisible();

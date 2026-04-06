@@ -24,13 +24,13 @@ import TermsOfServiceModal from '../components/TermsOfServiceModal';
 
 const TERMS_AGREED_KEY = 'web3star_terms_agreed';
 
-function PreAuthModal({
-  onConfirm,
-  onCancel,
-}: {
-  onConfirm: (referralCode: string) => void;
-  onCancel: () => void;
-}) {
+export default function Login() {
+  const { user, loading: authLoading, refreshProfile } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const loginNext = searchParams.get('next');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
   const [referralCode, setReferralCode] = useState('');
@@ -39,126 +39,20 @@ function PreAuthModal({
 
   const canProceed = agreedToTerms && agreedToPrivacy;
 
-  return (
-    <div
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain bg-black/70 px-4 py-6 backdrop-blur-sm [-webkit-overflow-scrolling:touch]"
-      data-modal-scroll-root
-    >
-      <div className="flex min-h-[100dvh] min-h-[100%] w-full items-end justify-center pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:py-8">
-        <div className="w-full max-w-md space-y-5 rounded-2xl border border-gray-700 bg-[#13131e] p-6 shadow-2xl">
-          <h2 className="text-center text-lg font-bold text-white">Before you continue</h2>
-          <p className="text-center text-xs text-gray-500">
-            Sign in with Google. New accounts are created automatically. If you have a referral code, enter it below
-            (optional).
-          </p>
+  useEffect(() => {
+    attachAuthKeyboardScroll();
+    try {
+      if (localStorage.getItem(TERMS_AGREED_KEY) === 'true') {
+        setAgreedToTerms(true);
+        setAgreedToPrivacy(true);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
-          <div>
-            <label htmlFor="modal-referral" className="mb-2 block text-sm text-gray-400">
-              Referral code <span className="text-gray-600">(optional)</span>
-            </label>
-            <input
-              id="modal-referral"
-              type="text"
-              value={referralCode}
-              onChange={(e) => setReferralCode(e.target.value)}
-              className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-sm text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
-              placeholder="Enter referral code"
-            />
-          </div>
-
-          <div className="space-y-3">
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer accent-cyan-400"
-              />
-              <span className="text-sm text-gray-300">
-                I agree to the{' '}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIsTermsModalOpen(true);
-                  }}
-                  className="inline cursor-pointer border-0 bg-transparent p-0 align-baseline text-sm font-inherit text-cyan-400 underline hover:text-cyan-300"
-                >
-                  Terms of Service
-                </button>
-                <span className="text-red-400"> (required)</span>
-              </span>
-            </label>
-
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                checked={agreedToPrivacy}
-                onChange={(e) => setAgreedToPrivacy(e.target.checked)}
-                className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer accent-cyan-400"
-              />
-              <span className="text-sm text-gray-300">
-                I agree to the{' '}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIsPrivacyPolicyOpen(true);
-                  }}
-                  className="inline cursor-pointer border-0 bg-transparent p-0 align-baseline text-sm font-inherit text-cyan-400 underline hover:text-cyan-300"
-                >
-                  Privacy Policy
-                </button>
-                <span className="text-red-400"> (required)</span>
-              </span>
-            </label>
-          </div>
-
-          <div className="flex gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex-1 rounded-lg border border-gray-700 py-3 text-sm font-medium text-gray-400 transition-colors hover:text-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                localStorage.setItem(TERMS_AGREED_KEY, 'true');
-                onConfirm(referralCode.trim());
-              }}
-              disabled={!canProceed}
-              className="flex-1 rounded-lg bg-cyan-500 py-3 text-sm font-semibold text-black transition-all hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Agree & continue
-            </button>
-          </div>
-
-          <PrivacyPolicyModal isOpen={isPrivacyPolicyOpen} onClose={() => setIsPrivacyPolicyOpen(false)} />
-          <TermsOfServiceModal isOpen={isTermsModalOpen} onClose={() => setIsTermsModalOpen(false)} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function Login() {
-  const { user, loading: authLoading, refreshProfile } = useAuth();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const loginNext = searchParams.get('next');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-
-  useEffect(() => attachAuthKeyboardScroll(), []);
-
-  const proceedGoogleLogin = async (referralCode = '') => {
+  const proceedGoogleLogin = async (code: string) => {
     setLoading(true);
-    setShowModal(false);
     try {
       setError('');
       if (isLikelyNativePlatform()) {
@@ -171,8 +65,8 @@ export default function Login() {
           setError(idTokenError.message);
           return;
         }
-        if (sessionData?.user && referralCode.trim()) {
-          const refRes = await applyReferralRewards(sessionData.user.id, referralCode);
+        if (sessionData?.user && code.trim()) {
+          const refRes = await applyReferralRewards(sessionData.user.id, code);
           if (!refRes.ok) {
             setError(refRes.message);
             return;
@@ -183,8 +77,8 @@ export default function Login() {
         return;
       }
 
-      if (referralCode.trim()) {
-        sessionStorage.setItem('pending_referral_code', referralCode.trim());
+      if (code.trim()) {
+        sessionStorage.setItem('pending_referral_code', code.trim());
       }
       if (loginNext) {
         writeStoredPendingNext(loginNext);
@@ -220,18 +114,13 @@ export default function Login() {
   };
 
   const handleGoogleLogin = () => {
-    if (loading) return;
-    if (isLikelyNativePlatform()) {
-      setShowModal(true);
-      return;
+    if (loading || !canProceed) return;
+    try {
+      localStorage.setItem(TERMS_AGREED_KEY, 'true');
+    } catch {
+      /* ignore */
     }
-
-    const alreadyAgreed = localStorage.getItem(TERMS_AGREED_KEY) === 'true';
-    if (alreadyAgreed) {
-      void proceedGoogleLogin();
-      return;
-    }
-    setShowModal(true);
+    void proceedGoogleLogin(referralCode.trim());
   };
 
   React.useEffect(() => {
@@ -253,7 +142,7 @@ export default function Login() {
             className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
           >
             <div className="flex min-h-full flex-col px-6 pt-[max(1rem,env(safe-area-inset-top,24px))]">
-              <div className="flex flex-1 flex-col items-center justify-center space-y-6 pb-8">
+              <div className="flex flex-1 flex-col items-center justify-center space-y-5 pb-8">
                 <div className="flex w-full flex-col items-center">
                   <img
                     src={logoImage}
@@ -265,6 +154,73 @@ export default function Login() {
                 <p className="max-w-sm text-center text-sm text-gray-400">
                   Sign in or create an account with Google. Email and password sign-in is not available.
                 </p>
+
+                <div className="w-full max-w-md space-y-4">
+                  <div>
+                    <label htmlFor="login-referral" className="mb-2 block text-sm text-gray-400">
+                      Referral code <span className="text-gray-600">(optional)</span>
+                    </label>
+                    <input
+                      id="login-referral"
+                      type="text"
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value)}
+                      autoComplete="off"
+                      className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-sm text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                      placeholder="Enter referral code"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="flex cursor-pointer items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={agreedToTerms}
+                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer accent-cyan-400"
+                      />
+                      <span className="text-sm text-gray-300">
+                        I agree to the{' '}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsTermsModalOpen(true);
+                          }}
+                          className="inline cursor-pointer border-0 bg-transparent p-0 align-baseline text-sm font-inherit text-cyan-400 underline hover:text-cyan-300"
+                        >
+                          Terms of Service
+                        </button>
+                        <span className="text-red-400"> (required)</span>
+                      </span>
+                    </label>
+
+                    <label className="flex cursor-pointer items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={agreedToPrivacy}
+                        onChange={(e) => setAgreedToPrivacy(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer accent-cyan-400"
+                      />
+                      <span className="text-sm text-gray-300">
+                        I agree to the{' '}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsPrivacyPolicyOpen(true);
+                          }}
+                          className="inline cursor-pointer border-0 bg-transparent p-0 align-baseline text-sm font-inherit text-cyan-400 underline hover:text-cyan-300"
+                        >
+                          Privacy Policy
+                        </button>
+                        <span className="text-red-400"> (required)</span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
 
                 {error && (
                   <div
@@ -279,12 +235,19 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  disabled={loading}
+                  disabled={loading || !canProceed}
+                  title={!canProceed ? 'Please accept the Terms of Service and Privacy Policy' : undefined}
                   className="flex w-full max-w-md items-center justify-center gap-3 rounded-lg bg-white px-6 py-3.5 font-semibold text-gray-800 shadow-lg transition-all duration-200 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <GoogleIcon className="h-5 w-5" />
                   {loading ? 'Connecting…' : 'Continue with Google'}
                 </button>
+
+                {!canProceed && (
+                  <p className="max-w-md text-center text-xs text-gray-500">
+                    Check both boxes above to enable Google sign-in.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -305,9 +268,8 @@ export default function Login() {
         </div>
       </div>
 
-      {showModal && (
-        <PreAuthModal onConfirm={(code) => void proceedGoogleLogin(code)} onCancel={() => setShowModal(false)} />
-      )}
+      <PrivacyPolicyModal isOpen={isPrivacyPolicyOpen} onClose={() => setIsPrivacyPolicyOpen(false)} />
+      <TermsOfServiceModal isOpen={isTermsModalOpen} onClose={() => setIsTermsModalOpen(false)} />
     </div>
   );
 }
