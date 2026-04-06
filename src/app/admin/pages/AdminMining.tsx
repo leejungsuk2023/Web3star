@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router';
 import { toast } from 'sonner';
 import {
   adminAdjustPoints,
   adminListMiningLogs,
-  adminListReferralSummaries,
   adminListUsers,
   adminSetAccountStatus,
   adminSetMiningDisabled,
@@ -41,25 +39,15 @@ export default function AdminMining() {
   const [deltas, setDeltas] = useState<Record<string, string>>({});
   const [adjustReason, setAdjustReason] = useState('관리자 테이블 조정');
 
-  /** admin_list_referral_summaries 기준 (같은 검색어로 넉넉히 받아 id 매칭) */
-  const [referralById, setReferralById] = useState<
-    Record<string, { count: number; pts: number }>
-  >({});
-  const [referralSummaryFailed, setReferralSummaryFailed] = useState(false);
-
   const loadUsers = useCallback(async () => {
     setLoadingUsers(true);
-    const q = search.trim() || undefined;
-    const [res, refRes] = await Promise.all([
-      adminListUsers({
-        search: q,
-        role: roleFilter || undefined,
-        status: statusFilter || undefined,
-        limit: 100,
-        offset: 0,
-      }),
-      adminListReferralSummaries({ search: q, limit: 300, offset: 0 }),
-    ]);
+    const res = await adminListUsers({
+      search: search.trim() || undefined,
+      role: roleFilter || undefined,
+      status: statusFilter || undefined,
+      limit: 100,
+      offset: 0,
+    });
     setLoadingUsers(false);
     if (!res.ok) {
       toast.error(res.message);
@@ -67,22 +55,6 @@ export default function AdminMining() {
     }
     setUsers(res.rows);
     setUserTotal(res.total);
-
-    if (!refRes.ok) {
-      setReferralById({});
-      setReferralSummaryFailed(true);
-      toast.error(
-        `레퍼럴 요약을 불러오지 못했습니다: ${refRes.message} (Supabase에 docs/supabase-admin-panel-referrals.sql 적용 여부를 확인하세요.)`,
-        { duration: 8000 },
-      );
-    } else {
-      setReferralSummaryFailed(false);
-      const m: Record<string, { count: number; pts: number }> = {};
-      for (const r of refRes.rows) {
-        m[r.id] = { count: r.referral_count, pts: r.referral_points_from_logs };
-      }
-      setReferralById(m);
-    }
   }, [search, roleFilter, statusFilter]);
 
   useEffect(() => {
@@ -172,16 +144,6 @@ export default function AdminMining() {
           사용자 ID·닉네임·이메일로 검색하고, 누적 채굴량·포인트·최근 활동을 한눈에 봅니다. 테이블에서 포인트 조정·VIP·채굴
           ON/OFF를 바로 적용할 수 있습니다.
         </p>
-        <div className="mt-4 rounded-lg border border-cyan-900/40 bg-cyan-950/20 px-4 py-3 text-sm text-gray-200">
-          <span className="text-gray-400">추천인(레퍼럴): </span>
-          <Link to="/admin/referrals" className="font-medium text-cyan-300 underline-offset-2 hover:underline">
-            추천·레퍼럴 전용 페이지
-          </Link>
-          <span className="text-gray-500">
-            {' '}
-            또는 아래 표의 <strong className="text-gray-400">레퍼럴 수·추천로그</strong> 열을 확인하세요.
-          </span>
-        </div>
       </div>
 
       <section className="space-y-4">
@@ -245,14 +207,12 @@ export default function AdminMining() {
         </p>
 
         <div className="overflow-x-auto rounded-xl border border-gray-800">
-          <table className="w-full min-w-[1240px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
             <thead className="bg-[#0f0f18] text-xs uppercase text-gray-500">
               <tr>
                 <th className="border-b border-gray-800 px-2 py-2">사용자</th>
                 <th className="border-b border-gray-800 px-2 py-2">누적 채굴</th>
                 <th className="border-b border-gray-800 px-2 py-2">포인트</th>
-                <th className="border-b border-gray-800 px-2 py-2">레퍼럴 수</th>
-                <th className="border-b border-gray-800 px-2 py-2">추천로그</th>
                 <th className="border-b border-gray-800 px-2 py-2">최근 활동</th>
                 <th className="border-b border-gray-800 px-2 py-2">역할·상태·채굴</th>
                 <th className="border-b border-gray-800 px-2 py-2">포인트 ±</th>
@@ -262,13 +222,13 @@ export default function AdminMining() {
             <tbody>
               {loadingUsers ? (
                 <tr>
-                  <td colSpan={9} className="px-3 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-3 py-8 text-center text-gray-500">
                     불러오는 중…
                   </td>
                 </tr>
               ) : sortedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-3 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-3 py-8 text-center text-gray-500">
                     결과 없음
                   </td>
                 </tr>
@@ -286,12 +246,6 @@ export default function AdminMining() {
                       {u.total_mined != null ? Number(u.total_mined).toLocaleString() : '—'}
                     </td>
                     <td className="px-2 py-2 tabular-nums text-white">{Number(u.point).toLocaleString()}</td>
-                    <td className="px-2 py-2 tabular-nums text-amber-200/90">
-                      {referralSummaryFailed ? '—' : (referralById[u.id]?.count ?? 0)}
-                    </td>
-                    <td className="px-2 py-2 tabular-nums text-violet-200/80">
-                      {referralSummaryFailed ? '—' : (referralById[u.id]?.pts ?? 0).toLocaleString()}
-                    </td>
                     <td className="px-2 py-2 text-xs text-gray-400">{lastActivityLabel(u)}</td>
                     <td className="px-2 py-2">
                       <div className="flex flex-col gap-1">
