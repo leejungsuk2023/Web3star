@@ -15,6 +15,11 @@ import { googleNativeIdToken } from '../../lib/socialLogin';
 import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
 import { getSafePostLoginPath } from '../../lib/loginRedirect';
+import {
+  clearStoredPendingNext,
+  readStoredPendingNext,
+  writeStoredPendingNext,
+} from '../../lib/pendingNextAfterOAuth';
 import { attachAuthKeyboardScroll } from '../../lib/keyboardLayout';
 import {
   AUTH_PAGE_INNER_CLASS,
@@ -28,30 +33,6 @@ import TermsOfServiceModal from '../components/TermsOfServiceModal';
 import type { AuthError } from '@supabase/supabase-js';
 
 const TERMS_AGREED_KEY = 'web3star_terms_agreed';
-const PENDING_NEXT_KEY = 'web3star_pending_next';
-const PENDING_NEXT_COOKIE_KEY = 'web3star_pending_next_cookie';
-
-function setPendingNextCookie(value: string) {
-  // OAuth redirect 후에도 유지되도록 cookie로도 저장 (localStorage/sessionStorage가 날아갈 때 대비)
-  // SameSite=Lax로 일반적인 redirect 흐름에서 보장
-  document.cookie = `${PENDING_NEXT_COOKIE_KEY}=${encodeURIComponent(value)}; Path=/; Max-Age=600; SameSite=Lax`;
-}
-
-function getPendingNextCookie(): string | null {
-  try {
-    const cookie = document.cookie ?? '';
-    const parts = cookie.split(';').map((p) => p.trim());
-    const found = parts.find((p) => p.startsWith(`${PENDING_NEXT_COOKIE_KEY}=`));
-    if (!found) return null;
-    return decodeURIComponent(found.split('=').slice(1).join('='));
-  } catch {
-    return null;
-  }
-}
-
-function clearPendingNextCookie() {
-  document.cookie = `${PENDING_NEXT_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
-}
 
 function getLoginErrorMessage(err: AuthError): string {
   const msg = (err?.message ?? '').toLowerCase();
@@ -484,10 +465,7 @@ export default function Login() {
       }
       // OAuth로 이동하면 원래 URL query(`next`)가 사라질 수 있어, 로그인 완료 후 경로 복구용으로 저장합니다.
       if (loginNext) {
-        // 배포 환경에서는 OAuth 리디렉션으로 인해 sessionStorage가 날아갈 수 있어 localStorage로도 저장합니다.
-        sessionStorage.setItem(PENDING_NEXT_KEY, loginNext);
-        localStorage.setItem(PENDING_NEXT_KEY, loginNext);
-        setPendingNextCookie(loginNext);
+        writeStoredPendingNext(loginNext);
       }
       const computedRedirect = getAuthRedirectUrlWithNext(loginNext);
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -609,13 +587,8 @@ export default function Login() {
     if (authLoading) return;
     if (recoveryFlowActive) return;
     if (user) {
-      const pendingNext =
-        sessionStorage.getItem(PENDING_NEXT_KEY) ??
-        localStorage.getItem(PENDING_NEXT_KEY) ??
-        getPendingNextCookie();
-      sessionStorage.removeItem(PENDING_NEXT_KEY);
-      localStorage.removeItem(PENDING_NEXT_KEY);
-      clearPendingNextCookie();
+      const pendingNext = readStoredPendingNext();
+      clearStoredPendingNext();
       const effectiveNext = loginNext ?? pendingNext;
       navigate(getSafePostLoginPath(effectiveNext), { replace: true });
     }

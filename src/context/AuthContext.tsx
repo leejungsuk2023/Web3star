@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { InAppBrowser } from '@capacitor/inappbrowser';
 import { supabase } from '../lib/supabase';
+import { clearStoredPendingNext } from '../lib/pendingNextAfterOAuth';
 import { applyReferralRewards } from '../lib/referral';
 
 export interface UserProfile {
@@ -150,7 +151,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        clearStoredPendingNext();
+      }
       setUser(session?.user ?? null);
       if (session?.user) {
         void fetchProfile(session.user.id);

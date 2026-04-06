@@ -1,7 +1,8 @@
 import { createElement } from 'react';
-import { Outlet, createBrowserRouter, redirect } from 'react-router';
+import { createBrowserRouter, redirect } from 'react-router';
 import { adminRouteObject } from './admin/adminRoutes';
 import ChunkLoadErrorFallback from './components/ChunkLoadErrorFallback';
+import WebMarketingRouteRoot from './components/WebMarketingRouteRoot';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 
@@ -13,7 +14,7 @@ const routerBase = import.meta.env.BASE_URL;
 export const router = createBrowserRouter(
   [
     {
-      element: createElement(Outlet),
+      element: createElement(WebMarketingRouteRoot),
       errorElement: createElement(ChunkLoadErrorFallback),
       children: [
         {
