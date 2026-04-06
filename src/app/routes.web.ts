@@ -1,5 +1,7 @@
-import { createBrowserRouter, redirect } from 'react-router';
+import { createElement } from 'react';
+import { Outlet, createBrowserRouter, redirect } from 'react-router';
 import { adminRouteObject } from './admin/adminRoutes';
+import ChunkLoadErrorFallback from './components/ChunkLoadErrorFallback';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 
@@ -11,19 +13,25 @@ const routerBase = import.meta.env.BASE_URL;
 export const router = createBrowserRouter(
   [
     {
-      path: '/',
-      lazy: () => import('./pages/Homepage').then((m) => ({ Component: m.default })),
+      element: createElement(Outlet),
+      errorElement: createElement(ChunkLoadErrorFallback),
+      children: [
+        {
+          path: '/',
+          lazy: () => import('./pages/Homepage').then((m) => ({ Component: m.default })),
+        },
+        { path: '/app/login', Component: Login },
+        { path: '/app/signup', Component: Signup },
+        { path: '/login', loader: () => redirect('/app/login') },
+        { path: '/signup', loader: () => redirect('/app/signup') },
+        { path: '/app/splash', loader: () => redirect('/app/login') },
+        { path: '/app/admob-test', loader: () => redirect('/') },
+        { path: '/app', loader: () => redirect('/?app=1') },
+        { path: '/app/*', loader: () => redirect('/?app=1') },
+        adminRouteObject,
+        { path: '*', loader: () => redirect('/') },
+      ],
     },
-    { path: '/app/login', Component: Login },
-    { path: '/app/signup', Component: Signup },
-    { path: '/login', loader: () => redirect('/app/login') },
-    { path: '/signup', loader: () => redirect('/app/signup') },
-    { path: '/app/splash', loader: () => redirect('/app/login') },
-    { path: '/app/admob-test', loader: () => redirect('/') },
-    { path: '/app', loader: () => redirect('/?app=1') },
-    { path: '/app/*', loader: () => redirect('/?app=1') },
-    adminRouteObject,
-    { path: '*', loader: () => redirect('/') },
   ],
   { basename: routerBase },
 );

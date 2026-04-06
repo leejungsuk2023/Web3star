@@ -1,6 +1,8 @@
+import { createElement } from 'react';
 import { createBrowserRouter, redirect } from 'react-router';
 import { adminRouteObject } from './admin/adminRoutes';
 import AppRouteRoot from './components/AppRouteRoot';
+import ChunkLoadErrorFallback from './components/ChunkLoadErrorFallback';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Leaderboard from './pages/Leaderboard';
@@ -20,6 +22,7 @@ export const router = createBrowserRouter(
   [
     {
       Component: AppRouteRoot,
+      errorElement: createElement(ChunkLoadErrorFallback),
       children: [
         { path: '/', loader: () => redirect('/app/splash') },
         { path: '/app/splash', Component: Splash },

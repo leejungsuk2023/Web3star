@@ -2,7 +2,10 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Capacitor } from '@capacitor/core';
 import App from './app/App.tsx';
+import { installChunkLoadRecovery } from './lib/installChunkLoadRecovery';
 import './styles/index.css';
+
+installChunkLoadRecovery();
 
 if (Capacitor.isNativePlatform()) {
   document.documentElement.classList.add('cap-native');
