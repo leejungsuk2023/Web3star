@@ -60,9 +60,20 @@ export default function AdminLayout() {
       <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#06060a] px-6 text-center">
         <h1 className="text-xl font-semibold text-white">접근 거부</h1>
         <p className="max-w-md text-sm text-gray-400">
-          지금 로그인한 계정은 관리자가 아닙니다. 다른 이메일로 들어왔다면 아래 버튼으로 로그아웃한 뒤, Supabase에서{' '}
-          <code className="rounded bg-gray-800 px-1 text-cyan-300">role = &apos;admin&apos;</code>이 붙은 계정으로 다시
-          로그인하세요.
+          {!profile && !profileLoading ? (
+            <>
+              <strong className="text-gray-200">public.users</strong> 테이블에 이 계정 행이 없을 수 있습니다. Google 로그인만
+              한 경우 자주 발생합니다. Supabase SQL에서{' '}
+              <code className="rounded bg-gray-800 px-1 text-cyan-300">docs/supabase-fix-missing-public-user-admin.sql</code>{' '}
+              를 실행한 뒤 아래에서 권한을 다시 확인하세요.
+            </>
+          ) : (
+            <>
+              지금 로그인한 계정은 관리자가 아닙니다. 다른 이메일로 들어왔다면 아래 버튼으로 로그아웃한 뒤, Supabase에서{' '}
+              <code className="rounded bg-gray-800 px-1 text-cyan-300">role = &apos;admin&apos;</code>이 붙은 계정으로 다시
+              로그인하세요.
+            </>
+          )}
         </p>
         <div className="w-full max-w-md rounded-lg border border-gray-800 bg-[#0f0f18] px-4 py-3 text-left text-xs text-gray-300">
           <div>

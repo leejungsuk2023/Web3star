@@ -54,11 +54,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfileLoading(true);
     try {
       const { data: rpcData, error: rpcError } = await supabase.rpc('get_my_user_row');
-      if (!rpcError && rpcData != null && typeof rpcData === 'object' && !Array.isArray(rpcData)) {
-        const row = rpcData as Record<string, unknown>;
-        const rid = row.id != null ? String(row.id) : '';
+      if (rpcError) {
+        console.error('[Auth] get_my_user_row failed:', rpcError.message, rpcError);
+      }
+
+      const rowFromRpc = ((): Record<string, unknown> | null => {
+        if (rpcData == null) return null;
+        if (typeof rpcData === 'string') {
+          try {
+            const parsed = JSON.parse(rpcData) as unknown;
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              return parsed as Record<string, unknown>;
+            }
+          } catch {
+            return null;
+          }
+          return null;
+        }
+        if (typeof rpcData === 'object' && !Array.isArray(rpcData)) {
+          return rpcData as Record<string, unknown>;
+        }
+        return null;
+      })();
+
+      if (!rpcError && rowFromRpc) {
+        const rid = rowFromRpc.id != null ? String(rowFromRpc.id) : '';
         if (rid === userId) {
-          setProfile(row as unknown as UserProfile);
+          setProfile(rowFromRpc as unknown as UserProfile);
           return;
         }
       }
