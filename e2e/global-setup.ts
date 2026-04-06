@@ -1,41 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
-
-const SUPABASE_URL = 'https://imlmvqpbjuznvprwhkkz.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltbG12cXBianV6bnZwcndoa2t6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMDM4NjksImV4cCI6MjA4NjU3OTg2OX0.Vy1u_IbKEAy5Zhl7R1z58oGlyvfd7JVHO730bMVH71c';
-
-const TEST_EMAIL = 'e2etest@web3star.com';
-const TEST_PASSWORD = 'TestPass1234!';
-const TEST_NICKNAME = 'E2ETester';
-
+/**
+ * Google 전용 로그인 UI 이후 비밀번호로 E2E 로그인을 쓰지 않습니다.
+ * 인증이 필요한 스위트는 스킵되며, 필요 시 storageState·서비스 롤 등으로 별도 구성하세요.
+ */
 export default async function globalSetup() {
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  // 먼저 로그인 시도 (이미 계정 있으면 성공)
-  const { error: loginError } = await supabase.auth.signInWithPassword({
-    email: TEST_EMAIL,
-    password: TEST_PASSWORD,
-  });
-
-  if (!loginError) {
-    console.log('[Global Setup] Test account already exists — login OK');
-    await supabase.auth.signOut();
-    return;
-  }
-
-  // 계정이 없으면 가입
-  const { error: signupError } = await supabase.auth.signUp({
-    email: TEST_EMAIL,
-    password: TEST_PASSWORD,
-    options: {
-      data: { nickname: TEST_NICKNAME },
-    },
-  });
-
-  if (signupError) {
-    console.error('[Global Setup] Signup failed:', signupError.message);
-  } else {
-    console.log('[Global Setup] Test account created successfully');
-  }
-
-  await supabase.auth.signOut();
+  console.log('[Global Setup] Skipped (Google-only auth UI; no password E2E bootstrap).');
 }

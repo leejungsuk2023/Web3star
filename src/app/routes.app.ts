@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { createBrowserRouter, redirect } from 'react-router';
+import { createBrowserRouter, Navigate, redirect } from 'react-router';
 import { adminRouteObject } from './admin/adminRoutes';
 import AppRouteRoot from './components/AppRouteRoot';
 import ChunkLoadErrorFallback from './components/ChunkLoadErrorFallback';
@@ -7,7 +7,6 @@ import Layout from './components/Layout';
 import Home from './pages/Home';
 import Leaderboard from './pages/Leaderboard';
 import Profile from './pages/Profile';
-import Signup from './pages/Signup';
 import Login from './pages/Login';
 import Splash from './pages/Splash';
 import AdMobTest from './pages/AdMobTest';
@@ -27,7 +26,7 @@ export const router = createBrowserRouter(
         { path: '/', loader: () => redirect('/app/splash') },
         { path: '/app/splash', Component: Splash },
         { path: '/app/login', Component: Login },
-        { path: '/app/signup', Component: Signup },
+        { path: '/app/signup', element: createElement(Navigate, { to: '/app/login', replace: true }) },
         { path: '/app/admob-test', Component: AdMobTest },
         ...(import.meta.env.DEV
           ? [
@@ -67,7 +66,7 @@ export const router = createBrowserRouter(
           ],
         },
         { path: '/login', loader: () => redirect('/app/login') },
-        { path: '/signup', loader: () => redirect('/app/signup') },
+        { path: '/signup', element: createElement(Navigate, { to: '/app/login', replace: true }) },
         { path: '/splash', loader: () => redirect('/app/splash') },
         { path: '/leaderboard', loader: () => redirect('/app/leaderboard') },
         { path: '/profile', loader: () => redirect('/app/profile') },

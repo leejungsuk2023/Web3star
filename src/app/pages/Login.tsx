@@ -1,16 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import logoImage from '../../assets/signup-hero-new.png';
 import { useNavigate, useSearchParams } from 'react-router';
-import { toast } from 'sonner';
 import GoogleIcon from '../components/GoogleIcon';
 import { Capacitor } from '@capacitor/core';
-import {
-  supabase,
-  getAuthRedirectUrl,
-  getAuthRedirectUrlWithNext,
-  getPasswordResetRedirectUrl,
-  isLikelyNativePlatform,
-} from '../../lib/supabase';
+import { supabase, getAuthRedirectUrlWithNext, isLikelyNativePlatform } from '../../lib/supabase';
 import { googleNativeIdToken } from '../../lib/socialLogin';
 import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
@@ -25,82 +18,11 @@ import {
   AUTH_PAGE_INNER_CLASS,
   AUTH_PAGE_OUTER_CLASS,
   LOGIN_FOOTER_PB_CLASS,
-  LOGIN_SCROLL_TOP_PT_CLASS,
 } from '../../lib/nativeLayout';
-import { useKeyboardOpen } from '../../lib/useKeyboardOpen';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
-import type { AuthError } from '@supabase/supabase-js';
 
 const TERMS_AGREED_KEY = 'web3star_terms_agreed';
-
-function getLoginErrorMessage(err: AuthError): string {
-  const msg = (err?.message ?? '').toLowerCase();
-  const code = err?.code ?? '';
-  if (
-    code === 'invalid_credentials' ||
-    code === 'invalid_grant' ||
-    msg.includes('invalid login') ||
-    msg.includes('invalid credentials') ||
-    msg.includes('wrong password') ||
-    msg.includes('user not found') ||
-    msg.includes('email address is not valid') ||
-    msg.includes('invalid email')
-  ) {
-    return 'The email or password you entered is incorrect. Please try again.';
-  }
-  if (msg.includes('email not confirmed')) {
-    return 'Please confirm your email address before signing in.';
-  }
-  if (msg.includes('too many requests') || code === 'over_request_rate_limit') {
-    return 'Too many sign-in attempts. Please wait a moment and try again.';
-  }
-  return err.message?.trim() || 'Unable to sign in. Please try again.';
-}
-
-function getResetPasswordErrorMessage(rawMessage: string): string {
-  const msg = (rawMessage ?? '').toLowerCase();
-  if (msg.includes('email rate limit exceeded') || msg.includes('rate limit')) {
-    return 'Too many reset emails were requested. Please wait about 1 minute and try again.';
-  }
-  if (msg.includes('invalid email')) {
-    return 'Please enter a valid email address.';
-  }
-  if (msg.includes('email not confirmed')) {
-    return 'Please confirm your email address first, then try password reset again.';
-  }
-  return rawMessage?.trim() || 'Could not send reset email. Please try again.';
-}
-
-function LoginErrorModal({ isOpen, message, onClose }: { isOpen: boolean; message: string; onClose: () => void }) {
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-[200] overflow-y-auto overscroll-y-contain bg-black/70 px-4 py-6 backdrop-blur-sm [-webkit-overflow-scrolling:touch]"
-      data-modal-scroll-root
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="login-error-title"
-    >
-      <div className="flex min-h-[100dvh] min-h-[100%] w-full items-end justify-center pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:py-8">
-        <div className="w-full max-w-md space-y-4 rounded-2xl border border-gray-700 bg-[#13131e] p-6 shadow-2xl">
-          <h2 id="login-error-title" className="text-center text-lg font-bold text-white">
-            Sign-in failed
-          </h2>
-          <p className="text-center text-sm leading-relaxed text-gray-300">{message}</p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full rounded-lg bg-cyan-500 py-3 text-sm font-semibold text-black transition-all hover:bg-cyan-400"
-          >
-            OK
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function PreAuthModal({
   onConfirm,
@@ -123,262 +45,97 @@ function PreAuthModal({
       data-modal-scroll-root
     >
       <div className="flex min-h-[100dvh] min-h-[100%] w-full items-end justify-center pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:py-8">
-        <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-[#13131e] p-6 shadow-2xl space-y-5">
-        <h2 className="text-white font-bold text-lg text-center">Before you continue</h2>
-        <p className="text-xs text-gray-500 text-center">
-          You can sign in with Google. If you have a referral code, enter it below (optional).
-        </p>
-
-        {/* Referral Code */}
-        <div>
-          <label htmlFor="modal-referral" className="block text-sm text-gray-400 mb-2">
-            Referral code <span className="text-gray-600">(optional)</span>
-          </label>
-          <input
-            id="modal-referral"
-            type="text"
-            value={referralCode}
-            onChange={(e) => setReferralCode(e.target.value)}
-            className="w-full px-4 py-3 bg-[#1a1a24] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors text-sm"
-            placeholder="Enter referral code"
-          />
-        </div>
-
-        {/* Terms */}
-        <div className="space-y-3">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={agreedToTerms}
-              onChange={(e) => setAgreedToTerms(e.target.checked)}
-              className="mt-0.5 w-4 h-4 accent-cyan-400 cursor-pointer flex-shrink-0"
-            />
-            <span className="text-sm text-gray-300">
-              I agree to the{' '}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setIsTermsModalOpen(true);
-                }}
-                className="text-cyan-400 hover:text-cyan-300 underline inline p-0 bg-transparent border-0 cursor-pointer text-sm font-inherit align-baseline"
-              >
-                Terms of Service
-              </button>
-              <span className="text-red-400"> (required)</span>
-            </span>
-          </label>
-
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={agreedToPrivacy}
-              onChange={(e) => setAgreedToPrivacy(e.target.checked)}
-              className="mt-0.5 w-4 h-4 accent-cyan-400 cursor-pointer flex-shrink-0"
-            />
-            <span className="text-sm text-gray-300">
-              I agree to the{' '}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setIsPrivacyPolicyOpen(true);
-                }}
-                className="text-cyan-400 hover:text-cyan-300 underline inline p-0 bg-transparent border-0 cursor-pointer text-sm font-inherit align-baseline"
-              >
-                Privacy Policy
-              </button>
-              <span className="text-red-400"> (required)</span>
-            </span>
-          </label>
-        </div>
-
-        {/* Buttons */}
-        <div className="flex gap-3 pt-1">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-3 border border-gray-700 text-gray-400 hover:text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => {
-              localStorage.setItem(TERMS_AGREED_KEY, 'true');
-              onConfirm(referralCode.trim());
-            }}
-            disabled={!canProceed}
-            className="flex-1 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Agree & continue
-          </button>
-        </div>
-
-        <PrivacyPolicyModal
-          isOpen={isPrivacyPolicyOpen}
-          onClose={() => setIsPrivacyPolicyOpen(false)}
-        />
-        <TermsOfServiceModal
-          isOpen={isTermsModalOpen}
-          onClose={() => setIsTermsModalOpen(false)}
-        />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ResetPasswordModal({
-  isOpen,
-  loading,
-  retryCooldownSec,
-  email,
-  errorMessage,
-  onEmailChange,
-  onClose,
-  onSubmit,
-}: {
-  isOpen: boolean;
-  loading: boolean;
-  retryCooldownSec: number;
-  email: string;
-  errorMessage: string;
-  onEmailChange: (value: string) => void;
-  onClose: () => void;
-  onSubmit: () => void;
-}) {
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain bg-black/70 px-4 py-6 backdrop-blur-sm [-webkit-overflow-scrolling:touch]"
-      data-modal-scroll-root
-    >
-      <div className="flex min-h-[100dvh] min-h-[100%] w-full items-end justify-center pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:py-8">
-        <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-[#13131e] p-6 shadow-2xl space-y-4">
-          <h2 className="text-center text-lg font-bold text-white">Reset password</h2>
+        <div className="w-full max-w-md space-y-5 rounded-2xl border border-gray-700 bg-[#13131e] p-6 shadow-2xl">
+          <h2 className="text-center text-lg font-bold text-white">계속하기 전에</h2>
           <p className="text-center text-xs text-gray-500">
-            Enter your account email. We will send a password reset link.
+            Google로 로그인합니다. 처음 오시는 분도 같은 버튼으로 가입됩니다. 추천 코드가 있으면 입력하세요(선택).
           </p>
 
           <div>
-            <label htmlFor="reset-email" className="mb-2 block text-sm text-gray-400">
-              Email
+            <label htmlFor="modal-referral" className="mb-2 block text-sm text-gray-400">
+              추천 코드 <span className="text-gray-600">(선택)</span>
             </label>
             <input
-              id="reset-email"
-              type="email"
-              value={email}
-              onChange={(e) => onEmailChange(e.target.value)}
+              id="modal-referral"
+              type="text"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value)}
               className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-sm text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
-              placeholder="Enter your email"
-              autoFocus
+              placeholder="추천 코드"
             />
           </div>
-          {errorMessage && (
-            <div
-              role="alert"
-              aria-live="polite"
-              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300"
-            >
-              {errorMessage}
-            </div>
-          )}
 
-          <div className="flex gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-lg border border-gray-700 py-3 text-sm font-medium text-gray-400 transition-colors hover:text-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={loading || retryCooldownSec > 0 || !email.trim()}
-              className="flex-1 rounded-lg bg-cyan-500 py-3 text-sm font-semibold text-black transition-all hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {loading
-                ? 'Sending...'
-                : retryCooldownSec > 0
-                  ? `Retry in ${retryCooldownSec}s`
-                  : 'Send link'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NewPasswordModal({
-  isOpen,
-  loading,
-  password,
-  confirmPassword,
-  onPasswordChange,
-  onConfirmPasswordChange,
-  onClose,
-  onSubmit,
-}: {
-  isOpen: boolean;
-  loading: boolean;
-  password: string;
-  confirmPassword: string;
-  onPasswordChange: (value: string) => void;
-  onConfirmPasswordChange: (value: string) => void;
-  onClose: () => void;
-  onSubmit: () => void;
-}) {
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain bg-black/70 px-4 py-6 backdrop-blur-sm [-webkit-overflow-scrolling:touch]"
-      data-modal-scroll-root
-    >
-      <div className="flex min-h-[100dvh] min-h-[100%] w-full items-end justify-center pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:py-8">
-        <div className="w-full max-w-md space-y-4 rounded-2xl border border-gray-700 bg-[#13131e] p-6 shadow-2xl">
-          <h2 className="text-center text-lg font-bold text-white">Set new password</h2>
-          <p className="text-center text-xs text-gray-500">
-            Enter your new password to finish account recovery.
-          </p>
           <div className="space-y-3">
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => onPasswordChange(e.target.value)}
-              className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-sm text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
-              placeholder="New password (min 8 chars)"
-              autoFocus
-            />
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => onConfirmPasswordChange(e.target.value)}
-              className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-sm text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
-              placeholder="Confirm new password"
-            />
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer accent-cyan-400"
+              />
+              <span className="text-sm text-gray-300">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsTermsModalOpen(true);
+                  }}
+                  className="inline cursor-pointer border-0 bg-transparent p-0 align-baseline text-sm font-inherit text-cyan-400 underline hover:text-cyan-300"
+                >
+                  이용약관
+                </button>
+                에 동의합니다 <span className="text-red-400">(필수)</span>
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={agreedToPrivacy}
+                onChange={(e) => setAgreedToPrivacy(e.target.checked)}
+                className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer accent-cyan-400"
+              />
+              <span className="text-sm text-gray-300">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsPrivacyPolicyOpen(true);
+                  }}
+                  className="inline cursor-pointer border-0 bg-transparent p-0 align-baseline text-sm font-inherit text-cyan-400 underline hover:text-cyan-300"
+                >
+                  개인정보 처리방침
+                </button>
+                에 동의합니다 <span className="text-red-400">(필수)</span>
+              </span>
+            </label>
           </div>
+
           <div className="flex gap-3 pt-1">
             <button
               type="button"
-              onClick={onClose}
+              onClick={onCancel}
               className="flex-1 rounded-lg border border-gray-700 py-3 text-sm font-medium text-gray-400 transition-colors hover:text-white"
             >
-              Cancel
+              취소
             </button>
             <button
               type="button"
-              onClick={onSubmit}
-              disabled={loading || !password.trim() || !confirmPassword.trim()}
+              onClick={() => {
+                localStorage.setItem(TERMS_AGREED_KEY, 'true');
+                onConfirm(referralCode.trim());
+              }}
+              disabled={!canProceed}
               className="flex-1 rounded-lg bg-cyan-500 py-3 text-sm font-semibold text-black transition-all hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {loading ? 'Saving...' : 'Update'}
+              동의하고 계속
             </button>
           </div>
+
+          <PrivacyPolicyModal isOpen={isPrivacyPolicyOpen} onClose={() => setIsPrivacyPolicyOpen(false)} />
+          <TermsOfServiceModal isOpen={isTermsModalOpen} onClose={() => setIsTermsModalOpen(false)} />
         </div>
       </div>
     </div>
@@ -390,48 +147,11 @@ export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const loginNext = searchParams.get('next');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  const [loginErrorModalOpen, setLoginErrorModalOpen] = useState(false);
-  const [loginErrorModalMessage, setLoginErrorModalMessage] = useState('');
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetErrorMessage, setResetErrorMessage] = useState('');
-  const [resetRetryCooldownSec, setResetRetryCooldownSec] = useState(0);
-  const [isNewPasswordModalOpen, setIsNewPasswordModalOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [recoveryFlowActive, setRecoveryFlowActive] = useState(false);
-  const isKeyboardOpen = useKeyboardOpen();
 
   useEffect(() => attachAuthKeyboardScroll(), []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-      if (authError) {
-        setLoginErrorModalMessage(getLoginErrorMessage(authError));
-        setLoginErrorModalOpen(true);
-        return;
-      }
-      navigate(getSafePostLoginPath(loginNext));
-    } catch (e: any) {
-      const message =
-        typeof e?.message === 'string' && e.message.trim()
-          ? e.message
-          : 'Unable to sign in right now. Please try again.';
-      setLoginErrorModalMessage(message);
-      setLoginErrorModalOpen(true);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const proceedGoogleLogin = async (referralCode = '') => {
     setLoading(true);
@@ -463,7 +183,6 @@ export default function Login() {
       if (referralCode.trim()) {
         sessionStorage.setItem('pending_referral_code', referralCode.trim());
       }
-      // OAuth로 이동하면 원래 URL query(`next`)가 사라질 수 있어, 로그인 완료 후 경로 복구용으로 저장합니다.
       if (loginNext) {
         writeStoredPendingNext(loginNext);
       }
@@ -479,20 +198,19 @@ export default function Login() {
       if (data?.url) {
         const authUrl = new URL(data.url);
         const returnedRedirectTo = authUrl.searchParams.get('redirect_to');
-        // 배포(예: GitHub Pages)에서 실수로 localhost redirect가 잡히면 막음. 로컬 npm run dev 에서는 정상.
         const blockLocalhostRedirect =
           Boolean(returnedRedirectTo?.includes('localhost')) && !import.meta.env.DEV;
         if (blockLocalhostRedirect) {
           setError(
-            `OAuth misconfiguration detected: Supabase returned localhost redirect (${returnedRedirectTo}). ` +
-              `Check Supabase Auth URL config (Site URL + Redirect URLs) for GitHub Pages.`,
+            `OAuth 설정 오류: Supabase가 localhost로 리다이렉트합니다 (${returnedRedirectTo}). ` +
+              `GitHub Pages용 Site URL·Redirect URL을 확인하세요.`,
           );
           return;
         }
         window.location.href = data.url;
       }
-    } catch (e: any) {
-      setError(e?.message ?? 'Google login failed');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Google 로그인에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -500,8 +218,6 @@ export default function Login() {
 
   const handleGoogleLogin = () => {
     if (loading) return;
-    // Some Android devices may restore WebView/localStorage after reinstall.
-    // Always show pre-auth modal on native to avoid stale "agreed" flags skipping referral/consent UI.
     if (isLikelyNativePlatform()) {
       setShowModal(true);
       return;
@@ -509,119 +225,21 @@ export default function Login() {
 
     const alreadyAgreed = localStorage.getItem(TERMS_AGREED_KEY) === 'true';
     if (alreadyAgreed) {
-      proceedGoogleLogin();
+      void proceedGoogleLogin();
       return;
     }
     setShowModal(true);
   };
 
-  const handlePasswordReset = async () => {
-    const targetEmail = resetEmail.trim();
-    if (!targetEmail) {
-      setResetErrorMessage('Please enter your email first.');
-      return;
-    }
-    if (resetRetryCooldownSec > 0) {
-      setResetErrorMessage(`Please wait ${resetRetryCooldownSec}s and try again.`);
-      return;
-    }
-    setResetErrorMessage('');
-    setLoading(true);
-    setError('');
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(targetEmail, {
-      redirectTo: getPasswordResetRedirectUrl(),
-    });
-    setLoading(false);
-
-    if (resetError) {
-      const msg = getResetPasswordErrorMessage(resetError.message ?? '');
-      setResetErrorMessage(msg);
-      toast.error(msg);
-      if ((resetError.message ?? '').toLowerCase().includes('rate limit')) {
-        setResetRetryCooldownSec(60);
-      }
-      return;
-    }
-
-    toast.success('Password reset email sent. Check your inbox.');
-    setResetErrorMessage('');
-    setResetRetryCooldownSec(0);
-    setIsResetModalOpen(false);
-  };
-
-  useEffect(() => {
-    if (resetRetryCooldownSec <= 0) return;
-    const t = window.setTimeout(() => setResetRetryCooldownSec((s) => s - 1), 1000);
-    return () => window.clearTimeout(t);
-  }, [resetRetryCooldownSec]);
-
-  const handleUpdateRecoveredPassword = async () => {
-    const pw = newPassword.trim();
-    const pw2 = confirmNewPassword.trim();
-    if (pw.length < 8) {
-      setError('Password must be at least 8 characters.');
-      return;
-    }
-    if (pw !== pw2) {
-      setError('Passwords do not match.');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    const { error: updateError } = await supabase.auth.updateUser({ password: pw });
-    setLoading(false);
-    if (updateError) {
-      setError(updateError.message);
-      return;
-    }
-
-    toast.success('Password updated. Please sign in with your new password.');
-    setIsNewPasswordModalOpen(false);
-    setNewPassword('');
-    setConfirmNewPassword('');
-    setRecoveryFlowActive(false);
-  };
-
   React.useEffect(() => {
     if (authLoading) return;
-    if (recoveryFlowActive) return;
     if (user) {
       const pendingNext = readStoredPendingNext();
       clearStoredPendingNext();
       const effectiveNext = loginNext ?? pendingNext;
       navigate(getSafePostLoginPath(effectiveNext), { replace: true });
     }
-  }, [authLoading, recoveryFlowActive, user, navigate, loginNext]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const search = new URLSearchParams(window.location.search);
-    if (search.get('recovery') === '1') {
-      setRecoveryFlowActive(true);
-      setIsNewPasswordModalOpen(true);
-      return;
-    }
-    const hash = window.location.hash || '';
-    const params = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
-    const type = params.get('type');
-    const accessToken = params.get('access_token');
-    if (type === 'recovery' && accessToken) {
-      setRecoveryFlowActive(true);
-      setIsNewPasswordModalOpen(true);
-      window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
-  }, []);
-
-  useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setRecoveryFlowActive(true);
-        setIsNewPasswordModalOpen(true);
-      }
-    });
-    return () => data.subscription.unsubscribe();
-  }, []);
+  }, [authLoading, user, navigate, loginNext]);
 
   return (
     <div className={AUTH_PAGE_OUTER_CLASS}>
@@ -630,170 +248,63 @@ export default function Login() {
           <div
             data-auth-scroll-root
             className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
-            style={{ paddingBottom: isKeyboardOpen ? 12 : 0 }}
           >
             <div className="flex min-h-full flex-col px-6 pt-[max(1rem,env(safe-area-inset-top,24px))]">
-              {/* Center block: logo, Google, email/password (space-y keeps fields tight) */}
-              <div className="flex flex-1 flex-col items-center justify-center space-y-8">
+              <div className="flex flex-1 flex-col items-center justify-center space-y-6 pb-8">
                 <div className="flex w-full flex-col items-center">
                   <img
                     src={logoImage}
                     alt="Web3Star Logo"
-                    className="mb-4 w-full mix-blend-screen opacity-90"
+                    className="mb-2 w-full mix-blend-screen opacity-90"
                   />
                 </div>
+
+                <p className="max-w-sm text-center text-sm text-gray-400">
+                  Google 계정 하나로 로그인·가입이 모두 처리됩니다. 이메일·비밀번호 가입은 사용하지 않습니다.
+                </p>
 
                 {error && (
                   <div
                     role="alert"
                     aria-live="polite"
-                    className="w-full rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-center text-sm text-red-400"
+                    className="w-full max-w-md rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-center text-sm text-red-400"
                   >
                     {error}
                   </div>
                 )}
 
-                <div className="w-full space-y-4">
-                  <form id="login-form" onSubmit={handleSubmit} className="space-y-4">
-                    <button
-                      type="button"
-                      onClick={handleGoogleLogin}
-                      disabled={loading}
-                      className="flex w-full items-center justify-center gap-3 rounded-lg bg-white px-6 py-3.5 font-semibold text-gray-800 shadow-lg transition-all duration-200 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <GoogleIcon className="h-5 w-5" />
-                      Continue with Google
-                    </button>
-
-                    <div className="my-4 flex items-center gap-4">
-                      <div className="h-px flex-1 bg-gray-800" />
-                      <span className="text-sm text-gray-500">or</span>
-                      <div className="h-px flex-1 bg-gray-800" />
-                    </div>
-
-                    <div>
-                      <label htmlFor="email" className="mb-2 block text-sm text-gray-400">
-                        Email
-                      </label>
-                      <input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
-                        placeholder="Enter your email"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="password" className="mb-2 block text-sm text-gray-400">
-                        Password
-                      </label>
-                      <input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
-                        placeholder="Enter your password"
-                        required
-                      />
-                    </div>
-                  </form>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                  className="flex w-full max-w-md items-center justify-center gap-3 rounded-lg bg-white px-6 py-3.5 font-semibold text-gray-800 shadow-lg transition-all duration-200 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <GoogleIcon className="h-5 w-5" />
+                  {loading ? '연결 중…' : 'Google로 계속하기'}
+                </button>
               </div>
             </div>
           </div>
 
-          {!isKeyboardOpen && (
-            <div
-              className={`mt-auto w-full shrink-0 space-y-4 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-6 pt-4 backdrop-blur ${LOGIN_FOOTER_PB_CLASS}`}
-            >
-              {Capacitor.isNativePlatform() && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/app/admob-test')}
-                  className="mb-1 w-full text-center text-xs text-gray-500 transition-colors hover:text-gray-300"
-                >
-                  AdMob Test (Android/iOS)
-                </button>
-              )}
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <button
-                  type="submit"
-                  form="login-form"
-                  disabled={loading}
-                  className="w-full rounded-lg bg-cyan-500 px-4 py-3 font-semibold text-black shadow-[0_0_20px_rgba(34,211,238,0.3)] transition-all duration-200 hover:bg-cyan-400 hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {loading ? 'Logging in...' : 'Login'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/app/signup')}
-                  className="w-full rounded-lg border border-cyan-500/50 px-4 py-3 font-semibold text-cyan-300 transition-colors hover:border-cyan-400 hover:text-cyan-200"
-                >
-                  Sign Up
-                </button>
-              </div>
-
+          <div
+            className={`mt-auto w-full shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-6 pt-4 backdrop-blur ${LOGIN_FOOTER_PB_CLASS}`}
+          >
+            {Capacitor.isNativePlatform() && (
               <button
                 type="button"
-                onClick={() => {
-                  setResetEmail(email);
-                  setResetErrorMessage('');
-                  setResetRetryCooldownSec(0);
-                  setIsResetModalOpen(true);
-                }}
-                className="w-full text-center text-sm text-gray-400 transition-colors hover:text-cyan-400"
+                onClick={() => navigate('/app/admob-test')}
+                className="mb-3 w-full text-center text-xs text-gray-500 transition-colors hover:text-gray-300"
               >
-                Forgot Password?
+                AdMob Test (Android/iOS)
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Pre-auth modal */}
       {showModal && (
-        <PreAuthModal
-          onConfirm={(code) => proceedGoogleLogin(code)}
-          onCancel={() => setShowModal(false)}
-        />
+        <PreAuthModal onConfirm={(code) => void proceedGoogleLogin(code)} onCancel={() => setShowModal(false)} />
       )}
-      <ResetPasswordModal
-        isOpen={isResetModalOpen}
-        loading={loading}
-        retryCooldownSec={resetRetryCooldownSec}
-        email={resetEmail}
-        errorMessage={resetErrorMessage}
-        onEmailChange={setResetEmail}
-        onClose={() => {
-          setIsResetModalOpen(false);
-          setResetErrorMessage('');
-          setResetRetryCooldownSec(0);
-        }}
-        onSubmit={handlePasswordReset}
-      />
-      <LoginErrorModal
-        isOpen={loginErrorModalOpen}
-        message={loginErrorModalMessage}
-        onClose={() => setLoginErrorModalOpen(false)}
-      />
-      <NewPasswordModal
-        isOpen={isNewPasswordModalOpen}
-        loading={loading}
-        password={newPassword}
-        confirmPassword={confirmNewPassword}
-        onPasswordChange={setNewPassword}
-        onConfirmPasswordChange={setConfirmNewPassword}
-        onClose={() => {
-          setIsNewPasswordModalOpen(false);
-          setRecoveryFlowActive(false);
-        }}
-        onSubmit={handleUpdateRecoveredPassword}
-      />
     </div>
   );
 }

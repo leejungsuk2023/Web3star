@@ -1,10 +1,9 @@
 import { createElement } from 'react';
-import { createBrowserRouter, redirect } from 'react-router';
+import { createBrowserRouter, Navigate, redirect } from 'react-router';
 import { adminRouteObject } from './admin/adminRoutes';
 import ChunkLoadErrorFallback from './components/ChunkLoadErrorFallback';
 import WebMarketingRouteRoot from './components/WebMarketingRouteRoot';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
 
 const routerBase = import.meta.env.BASE_URL;
 
@@ -22,9 +21,9 @@ export const router = createBrowserRouter(
           lazy: () => import('./pages/Homepage').then((m) => ({ Component: m.default })),
         },
         { path: '/app/login', Component: Login },
-        { path: '/app/signup', Component: Signup },
+        { path: '/app/signup', element: createElement(Navigate, { to: '/app/login', replace: true }) },
         { path: '/login', loader: () => redirect('/app/login') },
-        { path: '/signup', loader: () => redirect('/app/signup') },
+        { path: '/signup', element: createElement(Navigate, { to: '/app/login', replace: true }) },
         { path: '/app/splash', loader: () => redirect('/app/login') },
         { path: '/app/admob-test', loader: () => redirect('/') },
         { path: '/app', loader: () => redirect('/?app=1') },

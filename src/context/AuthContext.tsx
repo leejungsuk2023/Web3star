@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
-  // Web Google OAuth: Signup/Login stores referral code before redirect; apply after session exists.
+  // Web Google OAuth: 로그인 직전에 referral 코드를 sessionStorage에 두고, 세션 생기면 적용.
   useEffect(() => {
     if (!user?.id) return;
     const code = sessionStorage.getItem('pending_referral_code');
