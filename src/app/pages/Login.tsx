@@ -46,14 +46,15 @@ function PreAuthModal({
     >
       <div className="flex min-h-[100dvh] min-h-[100%] w-full items-end justify-center pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:py-8">
         <div className="w-full max-w-md space-y-5 rounded-2xl border border-gray-700 bg-[#13131e] p-6 shadow-2xl">
-          <h2 className="text-center text-lg font-bold text-white">계속하기 전에</h2>
+          <h2 className="text-center text-lg font-bold text-white">Before you continue</h2>
           <p className="text-center text-xs text-gray-500">
-            Google로 로그인합니다. 처음 오시는 분도 같은 버튼으로 가입됩니다. 추천 코드가 있으면 입력하세요(선택).
+            Sign in with Google. New accounts are created automatically. If you have a referral code, enter it below
+            (optional).
           </p>
 
           <div>
             <label htmlFor="modal-referral" className="mb-2 block text-sm text-gray-400">
-              추천 코드 <span className="text-gray-600">(선택)</span>
+              Referral code <span className="text-gray-600">(optional)</span>
             </label>
             <input
               id="modal-referral"
@@ -61,7 +62,7 @@ function PreAuthModal({
               value={referralCode}
               onChange={(e) => setReferralCode(e.target.value)}
               className="w-full rounded-lg border border-gray-800 bg-[#1a1a24] px-4 py-3 text-sm text-white placeholder-gray-600 transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
-              placeholder="추천 코드"
+              placeholder="Enter referral code"
             />
           </div>
 
@@ -74,6 +75,7 @@ function PreAuthModal({
                 className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer accent-cyan-400"
               />
               <span className="text-sm text-gray-300">
+                I agree to the{' '}
                 <button
                   type="button"
                   onClick={(e) => {
@@ -83,9 +85,9 @@ function PreAuthModal({
                   }}
                   className="inline cursor-pointer border-0 bg-transparent p-0 align-baseline text-sm font-inherit text-cyan-400 underline hover:text-cyan-300"
                 >
-                  이용약관
+                  Terms of Service
                 </button>
-                에 동의합니다 <span className="text-red-400">(필수)</span>
+                <span className="text-red-400"> (required)</span>
               </span>
             </label>
 
@@ -97,6 +99,7 @@ function PreAuthModal({
                 className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer accent-cyan-400"
               />
               <span className="text-sm text-gray-300">
+                I agree to the{' '}
                 <button
                   type="button"
                   onClick={(e) => {
@@ -106,9 +109,9 @@ function PreAuthModal({
                   }}
                   className="inline cursor-pointer border-0 bg-transparent p-0 align-baseline text-sm font-inherit text-cyan-400 underline hover:text-cyan-300"
                 >
-                  개인정보 처리방침
+                  Privacy Policy
                 </button>
-                에 동의합니다 <span className="text-red-400">(필수)</span>
+                <span className="text-red-400"> (required)</span>
               </span>
             </label>
           </div>
@@ -119,7 +122,7 @@ function PreAuthModal({
               onClick={onCancel}
               className="flex-1 rounded-lg border border-gray-700 py-3 text-sm font-medium text-gray-400 transition-colors hover:text-white"
             >
-              취소
+              Cancel
             </button>
             <button
               type="button"
@@ -130,7 +133,7 @@ function PreAuthModal({
               disabled={!canProceed}
               className="flex-1 rounded-lg bg-cyan-500 py-3 text-sm font-semibold text-black transition-all hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              동의하고 계속
+              Agree & continue
             </button>
           </div>
 
@@ -202,15 +205,15 @@ export default function Login() {
           Boolean(returnedRedirectTo?.includes('localhost')) && !import.meta.env.DEV;
         if (blockLocalhostRedirect) {
           setError(
-            `OAuth 설정 오류: Supabase가 localhost로 리다이렉트합니다 (${returnedRedirectTo}). ` +
-              `GitHub Pages용 Site URL·Redirect URL을 확인하세요.`,
+            `OAuth misconfiguration: Supabase returned a localhost redirect (${returnedRedirectTo}). ` +
+              `Check Site URL and Redirect URLs in Supabase Auth (e.g. for GitHub Pages).`,
           );
           return;
         }
         window.location.href = data.url;
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Google 로그인에 실패했습니다.');
+      setError(e instanceof Error ? e.message : 'Google sign-in failed.');
     } finally {
       setLoading(false);
     }
@@ -260,7 +263,7 @@ export default function Login() {
                 </div>
 
                 <p className="max-w-sm text-center text-sm text-gray-400">
-                  Google 계정 하나로 로그인·가입이 모두 처리됩니다. 이메일·비밀번호 가입은 사용하지 않습니다.
+                  Sign in or create an account with Google. Email and password sign-in is not available.
                 </p>
 
                 {error && (
@@ -280,7 +283,7 @@ export default function Login() {
                   className="flex w-full max-w-md items-center justify-center gap-3 rounded-lg bg-white px-6 py-3.5 font-semibold text-gray-800 shadow-lg transition-all duration-200 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <GoogleIcon className="h-5 w-5" />
-                  {loading ? '연결 중…' : 'Google로 계속하기'}
+                  {loading ? 'Connecting…' : 'Continue with Google'}
                 </button>
               </div>
             </div>
