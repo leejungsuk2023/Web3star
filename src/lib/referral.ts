@@ -1,5 +1,8 @@
 import { supabase } from './supabase';
 
+/** Supabase에 배포해야 추천인·피추천인 양쪽 +100이 RLS 없이 보장됨 */
+export const REFERRAL_RPC_SQL_DOC = 'docs/supabase-apply-referral-rewards.sql';
+
 export const REFERRAL_BONUS = 100;
 
 export const REFERRAL_MILESTONES = [
@@ -304,7 +307,9 @@ async function applyReferralRewardsViaRest(
     console.error('Referral: update referrer affected 0 rows (RLS)');
     return {
       ok: false,
-      message: 'Could not credit the referrer. Please contact support.',
+      message:
+        `Could not credit the referrer (+${REFERRAL_BONUS} pts). ` +
+        `Deploy RPC apply_referral_rewards from ${REFERRAL_RPC_SQL_DOC} in Supabase so both parties are credited.`,
     };
   }
 
@@ -423,7 +428,11 @@ export async function applyReferralRewards(
   }
 
   if (rpcError && isRpcUnavailable(rpcError)) {
-    console.warn('[referral] RPC unavailable, using REST fallback:', rpcError?.message);
+    console.warn(
+      '[referral] RPC apply_referral_rewards missing or stale; REST fallback may not credit referrer under RLS. Run',
+      REFERRAL_RPC_SQL_DOC,
+      rpcError?.message,
+    );
   }
 
   const res = await applyReferralRewardsViaRest(newUserId, rawCode);
