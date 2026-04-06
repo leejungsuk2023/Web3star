@@ -775,3 +775,28 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.admin_mining_top_miners(int) TO authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 17) 본인 users 행 조회 (RLS로 직접 SELECT가 막혀도 role 등 로드)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_my_user_row()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  uid uuid := auth.uid();
+  j jsonb;
+BEGIN
+  IF uid IS NULL THEN
+    RETURN NULL;
+  END IF;
+  SELECT to_jsonb(u.*) INTO j FROM public.users u WHERE u.id = uid;
+  RETURN j;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_my_user_row() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_my_user_row() TO authenticated;

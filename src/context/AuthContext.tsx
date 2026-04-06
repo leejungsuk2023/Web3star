@@ -52,6 +52,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = useCallback(async (userId: string) => {
     setProfileLoading(true);
     try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_my_user_row');
+      if (!rpcError && rpcData != null && typeof rpcData === 'object' && !Array.isArray(rpcData)) {
+        const row = rpcData as Record<string, unknown>;
+        const rid = row.id != null ? String(row.id) : '';
+        if (rid === userId) {
+          setProfile(row as unknown as UserProfile);
+          return;
+        }
+      }
+
       const { data, error } = await supabase
         .from('users')
         .select('*')
