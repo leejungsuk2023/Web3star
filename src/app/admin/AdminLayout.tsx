@@ -50,13 +50,19 @@ export default function AdminLayout() {
   }
 
   if (profile?.role !== 'admin') {
+    const loginWithAdminNext = `/app/login?next=${encodeURIComponent('/admin')}`;
+    const signOutAndGoLogin = async () => {
+      await supabase.auth.signOut();
+      navigate(loginWithAdminNext, { replace: true });
+    };
+
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#06060a] px-6 text-center">
         <h1 className="text-xl font-semibold text-white">접근 거부</h1>
         <p className="max-w-md text-sm text-gray-400">
-          관리자 권한이 있는 계정만 이 영역을 사용할 수 있습니다. SQL로 본인 계정에{' '}
-          <code className="rounded bg-gray-800 px-1 text-cyan-300">role = &apos;admin&apos;</code>을 설정했는지
-          확인하세요.
+          지금 로그인한 계정은 관리자가 아닙니다. 다른 이메일로 들어왔다면 아래 버튼으로 로그아웃한 뒤, Supabase에서{' '}
+          <code className="rounded bg-gray-800 px-1 text-cyan-300">role = &apos;admin&apos;</code>이 붙은 계정으로 다시
+          로그인하세요.
         </p>
         <div className="w-full max-w-md rounded-lg border border-gray-800 bg-[#0f0f18] px-4 py-3 text-left text-xs text-gray-300">
           <div>
@@ -72,22 +78,31 @@ export default function AdminLayout() {
             <span className="font-mono text-gray-200">{profile?.account_status ?? '—'}</span>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={async () => {
-            await refreshProfile();
-          }}
-          className="rounded-lg border border-gray-600 px-4 py-2 text-sm text-white hover:bg-white/5"
-        >
-          권한 다시 확인
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="rounded-lg border border-gray-600 px-4 py-2 text-sm text-white hover:bg-white/5"
-        >
-          홈으로
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+          <button
+            type="button"
+            onClick={() => void signOutAndGoLogin()}
+            className="rounded-lg bg-cyan-600 px-5 py-2.5 text-sm font-medium text-black hover:bg-cyan-500"
+          >
+            로그아웃 후 관리자 계정으로 로그인
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              await refreshProfile();
+            }}
+            className="rounded-lg border border-gray-600 px-4 py-2 text-sm text-white hover:bg-white/5"
+          >
+            권한 다시 확인
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="rounded-lg border border-gray-600 px-4 py-2 text-sm text-white hover:bg-white/5"
+          >
+            홈으로
+          </button>
+        </div>
       </div>
     );
   }
