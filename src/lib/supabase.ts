@@ -77,6 +77,27 @@ export function getAuthRedirectUrl(): string {
   return redirectUrl;
 }
 
+/**
+ * Google OAuth `redirectTo`. 웹에서 구글 복귀 시 URL에 `?next=`가 없으면 세션/스토리지가 비는 환경에서
+ * 로그인 직후 `/?app=1`(소개 페이지)로만 가는 문제가 납니다. `loginRedirect.getSafePostLoginPath`와 동일하게 `/admin`만 허용.
+ */
+export function getAuthRedirectUrlWithNext(nextParam: string | null | undefined): string {
+  const base = getAuthRedirectUrl();
+  if (isLikelyNativePlatform()) return base;
+  if (!nextParam?.trim()) return base;
+  const t = nextParam.trim();
+  if (!t.startsWith('/')) return base;
+  if (t.startsWith('//') || t.includes('://')) return base;
+  if (!t.startsWith('/admin')) return base;
+  try {
+    const u = new URL(base);
+    u.searchParams.set('next', t);
+    return u.toString();
+  } catch {
+    return base;
+  }
+}
+
 /** Password recovery redirect: native deep-link first, web fallback keeps recovery modal open. */
 export function getPasswordResetRedirectUrl(): string {
   if (isLikelyNativePlatform()) {

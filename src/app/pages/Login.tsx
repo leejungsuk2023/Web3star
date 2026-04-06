@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import {
   supabase,
   getAuthRedirectUrl,
+  getAuthRedirectUrlWithNext,
   getPasswordResetRedirectUrl,
   isLikelyNativePlatform,
 } from '../../lib/supabase';
@@ -488,7 +489,7 @@ export default function Login() {
         localStorage.setItem(PENDING_NEXT_KEY, loginNext);
         setPendingNextCookie(loginNext);
       }
-      const computedRedirect = getAuthRedirectUrl();
+      const computedRedirect = getAuthRedirectUrlWithNext(loginNext);
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: computedRedirect },
