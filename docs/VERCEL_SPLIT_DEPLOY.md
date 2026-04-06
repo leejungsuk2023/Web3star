@@ -50,6 +50,14 @@ In homepage CTA buttons, link users to:
 
 - `https://app.web3star.org/app/login` (or `/app/login` if same domain)
 
+## GitHub Pages + custom domain (e.g. web3star.org)
+
+The default Pages build uses Vite **`base: /`**. That matches a **custom domain at the site root**.
+
+If you only use **`https://<user>.github.io/<RepositoryName>/`**, set a repository **Actions variable** named **`PAGES_BASE`** to your project path with slashes, e.g. **`/Web3star/`**, so asset URLs resolve correctly.
+
+Without the right `base`, the HTML will request `/Web3star/assets/...` while the domain serves files at `/assets/...` → **blank site and `/admin` not working**.
+
 ## Notes
 
 - Existing legacy links `/login`, `/signup`, `/splash` auto-redirect to `/app/*`.
