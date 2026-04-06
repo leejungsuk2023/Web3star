@@ -43,12 +43,14 @@ jobs:
       - name: Regenerate PWA & maskable icons from source PNG
         run: npm run icons:generate
 
+      # GitHub Pages 프로젝트 사이트 기본 URL: https://<user>.github.io/<repo>/
+      # → Vite base는 반드시 /Web3star/ 처럼 저장소 이름과 맞아야 JS/CSS가 로드됩니다.
+      # 커스텀 도메인 루트만 쓰는 경우: Repo → Settings → Variables → VITE_BASE_PATH 를 "/" 로 설정.
       - name: Build web app
         run: npm run build
         env:
           VITE_DEPLOY_TARGET: web
-          # Custom domain (web3star.org) is served at site root; /Web3star/ breaks asset URLs.
-          VITE_BASE_PATH: '/'
+          VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH || '/Web3star/' }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_OAUTH_CALLBACK_URL: ${{ secrets.VITE_OAUTH_CALLBACK_URL }}
