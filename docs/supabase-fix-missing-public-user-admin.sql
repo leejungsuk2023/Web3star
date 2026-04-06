@@ -14,7 +14,7 @@
 -- SELECT id, email, role, account_status FROM public.users WHERE email ILIKE 'coolhumvee@gmail.com';
 
 -- 1) public.users 에 행이 없으면 auth.users 기준으로 생성
---    (invite_code 는 id 기반으로 유니크하게 잡음 — 기존 앱 규칙과 다르면 닉네임/코드만 조정)
+--    invite_code 는 UUID 기반(기존 행과 충돌 거의 없음). 실행 후 "1 row" / RETURNING 행이 나와야 정상.
 INSERT INTO public.users (
   id,
   email,
@@ -36,7 +36,7 @@ SELECT
     'user'
   ) AS nickname,
   0,
-  lower('w3s' || substr(replace(au.id::text, '-', ''), 1, 12)) AS invite_code,
+  lower(replace(gen_random_uuid()::text, '-', '')) AS invite_code,
   NULL,
   NULL,
   '[]'::jsonb,
@@ -44,10 +44,11 @@ SELECT
 FROM auth.users au
 WHERE au.email ILIKE 'coolhumvee@gmail.com'
   AND NOT EXISTS (SELECT 1 FROM public.users p WHERE p.id = au.id)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING
+RETURNING id, email, invite_code;
 
--- invite_code 충돌 시(극히 드묾): 위 INSERT 가 실패하면 아래로 코드만 바꿔 재시도
--- invite_code 를 예: lower('w3s' || substr(md5(au.id::text), 1, 14)) 등으로 변경
+-- INSERT 가 "0 rows" 면: 이미 public.users 에 같은 id 가 있음 → 2번 UPDATE 만 필요
+-- INSERT 가 에러면: 메시지를 그대로 복사해 확인 (NOT NULL 컬럼 더 있으면 아래 주석 참고)
 
 -- 2) 관리자 지정 (SQL Editor 는 JWT 없음 → 트리거가 대시보드 실행은 허용하는 버전이어야 함)
 UPDATE public.users
@@ -60,3 +61,11 @@ WHERE email ILIKE 'coolhumvee@gmail.com';
 -- SELECT id, email, role, account_status FROM public.users WHERE email ILIKE 'coolhumvee@gmail.com';
 
 -- 4) 앱에서 "권한 다시 확인" 또는 로그아웃 후 재로그인
+--
+-- =============================================================================
+-- 그래도 화면에 role 이 "—" 이면
+-- =============================================================================
+-- • 웹앱이 붙는 프로젝트와, 지금 SQL 을 돌리는 Supabase 프로젝트가 같은지 확인하세요.
+--   (GitHub Actions 시크릿 / 로컬 .env 의 VITE_SUPABASE_URL 호스트가 대시보드 URL 과 동일한지)
+-- • 브라우저 개발자도구(F12) → Console 에 [Auth] get_my_user_row failed 가 있는지 확인.
+--   있으면 SQL Editor 에서 docs/supabase-auth-profile-rpc.sql 전체를 한 번 실행해 RPC 를 만드세요.
