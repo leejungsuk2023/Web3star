@@ -11,8 +11,9 @@ import Login from './pages/Login';
 import Splash from './pages/Splash';
 import AdMobTest from './pages/AdMobTest';
 import ProtectedRoute from '../components/ProtectedRoute';
+import { viteRouterBasename } from '../lib/routerBasename';
 
-const routerBase = import.meta.env.BASE_URL;
+const routerBase = viteRouterBasename();
 
 /**
  * Capacitor APK용: 스플래시·마이닝·프로필 등 본 앱. 마케팅 Homepage 라우트 없음.

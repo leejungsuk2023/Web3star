@@ -4,8 +4,9 @@ import { adminRouteObject } from './admin/adminRoutes';
 import ChunkLoadErrorFallback from './components/ChunkLoadErrorFallback';
 import WebMarketingRouteRoot from './components/WebMarketingRouteRoot';
 import Login from './pages/Login';
+import { viteRouterBasename } from '../lib/routerBasename';
 
-const routerBase = import.meta.env.BASE_URL;
+const routerBase = viteRouterBasename();
 
 /**
  * GitHub Pages 등 웹 배포용: 랜딩(소개) + 로그인/가입만. /app 본 기능 라우트 없음.

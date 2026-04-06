@@ -25,6 +25,9 @@ $env:Path = "$env:JAVA_HOME\bin;$env:Path"
 # Force Vite deploy target for APK builds.
 # (Other terminal sessions may leave `VITE_DEPLOY_TARGET=web` in environment, which breaks the APK routing.)
 $env:VITE_DEPLOY_TARGET = 'app'
+# GitHub Pages용으로 켜 둔 VITE_BASE_PATH=/Web3star/ 가 남아 있으면 APK index.html이 /Web3star/assets/... 를
+# 가리켜 Capacitor localhost에서 404 → 흰 화면이 난다. 앱 빌드 전에 루트로 고정.
+$env:VITE_BASE_PATH = '/'
 
 npm run build:app
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
