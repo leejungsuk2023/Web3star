@@ -129,7 +129,8 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = () => {
+  /** 신규 가입 흐름: 약관 필수 + 입력한 추천코드(있으면)를 OAuth 직전에 붙임 */
+  const handleGoogleSignUp = () => {
     if (loading || !canProceed) return;
     try {
       localStorage.setItem(TERMS_AGREED_KEY, 'true');
@@ -137,6 +138,12 @@ export default function Login() {
       /* ignore */
     }
     void proceedGoogleLogin(referralCode.trim());
+  };
+
+  /** 기존 계정 로그인: 동일 Google OAuth이나 추천코드는 넣지 않음(실수로 타인 코드 적용 방지) */
+  const handleGoogleLogIn = () => {
+    if (loading) return;
+    void proceedGoogleLogin('');
   };
 
   React.useEffect(() => {
@@ -168,13 +175,16 @@ export default function Login() {
                 </div>
 
                 <p className="max-w-sm text-center text-sm text-gray-400">
-                  Sign in or create an account with Google. Email and password sign-in is not available.
+                  Use Google only. <span className="text-zinc-300">Continue with Google</span> is for new
+                  accounts (optional referral below). <span className="text-zinc-300">Log in with Google</span>{' '}
+                  is for returning users.
                 </p>
 
                 <div className="w-full max-w-md space-y-4">
                   <div>
                     <label htmlFor="login-referral" className="mb-2 block text-sm text-gray-400">
-                      Referral code <span className="text-gray-600">(optional)</span>
+                      Referral code{' '}
+                      <span className="text-gray-600">(optional · only for new sign-up button)</span>
                     </label>
                     <input
                       id="login-referral"
@@ -248,20 +258,39 @@ export default function Login() {
                   </div>
                 )}
 
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={loading || !canProceed}
-                  title={!canProceed ? 'Please accept the Terms of Service and Privacy Policy' : undefined}
-                  className="flex w-full max-w-md items-center justify-center gap-3 rounded-lg bg-white px-6 py-3.5 font-semibold text-gray-800 shadow-lg transition-all duration-200 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <GoogleIcon className="h-5 w-5" />
-                  {loading ? 'Connecting…' : 'Continue with Google'}
-                </button>
+                <div className="flex w-full max-w-md flex-col gap-3">
+                  <button
+                    type="button"
+                    onClick={handleGoogleSignUp}
+                    disabled={loading || !canProceed}
+                    title={
+                      !canProceed ? 'Please accept the Terms of Service and Privacy Policy' : undefined
+                    }
+                    className="flex w-full items-center justify-center gap-3 rounded-lg bg-white px-6 py-3.5 font-semibold text-gray-800 shadow-lg transition-all duration-200 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <GoogleIcon className="h-5 w-5" />
+                    {loading ? 'Connecting…' : 'Continue with Google'}
+                  </button>
+                  <p className="text-center text-[11px] text-gray-500">New account — uses referral code if filled</p>
+
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogIn}
+                    disabled={loading}
+                    className="flex w-full items-center justify-center gap-3 rounded-lg border border-zinc-600 bg-zinc-900/80 px-6 py-3.5 font-semibold text-zinc-100 shadow-md transition-all duration-200 hover:border-zinc-500 hover:bg-zinc-800/90 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <GoogleIcon className="h-5 w-5" />
+                    {loading ? 'Connecting…' : 'Log in with Google'}
+                  </button>
+                  <p className="text-center text-[11px] text-gray-500">
+                    Existing account — referral field is ignored
+                  </p>
+                </div>
 
                 {!canProceed && (
                   <p className="max-w-md text-center text-xs text-gray-500">
-                    Check both boxes above to enable Google sign-in.
+                    Check both boxes above to use <span className="text-zinc-400">Continue with Google</span>{' '}
+                    (new account). <span className="text-zinc-400">Log in with Google</span> works without them.
                   </p>
                 )}
               </div>

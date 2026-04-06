@@ -115,9 +115,11 @@ export default function AdminReferrals() {
       <div>
         <h1 className="text-2xl font-semibold text-white">레퍼럴(추천인)</h1>
         <p className="mt-1 text-sm text-gray-500">
-          사용자별 초대 인원·추천 관련 로그 합계를 확인하고, 오류 시{' '}
-          <code className="text-cyan-600">admin_adjust_points</code>로 잔액을 수정합니다. (로그는
-          ADMIN_ADJUST로 남습니다.)
+          사용자별 초대 인원·<strong className="font-medium text-gray-400">레퍼럴 포인트(누적)</strong>는
+          추천 보상으로 쌓인 <code className="text-gray-600">mining_logs</code>의 REFERRAL·BONUS 합입니다.
+          오류 시 <code className="text-cyan-600">admin_adjust_points</code>로{' '}
+          <strong className="font-medium text-gray-400">현재 포인트(잔액)</strong>를 조정합니다. (조정분은
+          ADMIN_ADJUST 로그)
         </p>
       </div>
 
@@ -183,7 +185,15 @@ export default function AdminReferrals() {
               <th className="border-b border-gray-800 px-3 py-3">이메일</th>
               <th className="border-b border-gray-800 px-3 py-3">가입일</th>
               <th className="border-b border-gray-800 px-3 py-3">레퍼럴 수</th>
-              <th className="border-b border-gray-800 px-3 py-3">추천 로그 합</th>
+              <th
+                className="border-b border-gray-800 px-3 py-3"
+                title="해당 회원 계정에 기록된 REFERRAL·BONUS mining_logs 금액 합"
+              >
+                레퍼럴 포인트
+                <span className="mt-0.5 block text-[10px] font-normal normal-case text-gray-600">
+                  (누적·로그합)
+                </span>
+              </th>
               <th className="border-b border-gray-800 px-3 py-3">현재 포인트</th>
               <th className="border-b border-gray-800 px-3 py-3">작업</th>
             </tr>
@@ -281,7 +291,7 @@ export default function AdminReferrals() {
               <div className="text-white">{detailUser.nickname ?? '—'}</div>
               <div className="text-xs text-gray-500">
                 초대 코드 <span className="text-gray-300">{detailUser.invite_code ?? '—'}</span>
-                {' · '}레퍼럴 {detailUser.referral_count}명 · 추천 로그 합{' '}
+                {' · '}레퍼럴 {detailUser.referral_count}명 · 레퍼럴 포인트(로그합){' '}
                 {detailUser.referral_points_from_logs.toLocaleString()} · 잔액{' '}
                 {detailUser.point.toLocaleString()}
               </div>
