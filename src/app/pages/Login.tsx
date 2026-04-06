@@ -21,6 +21,10 @@ import {
 } from '../../lib/nativeLayout';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 import TermsOfServiceModal from '../components/TermsOfServiceModal';
+import {
+  clearPendingReferralCookie,
+  setPendingReferralCookie,
+} from '../../lib/pendingReferralCookie';
 
 const TERMS_AGREED_KEY = 'web3star_terms_agreed';
 
@@ -78,7 +82,19 @@ export default function Login() {
       }
 
       if (code.trim()) {
-        sessionStorage.setItem('pending_referral_code', code.trim());
+        try {
+          sessionStorage.setItem('pending_referral_code', code.trim());
+        } catch {
+          /* ignore */
+        }
+        setPendingReferralCookie(code.trim());
+      } else {
+        try {
+          sessionStorage.removeItem('pending_referral_code');
+        } catch {
+          /* ignore */
+        }
+        clearPendingReferralCookie();
       }
       if (loginNext) {
         writeStoredPendingNext(loginNext);

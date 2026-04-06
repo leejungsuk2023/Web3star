@@ -5,7 +5,25 @@ import { App } from '@capacitor/app';
 import { InAppBrowser } from '@capacitor/inappbrowser';
 import { supabase } from '../lib/supabase';
 import { clearStoredPendingNext } from '../lib/pendingNextAfterOAuth';
+import {
+  clearPendingReferralCookie,
+  getPendingReferralCookie,
+} from '../lib/pendingReferralCookie';
 import { applyReferralRewards } from '../lib/referral';
+
+function isPermanentReferralFailure(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('invalid referral') ||
+    m.includes('cannot use your own') ||
+    m.includes('different referral') ||
+    m.includes('already registered on your account')
+  );
+}
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 export interface UserProfile {
   id: string;
@@ -176,6 +194,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         clearStoredPendingNext();
+        try {
+          sessionStorage.removeItem('pending_referral_code');
+        } catch {
+          /* ignore */
+        }
+        clearPendingReferralCookie();
       }
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -188,20 +212,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
-  // Web Google OAuth: 로그인 직전에 referral 코드를 sessionStorage에 두고, 세션 생기면 적용.
+  // Web Google OAuth: 로그인 직전 referral을 sessionStorage(+쿠키 백업)에 두고, 세션 후 적용. DB/세션 준비 지연 시 재시도.
   useEffect(() => {
     if (!user?.id) return;
-    const code = sessionStorage.getItem('pending_referral_code');
-    if (!code?.trim()) return;
-    void applyReferralRewards(user.id, code).then(async (res) => {
-      if (!res.ok) {
-        // Keep the code for retry on next auth/profile cycle.
-        console.warn('[referral] pending_referral_code apply failed (will retry):', res.message);
-        return;
+
+    let code = '';
+    try {
+      code = sessionStorage.getItem('pending_referral_code')?.trim() ?? '';
+    } catch {
+      /* ignore */
+    }
+    if (!code) {
+      const fromCookie = getPendingReferralCookie()?.trim() ?? '';
+      if (!fromCookie) return;
+      code = fromCookie;
+      try {
+        sessionStorage.setItem('pending_referral_code', code);
+      } catch {
+        /* ignore */
       }
-      sessionStorage.removeItem('pending_referral_code');
-      await fetchProfile(user.id);
-    });
+    }
+
+    let cancelled = false;
+    const run = async () => {
+      const delays = [0, 600, 1500, 3000, 5000];
+      for (let i = 0; i < delays.length; i++) {
+        if (cancelled) return;
+        if (delays[i] > 0) await sleep(delays[i]);
+        if (cancelled) return;
+
+        const res = await applyReferralRewards(user.id, code);
+        if (res.ok) {
+          try {
+            sessionStorage.removeItem('pending_referral_code');
+          } catch {
+            /* ignore */
+          }
+          clearPendingReferralCookie();
+          await fetchProfile(user.id);
+          return;
+        }
+
+        if (isPermanentReferralFailure(res.message)) {
+          try {
+            sessionStorage.removeItem('pending_referral_code');
+          } catch {
+            /* ignore */
+          }
+          clearPendingReferralCookie();
+          console.warn('[referral] permanent failure, cleared pending:', res.message);
+          return;
+        }
+      }
+      console.warn(
+        '[referral] pending_referral_code: transient errors after retries; code left for next session if you sign out/in',
+      );
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id, fetchProfile]);
 
   return (
