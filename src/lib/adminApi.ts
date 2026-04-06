@@ -61,6 +61,28 @@ export type AuditLogRow = {
   target_nickname?: string | null;
 };
 
+/** admin_list_referral_summaries 행 */
+export type ReferralSummaryRow = {
+  id: string;
+  email: string | null;
+  nickname: string | null;
+  point: number;
+  invite_code: string | null;
+  created_at: string;
+  referral_count: number;
+  referral_points_from_logs: number;
+};
+
+/** admin_list_invited_users 행 */
+export type InvitedUserRow = {
+  id: string;
+  email: string | null;
+  nickname: string | null;
+  created_at: string;
+  point: number;
+  referred_by: string | null;
+};
+
 /** 표시용: 닉네임 → 이메일 → 짧은 ID (UUID만 크게 보이지 않게) */
 export function adminUserDisplayLabel(
   nickname: string | null | undefined,
@@ -322,4 +344,62 @@ export async function adminListEvents(
   const j = data as { ok?: boolean; rows?: EventRow[]; message?: string };
   if (!j?.ok) return rpcError(j?.message ?? 'Request failed');
   return { ok: true, rows: j.rows ?? [] };
+}
+
+export async function adminListReferralSummaries(params: {
+  search?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ ok: true; total: number; rows: ReferralSummaryRow[] } | { ok: false; message: string }> {
+  const { data, error } = await supabase.rpc('admin_list_referral_summaries', {
+    p_search: params.search ?? null,
+    p_limit: params.limit ?? 50,
+    p_offset: params.offset ?? 0,
+  });
+  if (error) return rpcError(error.message);
+  const j = data as { ok?: boolean; total?: number; rows?: ReferralSummaryRow[]; message?: string };
+  if (!j?.ok) return rpcError(j?.message ?? 'Request failed');
+  const rows = (j.rows ?? []).map((r) => ({
+    ...r,
+    point: Number(r.point ?? 0),
+    referral_count: Number(r.referral_count ?? 0),
+    referral_points_from_logs: Number(r.referral_points_from_logs ?? 0),
+  }));
+  return { ok: true, total: Number(j.total ?? 0), rows };
+}
+
+export async function adminListInvitedUsers(params: {
+  referrerId: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ ok: true; total: number; rows: InvitedUserRow[] } | { ok: false; message: string }> {
+  const { data, error } = await supabase.rpc('admin_list_invited_users', {
+    p_referrer_id: params.referrerId,
+    p_limit: params.limit ?? 80,
+    p_offset: params.offset ?? 0,
+  });
+  if (error) return rpcError(error.message);
+  const j = data as { ok?: boolean; total?: number; rows?: InvitedUserRow[]; message?: string };
+  if (!j?.ok) return rpcError(j?.message ?? 'Request failed');
+  const rows = (j.rows ?? []).map((r) => ({
+    ...r,
+    point: Number(r.point ?? 0),
+  }));
+  return { ok: true, total: Number(j.total ?? 0), rows };
+}
+
+export async function adminListReferralProgramLogs(params: {
+  userId: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ ok: true; total: number; rows: MiningLogRow[] } | { ok: false; message: string }> {
+  const { data, error } = await supabase.rpc('admin_list_referral_program_logs', {
+    p_user_id: params.userId,
+    p_limit: params.limit ?? 100,
+    p_offset: params.offset ?? 0,
+  });
+  if (error) return rpcError(error.message);
+  const j = data as { ok?: boolean; total?: number; rows?: MiningLogRow[]; message?: string };
+  if (!j?.ok) return rpcError(j?.message ?? 'Request failed');
+  return { ok: true, total: Number(j.total ?? 0), rows: j.rows ?? [] };
 }

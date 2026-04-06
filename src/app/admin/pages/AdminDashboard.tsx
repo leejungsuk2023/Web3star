@@ -248,6 +248,12 @@ export default function AdminDashboard() {
           사용자
         </Link>
         <Link
+          to="/admin/referrals"
+          className="rounded-lg border border-gray-700 px-4 py-2 text-gray-300 hover:bg-white/5"
+        >
+          레퍼럴(추천인)
+        </Link>
+        <Link
           to="/admin/points"
           className="rounded-lg border border-gray-700 px-4 py-2 text-gray-300 hover:bg-white/5"
         >

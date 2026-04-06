@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 const nav = [
   { to: '/admin', label: '대시보드', end: true },
   { to: '/admin/users', label: '사용자' },
+  { to: '/admin/referrals', label: '추천·레퍼럴' },
   { to: '/admin/points', label: '포인트·환전' },
   { to: '/admin/mining', label: '채굴·활동' },
   { to: '/admin/content', label: '미션·이벤트' },

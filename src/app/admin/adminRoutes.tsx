@@ -14,6 +14,10 @@ export const adminRouteObject: RouteObject = {
       lazy: () => import('./pages/AdminUsers').then((m) => ({ Component: m.default })),
     },
     {
+      path: 'referrals',
+      lazy: () => import('./pages/AdminReferrals').then((m) => ({ Component: m.default })),
+    },
+    {
       path: 'points',
       lazy: () => import('./pages/AdminPoints').then((m) => ({ Component: m.default })),
     },
