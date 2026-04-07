@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from 'react';
 import type { User } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
@@ -10,6 +18,12 @@ import {
   getPendingReferralCookie,
 } from '../lib/pendingReferralCookie';
 import { applyReferralRewards } from '../lib/referral';
+import {
+  claimAuthSessionAndStore,
+  clearStoredAuthSessionToken,
+  enforceSingleAuthSession,
+  verifyAuthSessionToken,
+} from '../lib/authSession';
 
 function isPermanentReferralFailure(message: string): boolean {
   const m = message.toLowerCase();
@@ -39,6 +53,8 @@ export interface UserProfile {
   role?: string;
   account_status?: string;
   mining_disabled?: boolean;
+  /** docs/supabase-single-session.sql 적용 후 — 다른 기기 로그인 시 불일치로 로그아웃 */
+  auth_session_token?: string | null;
 }
 
 interface AuthContextType {
@@ -67,57 +83,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const lastUserIdRef = useRef<string | null>(null);
+  const fetchProfileQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const fetchProfile = useCallback(async (userId: string) => {
-    setProfileLoading(true);
-    try {
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_my_user_row');
-      if (rpcError) {
-        console.error('[Auth] get_my_user_row failed:', rpcError.message, rpcError);
-      }
+    const task = async () => {
+      setProfileLoading(true);
+      try {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_my_user_row');
+        if (rpcError) {
+          console.error('[Auth] get_my_user_row failed:', rpcError.message, rpcError);
+        }
 
-      const rowFromRpc = ((): Record<string, unknown> | null => {
-        if (rpcData == null) return null;
-        if (typeof rpcData === 'string') {
-          try {
-            const parsed = JSON.parse(rpcData) as unknown;
-            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-              return parsed as Record<string, unknown>;
+        const rowFromRpc = ((): Record<string, unknown> | null => {
+          if (rpcData == null) return null;
+          if (typeof rpcData === 'string') {
+            try {
+              const parsed = JSON.parse(rpcData) as unknown;
+              if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                return parsed as Record<string, unknown>;
+              }
+            } catch {
+              return null;
             }
-          } catch {
             return null;
           }
+          if (typeof rpcData === 'object' && !Array.isArray(rpcData)) {
+            return rpcData as Record<string, unknown>;
+          }
           return null;
-        }
-        if (typeof rpcData === 'object' && !Array.isArray(rpcData)) {
-          return rpcData as Record<string, unknown>;
-        }
-        return null;
-      })();
+        })();
 
-      if (!rpcError && rowFromRpc) {
-        const rid = rowFromRpc.id != null ? String(rowFromRpc.id) : '';
-        if (rid === userId) {
-          setProfile(rowFromRpc as unknown as UserProfile);
+        if (!rpcError && rowFromRpc) {
+          const rid = rowFromRpc.id != null ? String(rowFromRpc.id) : '';
+          if (rid === userId) {
+            const row = rowFromRpc as unknown as UserProfile;
+            const ok = await enforceSingleAuthSession(userId, row);
+            if (ok) {
+              setProfile(row);
+            }
+            return;
+          }
+        }
+
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        if (error) {
+          console.error('Failed to fetch profile:', error);
+          setProfile(null);
           return;
         }
+        const row = data as UserProfile;
+        const ok = await enforceSingleAuthSession(userId, row);
+        if (ok) {
+          setProfile(row);
+        }
+      } finally {
+        setProfileLoading(false);
       }
+    };
 
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Failed to fetch profile:', error);
-        setProfile(null);
-        return;
-      }
-      setProfile(data as UserProfile);
-    } finally {
-      setProfileLoading(false);
-    }
+    fetchProfileQueueRef.current = fetchProfileQueueRef.current.then(task).catch((err) => {
+      console.error('[Auth] fetchProfile failed:', err);
+    });
+    await fetchProfileQueueRef.current;
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -190,6 +223,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [setSessionFromOAuthUrl]);
 
   useEffect(() => {
+    lastUserIdRef.current = user?.id ?? null;
+  }, [user?.id]);
+
+  useEffect(() => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
@@ -200,17 +237,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           /* ignore */
         }
         clearPendingReferralCookie();
+        const uid = lastUserIdRef.current;
+        if (uid) {
+          clearStoredAuthSessionToken(uid);
+        }
       }
       setUser(session?.user ?? null);
-      if (session?.user) {
-        void fetchProfile(session.user.id);
-      } else {
+      if (!session?.user) {
         setProfile(null);
+        return;
       }
+      void (async () => {
+        if (event === 'SIGNED_IN') {
+          await claimAuthSessionAndStore(session.user.id);
+        }
+        await fetchProfile(session.user.id);
+      })();
     });
 
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
+
+  /** 다른 기기에서 로그인해 세션 토큰이 바뀌면 주기·복귀 시 로그아웃 */
+  useEffect(() => {
+    if (!user?.id) return;
+    const uid = user.id;
+
+    const tick = () => {
+      void verifyAuthSessionToken(uid);
+    };
+
+    const interval = window.setInterval(tick, 30_000);
+
+    const onVis = () => {
+      if (document.visibilityState === 'visible') {
+        tick();
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+
+    const resumeListenerPromise = Capacitor.isNativePlatform()
+      ? App.addListener('resume', tick)
+      : null;
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVis);
+      void resumeListenerPromise?.then((h) => h.remove());
+    };
+  }, [user?.id]);
 
   // Web Google OAuth: 로그인 직전 referral을 sessionStorage(+쿠키 백업)에 두고, 세션 후 적용. DB/세션 준비 지연 시 재시도.
   useEffect(() => {
