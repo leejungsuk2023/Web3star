@@ -9,7 +9,6 @@ import Leaderboard from './pages/Leaderboard';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Splash from './pages/Splash';
-import AdMobTest from './pages/AdMobTest';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { viteRouterBasename } from '../lib/routerBasename';
 
@@ -28,7 +27,17 @@ export const router = createBrowserRouter(
         { path: '/app/splash', Component: Splash },
         { path: '/app/login', Component: Login },
         { path: '/app/signup', element: createElement(Navigate, { to: '/app/login', replace: true }) },
-        { path: '/app/admob-test', Component: AdMobTest },
+        ...(import.meta.env.DEV
+          ? [
+              {
+                path: '/app/admob-test',
+                lazy: async () => {
+                  const { default: Component } = await import('./pages/AdMobTest');
+                  return { Component };
+                },
+              },
+            ]
+          : [{ path: '/app/admob-test', loader: () => redirect('/app/splash') }]),
         ...(import.meta.env.DEV
           ? [
               {
@@ -71,7 +80,10 @@ export const router = createBrowserRouter(
         { path: '/splash', loader: () => redirect('/app/splash') },
         { path: '/leaderboard', loader: () => redirect('/app/leaderboard') },
         { path: '/profile', loader: () => redirect('/app/profile') },
-        { path: '/admob-test', loader: () => redirect('/app/admob-test') },
+        {
+          path: '/admob-test',
+          loader: () => redirect(import.meta.env.DEV ? '/app/admob-test' : '/app/splash'),
+        },
         { path: '/homepage', loader: () => redirect('/app/splash') },
         ...(import.meta.env.DEV ? [adminRouteObject] : []),
         { path: '*', loader: () => redirect('/app/splash') },
