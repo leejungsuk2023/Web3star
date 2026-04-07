@@ -46,3 +46,10 @@ $$;
 
 REVOKE ALL ON FUNCTION public.get_my_auth_session_token() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_my_auth_session_token() TO authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 즉시 로그아웃(Realtime): 다른 기기에서 토큰이 바뀌면 WebSocket으로 곧바로 전달됩니다.
+-- 이미 포함되어 있으면 "already member" 계열 오류 → 무시하면 됩니다.
+-- (대시보드: Database → Publications → supabase_realtime 에 users 가 보이는지 확인 가능)
+-- ---------------------------------------------------------------------------
+ALTER PUBLICATION supabase_realtime ADD TABLE public.users;

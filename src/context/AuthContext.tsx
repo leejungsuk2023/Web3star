@@ -23,6 +23,7 @@ import {
   clearStoredAuthSessionToken,
   enforceSingleAuthSession,
   verifyAuthSessionToken,
+  subscribeAuthSessionInvalidation,
 } from '../lib/authSession';
 
 function isPermanentReferralFailure(message: string): boolean {
@@ -258,7 +259,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
-  /** 다른 기기에서 로그인해 세션 토큰이 바뀌면 주기·복귀 시 로그아웃 */
+  /** Realtime: 다른 기기 로그인 직후 토큰 변경을 거의 즉시 수신 */
+  useEffect(() => {
+    if (!user?.id) return;
+    return subscribeAuthSessionInvalidation(user.id);
+  }, [user?.id]);
+
+  /** 폴링·복귀: Realtime 미설정·끊김 시 백업 */
   useEffect(() => {
     if (!user?.id) return;
     const uid = user.id;

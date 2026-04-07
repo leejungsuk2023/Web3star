@@ -109,3 +109,42 @@ export async function verifyAuthSessionToken(userId: string): Promise<void> {
     clearStoredAuthSessionToken(userId);
   }
 }
+
+/**
+ * 다른 기기에서 `claim_my_auth_session`으로 토큰이 바뀌는 순간(Realtime) 거의 즉시 로그아웃.
+ * 본인 기기 claim 직후 로컬 저장보다 이벤트가 먼저 올 수 있어 짧게 지연 후 재비교한다.
+ *
+ * Supabase에서 `public.users`가 Realtime publication에 포함되어 있어야 동작합니다
+ * (`docs/supabase-single-session.sql` 참고). 없으면 폴링·포커스 복귀만으로 감지됩니다.
+ */
+export function subscribeAuthSessionInvalidation(userId: string): () => void {
+  const channel = supabase
+    .channel(`auth-session-invalidate:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'users',
+        filter: `id=eq.${userId}`,
+      },
+      (payload) => {
+        const raw = (payload.new as Record<string, unknown>).auth_session_token;
+        if (raw == null) return;
+        const serverTok = String(raw);
+        window.setTimeout(() => {
+          const local = readStoredAuthSessionToken(userId);
+          if (!local) return;
+          if (serverTok !== local) {
+            void supabase.auth.signOut();
+            clearStoredAuthSessionToken(userId);
+          }
+        }, 120);
+      },
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
