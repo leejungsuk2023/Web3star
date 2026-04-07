@@ -18,6 +18,15 @@ const MINING_REWARD = 10;
 const AD_REWARD_PER_SLOT = 5;
 const AD_BONUS_ALL_SLOTS = 5;
 const AD_COOLDOWN_SECONDS = 10;
+const AD_COOLDOWN_TICK_MS = 200;
+
+function adCooldownSecondsRemaining(endsAtMs: number | null): number {
+  if (endsAtMs == null) return 0;
+  const ms = endsAtMs - Date.now();
+  if (ms <= 0) return 0;
+  return Math.ceil(ms / 1000);
+}
+
 const MINING_NOTIFICATION_ID = 1001;
 const MINING_NOTIFICATION_CHANNEL_ID = 'mining-reminders-v1';
 
@@ -44,7 +53,10 @@ export default function Home() {
   const [activeSlots, setActiveSlots] = useState<number[]>([]);
   const [centerButtonActive, setCenterButtonActive] = useState(false);
   const [isMining, setIsMining] = useState(false);
-  const [adCooldown, setAdCooldown] = useState(0); // seconds remaining between ads
+  /** Wall-clock end of inter-slot ad cooldown (avoids setTimeout drift on some devices). */
+  const [adCooldownEndsAt, setAdCooldownEndsAt] = useState<number | null>(null);
+  const [, setAdCooldownPulse] = useState(0);
+  const adCooldown = adCooldownSecondsRemaining(adCooldownEndsAt);
   const [isInterstitialInFlight, setIsInterstitialInFlight] = useState(false);
 
   // Ads 동시 show 방지용 in-flight 락 (사용자가 연타할 때 중복 호출되는 걸 막음)
@@ -105,12 +117,17 @@ export default function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]); // 프로필 첫 로딩 시 한 번만
 
-  // Ad cooldown countdown
+  // Ad cooldown: re-render from Date.now() vs deadline (no chained 1s timers).
   useEffect(() => {
-    if (adCooldown <= 0) return;
-    const t = setTimeout(() => setAdCooldown(s => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [adCooldown]);
+    if (adCooldownEndsAt == null) return;
+    const id = window.setInterval(() => {
+      if (Date.now() >= adCooldownEndsAt) {
+        setAdCooldownEndsAt(null);
+      }
+      setAdCooldownPulse((x) => x + 1);
+    }, AD_COOLDOWN_TICK_MS);
+    return () => window.clearInterval(id);
+  }, [adCooldownEndsAt]);
 
   const formatTime = (value: number) => String(value).padStart(2, '0');
 
@@ -235,7 +252,7 @@ export default function Home() {
 
     setCenterButtonActive(true);
     setActiveSlots([]);
-    setAdCooldown(0);
+    setAdCooldownEndsAt(null);
     await refreshProfile();
     toast.success(`+${MINING_REWARD} PTS — Mining complete!`);
     // 4시간 뒤 알림 예약
@@ -533,7 +550,7 @@ export default function Home() {
               },
               async () => {
                 if (startCooldownAfterDismiss) {
-                  setAdCooldown(AD_COOLDOWN_SECONDS);
+                  setAdCooldownEndsAt(Date.now() + AD_COOLDOWN_SECONDS * 1000);
                 }
               }
             );
