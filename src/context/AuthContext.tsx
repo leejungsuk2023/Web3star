@@ -18,13 +18,6 @@ import {
   getPendingReferralCookie,
 } from '../lib/pendingReferralCookie';
 import { applyReferralRewards } from '../lib/referral';
-import {
-  claimAuthSessionAndStore,
-  clearStoredAuthSessionToken,
-  enforceSingleAuthSession,
-  verifyAuthSessionToken,
-  subscribeAuthSessionInvalidation,
-} from '../lib/authSession';
 
 function isPermanentReferralFailure(message: string): boolean {
   const m = message.toLowerCase();
@@ -54,8 +47,6 @@ export interface UserProfile {
   role?: string;
   account_status?: string;
   mining_disabled?: boolean;
-  /** docs/supabase-single-session.sql 적용 후 — 다른 기기 로그인 시 불일치로 로그아웃 */
-  auth_session_token?: string | null;
 }
 
 interface AuthContextType {
@@ -84,7 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
-  const lastUserIdRef = useRef<string | null>(null);
   const fetchProfileQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const fetchProfile = useCallback(async (userId: string) => {
@@ -118,11 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!rpcError && rowFromRpc) {
           const rid = rowFromRpc.id != null ? String(rowFromRpc.id) : '';
           if (rid === userId) {
-            const row = rowFromRpc as unknown as UserProfile;
-            const ok = await enforceSingleAuthSession(userId, row);
-            if (ok) {
-              setProfile(row);
-            }
+            setProfile(rowFromRpc as unknown as UserProfile);
             return;
           }
         }
@@ -138,11 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
           return;
         }
-        const row = data as UserProfile;
-        const ok = await enforceSingleAuthSession(userId, row);
-        if (ok) {
-          setProfile(row);
-        }
+        setProfile(data as UserProfile);
       } finally {
         setProfileLoading(false);
       }
@@ -224,10 +206,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [setSessionFromOAuthUrl]);
 
   useEffect(() => {
-    lastUserIdRef.current = user?.id ?? null;
-  }, [user?.id]);
-
-  useEffect(() => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
@@ -238,61 +216,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           /* ignore */
         }
         clearPendingReferralCookie();
-        const uid = lastUserIdRef.current;
-        if (uid) {
-          clearStoredAuthSessionToken(uid);
-        }
       }
       setUser(session?.user ?? null);
       if (!session?.user) {
         setProfile(null);
         return;
       }
-      void (async () => {
-        if (event === 'SIGNED_IN') {
-          await claimAuthSessionAndStore(session.user.id);
-        }
-        await fetchProfile(session.user.id);
-      })();
+      void fetchProfile(session.user.id);
     });
 
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
-
-  /** Realtime: 다른 기기 로그인 직후 토큰 변경을 거의 즉시 수신 */
-  useEffect(() => {
-    if (!user?.id) return;
-    return subscribeAuthSessionInvalidation(user.id);
-  }, [user?.id]);
-
-  /** 폴링·복귀: Realtime 미설정·끊김 시 백업 */
-  useEffect(() => {
-    if (!user?.id) return;
-    const uid = user.id;
-
-    const tick = () => {
-      void verifyAuthSessionToken(uid);
-    };
-
-    const interval = window.setInterval(tick, 30_000);
-
-    const onVis = () => {
-      if (document.visibilityState === 'visible') {
-        tick();
-      }
-    };
-    document.addEventListener('visibilitychange', onVis);
-
-    const resumeListenerPromise = Capacitor.isNativePlatform()
-      ? App.addListener('resume', tick)
-      : null;
-
-    return () => {
-      window.clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVis);
-      void resumeListenerPromise?.then((h) => h.remove());
-    };
-  }, [user?.id]);
 
   // Web Google OAuth: 로그인 직전 referral을 sessionStorage(+쿠키 백업)에 두고, 세션 후 적용. DB/세션 준비 지연 시 재시도.
   useEffect(() => {
