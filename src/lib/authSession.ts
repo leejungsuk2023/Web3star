@@ -2,6 +2,27 @@ import { supabase } from './supabase';
 
 const PREFIX = 'web3star_auth_sess_v1_';
 
+/**
+ * claim RPC 직후 서버 토큰은 최신인데 WebView localStorage 반영이 늦을 수 있음.
+ * 같은 틱에서 verify가 돌면 불일치로 오탐 로그아웃 → 메모리에 먼저 올려 검증과 맞춘다.
+ */
+const memAuthSessionToken = new Map<string, string>();
+
+function rememberAuthSessionToken(userId: string, token: string): void {
+  memAuthSessionToken.set(userId, token);
+}
+
+function forgetAuthSessionToken(userId: string): void {
+  memAuthSessionToken.delete(userId);
+}
+
+/** 스토리지보다 RPC 직후 메모리 값을 우선 (지연 쓰기 레이스 방지) */
+function readEffectiveLocalAuthSessionNorm(userId: string): string | null {
+  const nMem = normalizeAuthSessionToken(memAuthSessionToken.get(userId));
+  if (nMem) return nMem;
+  return normalizeAuthSessionToken(readStoredAuthSessionToken(userId));
+}
+
 /** UUID 비교 오탐(대소문자·공백) 방지 */
 export function normalizeAuthSessionToken(t: string | null | undefined): string | null {
   if (t == null) return null;
@@ -30,6 +51,7 @@ export function readStoredAuthSessionToken(userId: string): string | null {
 
 /** localStorage 실패(용량·WebView) 시 sessionStorage 폴백. 성공 시 읽어 검증. */
 export function writeStoredAuthSessionToken(userId: string, token: string): boolean {
+  rememberAuthSessionToken(userId, token);
   const k = authSessionStorageKey(userId);
   try {
     localStorage.setItem(k, token);
@@ -53,6 +75,7 @@ export function writeStoredAuthSessionToken(userId: string, token: string): bool
 }
 
 export function clearStoredAuthSessionToken(userId: string): void {
+  forgetAuthSessionToken(userId);
   const k = authSessionStorageKey(userId);
   try {
     localStorage.removeItem(k);
@@ -118,8 +141,7 @@ export async function enforceSingleAuthSession(
     row.auth_session_token != null && row.auth_session_token !== ''
       ? String(row.auth_session_token)
       : null;
-  const localRaw = readStoredAuthSessionToken(userId);
-  const localN = normalizeAuthSessionToken(localRaw);
+  const localN = readEffectiveLocalAuthSessionNorm(userId);
   const serverN = normalizeAuthSessionToken(serverTok);
 
   const doClaim = async (): Promise<string | null> => {
@@ -164,8 +186,7 @@ export async function enforceSingleAuthSession(
 export async function verifyAuthSessionToken(userId: string): Promise<void> {
   if (!(await assertSessionUserId(userId))) return;
 
-  const localRaw = readStoredAuthSessionToken(userId);
-  const localN = normalizeAuthSessionToken(localRaw);
+  const localN = readEffectiveLocalAuthSessionNorm(userId);
   if (!localN) return;
 
   const { data, error } = await supabase.rpc('get_my_auth_session_token');
