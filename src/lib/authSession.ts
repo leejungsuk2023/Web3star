@@ -8,6 +8,9 @@ const LAST_LOGOUT_REASON_KEY = 'web3star_last_logout_reason_v1';
  * 같은 틱에서 verify가 돌면 불일치로 오탐 로그아웃 → 메모리에 먼저 올려 검증과 맞춘다.
  */
 const memAuthSessionToken = new Map<string, string>();
+const claimInFlightByUser = new Map<string, Promise<string | null>>();
+const MISMATCH_RECHECK_DELAY_MS = 450;
+const MISMATCH_RECHECK_ATTEMPTS = 2;
 
 function rememberAuthSessionToken(userId: string, token: string): void {
   memAuthSessionToken.set(userId, token);
@@ -95,6 +98,16 @@ async function signOutWithReason(userId: string, reason: LogoutReason, detail?: 
   clearStoredAuthSessionToken(userId);
 }
 
+async function waitForClaimInFlight(userId: string): Promise<void> {
+  const pending = claimInFlightByUser.get(userId);
+  if (!pending) return;
+  try {
+    await pending;
+  } catch {
+    /* ignore claim errors; caller handles next steps */
+  }
+}
+
 /** UUID 비교 오탐(대소문자·공백) 방지 */
 export function normalizeAuthSessionToken(t: string | null | undefined): string | null {
   if (t == null) return null;
@@ -166,27 +179,74 @@ async function assertSessionUserId(userId: string): Promise<boolean> {
   return Boolean(user && user.id === userId);
 }
 
-/** 새 로그인 직후: 서버 토큰을 갱신하고 로컬에 저장 */
-export async function claimAuthSessionAndStore(userId: string): Promise<void> {
-  if (!(await assertSessionUserId(userId))) return;
+async function claimAndPersistToken(userId: string, source: string): Promise<string | null> {
+  const pending = claimInFlightByUser.get(userId);
+  if (pending) return pending;
 
-  const { data, error } = await supabase.rpc('claim_my_auth_session');
-  if (error) {
-    console.warn('[Auth] claim_my_auth_session failed:', error.message);
-    return;
-  }
-  if (data != null) {
+  const task = (async (): Promise<string | null> => {
+    if (!(await assertSessionUserId(userId))) return null;
+
+    const { data, error } = await supabase.rpc('claim_my_auth_session');
+    if (error || data == null) {
+      if (error) console.warn(`[Auth] claim_my_auth_session (${source}) failed:`, error.message);
+      return null;
+    }
+
     const t = String(data);
     if (!writeStoredAuthSessionToken(userId, t)) {
-      console.warn(
-        '[Auth] Could not persist auth_session_token to storage; re-fetch to avoid false logout.',
-      );
+      console.warn(`[Auth] ${source}: storage write failed after claim; syncing from server`);
       const { data: tok, error: tokErr } = await supabase.rpc('get_my_auth_session_token');
       if (!tokErr && tok != null) {
         writeStoredAuthSessionToken(userId, String(tok));
       }
     }
+    return t;
+  })();
+
+  claimInFlightByUser.set(userId, task);
+  try {
+    return await task;
+  } finally {
+    claimInFlightByUser.delete(userId);
   }
+}
+
+async function confirmPersistentMismatch(
+  userId: string,
+  initialServerN: string | null,
+): Promise<{ confirmed: boolean; localN: string | null; serverN: string | null }> {
+  let serverN = initialServerN;
+  let localN = readEffectiveLocalAuthSessionNorm(userId);
+
+  for (let i = 0; i < MISMATCH_RECHECK_ATTEMPTS; i++) {
+    await new Promise((r) => setTimeout(r, MISMATCH_RECHECK_DELAY_MS));
+    await waitForClaimInFlight(userId);
+    if (!(await assertSessionUserId(userId))) {
+      return { confirmed: false, localN, serverN };
+    }
+
+    localN = readEffectiveLocalAuthSessionNorm(userId);
+    if (!localN || !serverN || localN === serverN) {
+      return { confirmed: false, localN, serverN };
+    }
+
+    const { data, error } = await supabase.rpc('get_my_auth_session_token');
+    if (error) {
+      console.warn('[Auth] get_my_auth_session_token recheck failed:', error.message);
+      return { confirmed: false, localN, serverN };
+    }
+    serverN = normalizeAuthSessionToken(data != null ? String(data) : null);
+    if (!serverN || localN === serverN) {
+      return { confirmed: false, localN, serverN };
+    }
+  }
+
+  return { confirmed: Boolean(localN && serverN && localN !== serverN), localN, serverN };
+}
+
+/** 새 로그인 직후: 서버 토큰을 갱신하고 로컬에 저장 */
+export async function claimAuthSessionAndStore(userId: string): Promise<void> {
+  await claimAndPersistToken(userId, 'claim');
 }
 
 export type UserProfileLike = {
@@ -217,20 +277,8 @@ export async function enforceSingleAuthSession(
   const serverN = normalizeAuthSessionToken(serverTok);
 
   const doClaim = async (): Promise<string | null> => {
-    if (!(await assertSessionUserId(userId))) return null;
-    const { data, error } = await supabase.rpc('claim_my_auth_session');
-    if (error || data == null) {
-      if (error) console.warn('[Auth] claim_my_auth_session (enforce) failed:', error.message);
-      return null;
-    }
-    const t = String(data);
-    if (!writeStoredAuthSessionToken(userId, t)) {
-      console.warn('[Auth] enforce: storage write failed after claim; syncing from server');
-      const { data: tok, error: tokErr } = await supabase.rpc('get_my_auth_session_token');
-      if (!tokErr && tok != null) {
-        writeStoredAuthSessionToken(userId, String(tok));
-      }
-    }
+    const t = await claimAndPersistToken(userId, 'enforce');
+    if (!t) return null;
     row.auth_session_token = t;
     return t;
   };
@@ -246,10 +294,14 @@ export async function enforceSingleAuthSession(
   }
 
   if (localN !== serverN) {
+    const confirmed = await confirmPersistentMismatch(userId, serverN);
+    if (!confirmed.confirmed) {
+      return true;
+    }
     await signOutWithReason(
       userId,
       'single_session_mismatch_enforce',
-      `local=${localN} server=${serverN}`,
+      `local=${confirmed.localN} server=${confirmed.serverN}`,
     );
     return false;
   }
@@ -260,6 +312,7 @@ export async function enforceSingleAuthSession(
 /** 서버 토큰만 조회해 로컬과 비교 (폴링·앱 복귀) */
 export async function verifyAuthSessionToken(userId: string): Promise<void> {
   if (!(await assertSessionUserId(userId))) return;
+  await waitForClaimInFlight(userId);
 
   const localN = readEffectiveLocalAuthSessionNorm(userId);
   if (!localN) return;
@@ -272,10 +325,14 @@ export async function verifyAuthSessionToken(userId: string): Promise<void> {
 
   const serverN = normalizeAuthSessionToken(data != null ? String(data) : null);
   if (serverN && serverN !== localN) {
+    const confirmed = await confirmPersistentMismatch(userId, serverN);
+    if (!confirmed.confirmed) {
+      return;
+    }
     await signOutWithReason(
       userId,
       'single_session_mismatch_verify',
-      `local=${localN} server=${serverN}`,
+      `local=${confirmed.localN} server=${confirmed.serverN}`,
     );
   }
 }

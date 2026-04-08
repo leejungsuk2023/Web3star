@@ -199,6 +199,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       if (session?.user) {
+        // 앱 재실행/복귀로 기존 세션을 복원할 때도 현재 기기를 최신 세션으로 확정해
+        // verify 단계의 토큰 불일치 즉시 로그아웃 오탐을 줄인다.
+        await claimAuthSessionAndStore(session.user.id);
         fetchProfile(session.user.id);
       }
       setLoading(false);
