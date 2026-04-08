@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 
 const PREFIX = 'web3star_auth_sess_v1_';
+const LAST_LOGOUT_REASON_KEY = 'web3star_last_logout_reason_v1';
 
 /**
  * claim RPC 직후 서버 토큰은 최신인데 WebView localStorage 반영이 늦을 수 있음.
@@ -21,6 +22,77 @@ function readEffectiveLocalAuthSessionNorm(userId: string): string | null {
   const nMem = normalizeAuthSessionToken(memAuthSessionToken.get(userId));
   if (nMem) return nMem;
   return normalizeAuthSessionToken(readStoredAuthSessionToken(userId));
+}
+
+type LogoutReason =
+  | 'single_session_mismatch_enforce'
+  | 'single_session_mismatch_verify'
+  | 'unknown';
+
+export function writeLastLogoutReason(reason: LogoutReason, detail?: string): void {
+  const payload = JSON.stringify({
+    at: Date.now(),
+    reason,
+    detail: detail?.slice(0, 300) ?? '',
+  });
+  try {
+    localStorage.setItem(LAST_LOGOUT_REASON_KEY, payload);
+    return;
+  } catch {
+    /* fall through */
+  }
+  try {
+    sessionStorage.setItem(LAST_LOGOUT_REASON_KEY, payload);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readLastLogoutReason(): { at: number; reason: LogoutReason; detail?: string } | null {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(LAST_LOGOUT_REASON_KEY);
+  } catch {
+    /* fall through */
+  }
+  if (!raw) {
+    try {
+      raw = sessionStorage.getItem(LAST_LOGOUT_REASON_KEY);
+    } catch {
+      raw = null;
+    }
+  }
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') return null;
+    const p = parsed as Record<string, unknown>;
+    const at = typeof p.at === 'number' ? p.at : 0;
+    const reason = typeof p.reason === 'string' ? (p.reason as LogoutReason) : 'unknown';
+    const detail = typeof p.detail === 'string' ? p.detail : undefined;
+    return { at, reason, detail };
+  } catch {
+    return null;
+  }
+}
+
+export function clearLastLogoutReason(): void {
+  try {
+    localStorage.removeItem(LAST_LOGOUT_REASON_KEY);
+  } catch {
+    /* fall through */
+  }
+  try {
+    sessionStorage.removeItem(LAST_LOGOUT_REASON_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+async function signOutWithReason(userId: string, reason: LogoutReason, detail?: string): Promise<void> {
+  writeLastLogoutReason(reason, detail);
+  await supabase.auth.signOut();
+  clearStoredAuthSessionToken(userId);
 }
 
 /** UUID 비교 오탐(대소문자·공백) 방지 */
@@ -174,8 +246,11 @@ export async function enforceSingleAuthSession(
   }
 
   if (localN !== serverN) {
-    await supabase.auth.signOut();
-    clearStoredAuthSessionToken(userId);
+    await signOutWithReason(
+      userId,
+      'single_session_mismatch_enforce',
+      `local=${localN} server=${serverN}`,
+    );
     return false;
   }
 
@@ -197,8 +272,11 @@ export async function verifyAuthSessionToken(userId: string): Promise<void> {
 
   const serverN = normalizeAuthSessionToken(data != null ? String(data) : null);
   if (serverN && serverN !== localN) {
-    await supabase.auth.signOut();
-    clearStoredAuthSessionToken(userId);
+    await signOutWithReason(
+      userId,
+      'single_session_mismatch_verify',
+      `local=${localN} server=${serverN}`,
+    );
   }
 }
 

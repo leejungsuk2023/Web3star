@@ -8,6 +8,7 @@ import { googleNativeIdToken } from '../../lib/socialLogin';
 import { applyReferralRewards } from '../../lib/referral';
 import { useAuth } from '../../context/AuthContext';
 import { getSafePostLoginPath } from '../../lib/loginRedirect';
+import { clearLastLogoutReason, readLastLogoutReason } from '../../lib/authSession';
 import {
   clearStoredPendingNext,
   readStoredPendingNext,
@@ -35,6 +36,7 @@ export default function Login() {
   const loginNext = searchParams.get('next');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [lastLogout, setLastLogout] = useState<string>('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
   const [referralCode, setReferralCode] = useState('');
@@ -53,12 +55,19 @@ export default function Login() {
     } catch {
       /* ignore */
     }
+
+    const info = readLastLogoutReason();
+    if (info?.reason) {
+      const ageSec = Math.max(0, Math.floor((Date.now() - (info.at || 0)) / 1000));
+      setLastLogout(`[last logout] ${info.reason} (${ageSec}s ago) ${info.detail ?? ''}`.trim());
+    }
   }, []);
 
   const proceedGoogleLogin = async (code: string) => {
     setLoading(true);
     try {
       setError('');
+      clearLastLogoutReason();
       if (isLikelyNativePlatform()) {
         const idToken = await googleNativeIdToken();
         const { data: sessionData, error: idTokenError } = await supabase.auth.signInWithIdToken({
@@ -255,6 +264,16 @@ export default function Login() {
                     className="w-full max-w-md rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-center text-sm text-red-400"
                   >
                     {error}
+                  </div>
+                )}
+
+                {lastLogout && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="w-full max-w-md rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-3 text-center text-sm text-cyan-200"
+                  >
+                    {lastLogout}
                   </div>
                 )}
 
