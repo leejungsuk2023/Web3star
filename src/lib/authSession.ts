@@ -66,8 +66,15 @@ export function clearStoredAuthSessionToken(userId: string): void {
   }
 }
 
+async function assertSessionUserId(userId: string): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  return Boolean(user && user.id === userId);
+}
+
 /** 새 로그인 직후: 서버 토큰을 갱신하고 로컬에 저장 */
 export async function claimAuthSessionAndStore(userId: string): Promise<void> {
+  if (!(await assertSessionUserId(userId))) return;
+
   const { data, error } = await supabase.rpc('claim_my_auth_session');
   if (error) {
     console.warn('[Auth] claim_my_auth_session failed:', error.message);
@@ -100,6 +107,13 @@ export async function enforceSingleAuthSession(
   userId: string,
   row: UserProfileLike,
 ): Promise<boolean> {
+  if (String(row.id) !== String(userId)) {
+    return true;
+  }
+  if (!(await assertSessionUserId(userId))) {
+    return true;
+  }
+
   let serverTok =
     row.auth_session_token != null && row.auth_session_token !== ''
       ? String(row.auth_session_token)
@@ -109,6 +123,7 @@ export async function enforceSingleAuthSession(
   const serverN = normalizeAuthSessionToken(serverTok);
 
   const doClaim = async (): Promise<string | null> => {
+    if (!(await assertSessionUserId(userId))) return null;
     const { data, error } = await supabase.rpc('claim_my_auth_session');
     if (error || data == null) {
       if (error) console.warn('[Auth] claim_my_auth_session (enforce) failed:', error.message);
@@ -147,6 +162,8 @@ export async function enforceSingleAuthSession(
 
 /** 서버 토큰만 조회해 로컬과 비교 (폴링·앱 복귀) */
 export async function verifyAuthSessionToken(userId: string): Promise<void> {
+  if (!(await assertSessionUserId(userId))) return;
+
   const localRaw = readStoredAuthSessionToken(userId);
   const localN = normalizeAuthSessionToken(localRaw);
   if (!localN) return;
