@@ -2,29 +2,65 @@ import { supabase } from './supabase';
 
 const PREFIX = 'web3star_auth_sess_v1_';
 
+/** UUID 비교 오탐(대소문자·공백) 방지 */
+export function normalizeAuthSessionToken(t: string | null | undefined): string | null {
+  if (t == null) return null;
+  const s = String(t).trim().toLowerCase();
+  return s.length ? s : null;
+}
+
 export function authSessionStorageKey(userId: string): string {
   return `${PREFIX}${userId}`;
 }
 
 export function readStoredAuthSessionToken(userId: string): string | null {
+  const k = authSessionStorageKey(userId);
   try {
-    return localStorage.getItem(authSessionStorageKey(userId));
+    const a = localStorage.getItem(k);
+    if (a != null && a !== '') return a;
+  } catch {
+    /* fall through */
+  }
+  try {
+    return sessionStorage.getItem(k);
   } catch {
     return null;
   }
 }
 
-export function writeStoredAuthSessionToken(userId: string, token: string): void {
+/** localStorage 실패(용량·WebView) 시 sessionStorage 폴백. 성공 시 읽어 검증. */
+export function writeStoredAuthSessionToken(userId: string, token: string): boolean {
+  const k = authSessionStorageKey(userId);
   try {
-    localStorage.setItem(authSessionStorageKey(userId), token);
+    localStorage.setItem(k, token);
+    if (localStorage.getItem(k) === token) {
+      try {
+        sessionStorage.removeItem(k);
+      } catch {
+        /* ignore */
+      }
+      return true;
+    }
   } catch {
-    /* ignore */
+    /* try sessionStorage */
+  }
+  try {
+    sessionStorage.setItem(k, token);
+    return sessionStorage.getItem(k) === token;
+  } catch {
+    return false;
   }
 }
 
 export function clearStoredAuthSessionToken(userId: string): void {
+  const k = authSessionStorageKey(userId);
   try {
-    localStorage.removeItem(authSessionStorageKey(userId));
+    localStorage.removeItem(k);
+  } catch {
+    /* ignore */
+  }
+  try {
+    sessionStorage.removeItem(k);
   } catch {
     /* ignore */
   }
@@ -38,7 +74,16 @@ export async function claimAuthSessionAndStore(userId: string): Promise<void> {
     return;
   }
   if (data != null) {
-    writeStoredAuthSessionToken(userId, String(data));
+    const t = String(data);
+    if (!writeStoredAuthSessionToken(userId, t)) {
+      console.warn(
+        '[Auth] Could not persist auth_session_token to storage; re-fetch to avoid false logout.',
+      );
+      const { data: tok, error: tokErr } = await supabase.rpc('get_my_auth_session_token');
+      if (!tokErr && tok != null) {
+        writeStoredAuthSessionToken(userId, String(tok));
+      }
+    }
   }
 }
 
@@ -59,7 +104,9 @@ export async function enforceSingleAuthSession(
     row.auth_session_token != null && row.auth_session_token !== ''
       ? String(row.auth_session_token)
       : null;
-  const local = readStoredAuthSessionToken(userId);
+  const localRaw = readStoredAuthSessionToken(userId);
+  const localN = normalizeAuthSessionToken(localRaw);
+  const serverN = normalizeAuthSessionToken(serverTok);
 
   const doClaim = async (): Promise<string | null> => {
     const { data, error } = await supabase.rpc('claim_my_auth_session');
@@ -68,22 +115,28 @@ export async function enforceSingleAuthSession(
       return null;
     }
     const t = String(data);
-    writeStoredAuthSessionToken(userId, t);
+    if (!writeStoredAuthSessionToken(userId, t)) {
+      console.warn('[Auth] enforce: storage write failed after claim; syncing from server');
+      const { data: tok, error: tokErr } = await supabase.rpc('get_my_auth_session_token');
+      if (!tokErr && tok != null) {
+        writeStoredAuthSessionToken(userId, String(tok));
+      }
+    }
     row.auth_session_token = t;
     return t;
   };
 
-  if (!serverTok) {
+  if (!serverN) {
     await doClaim();
     return true;
   }
 
-  if (!local) {
+  if (!localN) {
     await doClaim();
     return true;
   }
 
-  if (local !== serverTok) {
+  if (localN !== serverN) {
     await supabase.auth.signOut();
     clearStoredAuthSessionToken(userId);
     return false;
@@ -94,8 +147,9 @@ export async function enforceSingleAuthSession(
 
 /** 서버 토큰만 조회해 로컬과 비교 (폴링·앱 복귀) */
 export async function verifyAuthSessionToken(userId: string): Promise<void> {
-  const local = readStoredAuthSessionToken(userId);
-  if (!local) return;
+  const localRaw = readStoredAuthSessionToken(userId);
+  const localN = normalizeAuthSessionToken(localRaw);
+  if (!localN) return;
 
   const { data, error } = await supabase.rpc('get_my_auth_session_token');
   if (error) {
@@ -103,8 +157,8 @@ export async function verifyAuthSessionToken(userId: string): Promise<void> {
     return;
   }
 
-  const server = data != null ? String(data) : null;
-  if (server && server !== local) {
+  const serverN = normalizeAuthSessionToken(data != null ? String(data) : null);
+  if (serverN && serverN !== localN) {
     await supabase.auth.signOut();
     clearStoredAuthSessionToken(userId);
   }
@@ -118,6 +172,15 @@ export async function verifyAuthSessionToken(userId: string): Promise<void> {
  * (`docs/supabase-single-session.sql` 참고). 없으면 폴링·포커스 복귀만으로 감지됩니다.
  */
 export function subscribeAuthSessionInvalidation(userId: string): () => void {
+  let debounce: number | null = null;
+  const scheduleVerify = () => {
+    if (debounce != null) window.clearTimeout(debounce);
+    debounce = window.setTimeout(() => {
+      debounce = null;
+      void verifyAuthSessionToken(userId);
+    }, 200);
+  };
+
   const channel = supabase
     .channel(`auth-session-invalidate:${userId}`)
     .on(
@@ -128,23 +191,15 @@ export function subscribeAuthSessionInvalidation(userId: string): () => void {
         table: 'users',
         filter: `id=eq.${userId}`,
       },
-      (payload) => {
-        const raw = (payload.new as Record<string, unknown>).auth_session_token;
-        if (raw == null) return;
-        const serverTok = String(raw);
-        window.setTimeout(() => {
-          const local = readStoredAuthSessionToken(userId);
-          if (!local) return;
-          if (serverTok !== local) {
-            void supabase.auth.signOut();
-            clearStoredAuthSessionToken(userId);
-          }
-        }, 120);
+      () => {
+        // payload.new 토큰만 믿지 않고 RPC로 서버 값 재확인 (직렬화·지연 오탐 방지)
+        scheduleVerify();
       },
     )
     .subscribe();
 
   return () => {
+    if (debounce != null) window.clearTimeout(debounce);
     void supabase.removeChannel(channel);
   };
 }
