@@ -68,6 +68,34 @@ export default function Home() {
   /** Show the settings nudge at most once per app session if permission stays denied. */
   const miningNotifPermissionToastShownRef = useRef(false);
 
+  // Prompt notification permission early on Home entry (once) so users don't see delayed popup later.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    if (!user?.id) return;
+    if (notificationPermissionPromptedRef.current) return;
+    let cancelled = false;
+
+    void (async () => {
+      let { display } = await LocalNotifications.checkPermissions();
+      if (cancelled || display === 'granted') return;
+      notificationPermissionPromptedRef.current = true;
+      await LocalNotifications.requestPermissions();
+      ({ display } = await LocalNotifications.checkPermissions());
+      if (cancelled || display === 'granted') return;
+      if (!miningNotifPermissionToastShownRef.current) {
+        miningNotifPermissionToastShownRef.current = true;
+        toast.warning('Enable notifications in system settings to get 4-hour mining reminders.', {
+          id: 'web3star-mining-notif-permission',
+          duration: 6000,
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
   // Initialize state from profile — rewarded slots only count during post-mine cooldown (after logo tap).
   useEffect(() => {
     if (profile) {
