@@ -145,6 +145,49 @@ CREATE TRIGGER tr_users_protect_sensitive
   FOR EACH ROW
   EXECUTE FUNCTION public.users_protect_sensitive_columns();
 
+-- mining_disabled 인 계정: 로그인 본인이 point / last_mined_at / ad_slots_viewed 만 바꾸는 UPDATE 차단. 타인 행·관리자 본인 행은 허용.
+CREATE OR REPLACE FUNCTION public.users_enforce_mining_disabled_on_self_update()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF TG_OP <> 'UPDATE' THEN
+    RETURN NEW;
+  END IF;
+  IF NOT COALESCE(OLD.mining_disabled, false) THEN
+    RETURN NEW;
+  END IF;
+  -- SQL Editor / service: JWT 없으면 기존 bootstrap 정책과 동일하게 허용
+  IF auth.uid() IS NULL THEN
+    RETURN NEW;
+  END IF;
+  -- 타인 행(관리자 조정 등)은 허용
+  IF auth.uid() IS DISTINCT FROM OLD.id THEN
+    RETURN NEW;
+  END IF;
+  -- 관리자 본인 행(포인트 수동 조정 등)은 허용
+  IF EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin') THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.point IS DISTINCT FROM OLD.point
+     OR NEW.last_mined_at IS DISTINCT FROM OLD.last_mined_at
+     OR NEW.ad_slots_viewed IS DISTINCT FROM OLD.ad_slots_viewed
+  THEN
+    RAISE EXCEPTION 'Mining and ad rewards are disabled for this account.'
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tr_users_enforce_mining_disabled ON public.users;
+CREATE TRIGGER tr_users_enforce_mining_disabled
+  BEFORE UPDATE ON public.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.users_enforce_mining_disabled_on_self_update();
+
 -- ---------------------------------------------------------------------------
 -- 6) 내부: 관리자 여부 (클라이언트에 GRANT 하지 않음)
 -- ---------------------------------------------------------------------------

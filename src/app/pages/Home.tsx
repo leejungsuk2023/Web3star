@@ -30,6 +30,43 @@ function adCooldownSecondsRemaining(endsAtMs: number | null): number {
 const MINING_NOTIFICATION_ID = 1001;
 const MINING_NOTIFICATION_CHANNEL_ID = 'mining-reminders-v1';
 
+/** `users` 직접 SELECT 가 RLS/스키마로 mining_disabled 를 빼먹는 경우 방지 — AuthContext 와 동일 RPC */
+function parseGetMyUserRowRpc(data: unknown): Record<string, unknown> | null {
+  if (data == null) return null;
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+  if (typeof data === 'object' && !Array.isArray(data)) {
+    return data as Record<string, unknown>;
+  }
+  return null;
+}
+
+async function fetchMyUserRowForMiningGate(
+  userId: string,
+): Promise<{ ok: true; row: Record<string, unknown> } | { ok: false; message: string }> {
+  const { data, error } = await supabase.rpc('get_my_user_row');
+  if (error) return { ok: false, message: error.message };
+  const row = parseGetMyUserRowRpc(data);
+  const rid = row?.id != null ? String(row.id) : '';
+  if (!row || rid !== userId) {
+    return { ok: false, message: '프로필을 불러오지 못했습니다.' };
+  }
+  return { ok: true, row };
+}
+
+function isMiningDisabledDbError(message: string): boolean {
+  return message.toLowerCase().includes('mining and ad rewards are disabled');
+}
+
 function getTimeRemaining(lastMinedAt: string | null): { hours: number; minutes: number; seconds: number } {
   if (!lastMinedAt) return { hours: 0, minutes: 0, seconds: 0 };
 
@@ -259,19 +296,15 @@ export default function Home() {
   const handleMine = useCallback(async () => {
     if (!user || isMining || centerButtonActive) return;
 
-    const { data: gate, error: gateErr } = await supabase
-      .from('users')
-      .select('point, mining_disabled')
-      .eq('id', user.id)
-      .single();
-
-    if (gateErr) {
-      console.error('Mining gate check failed:', gateErr);
+    const gateRes = await fetchMyUserRowForMiningGate(user.id);
+    if (!gateRes.ok) {
+      console.error('Mining gate check failed:', gateRes.message);
       toast.error('채굴 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
       return;
     }
 
-    if (gate?.mining_disabled) {
+    const gateRow = gateRes.row;
+    if (Boolean(gateRow.mining_disabled)) {
       toast.error(
         '관리자에 의해 채굴이 중단되었습니다. 하단 광고 보상도 이용할 수 없습니다. 문의는 고객지원을 이용해 주세요.',
         { duration: 6000 },
@@ -284,7 +317,7 @@ export default function Home() {
 
     const now = new Date().toISOString();
 
-    const currentPoint = gate?.point ?? profile?.point ?? 0;
+    const currentPoint = Number(gateRow.point ?? profile?.point ?? 0);
 
     const { error: updateError } = await supabase
       .from('users')
@@ -297,7 +330,15 @@ export default function Home() {
 
     if (updateError) {
       console.error('Mining failed:', updateError);
-      toast.error('Mining failed. Please try again.');
+      if (isMiningDisabledDbError(updateError.message ?? '')) {
+        toast.error(
+          '관리자에 의해 채굴이 중단되었습니다. 하단 광고 보상도 이용할 수 없습니다. 문의는 고객지원을 이용해 주세요.',
+          { duration: 6000 },
+        );
+        await refreshProfile();
+      } else {
+        toast.error('Mining failed. Please try again.');
+      }
       setIsMining(false);
       return;
     }
@@ -322,19 +363,15 @@ export default function Home() {
   const handleWatchAd = useCallback(async (): Promise<boolean> => {
     if (!user) return false;
 
-    const { data: gate, error: gateErr } = await supabase
-      .from('users')
-      .select('mining_disabled')
-      .eq('id', user.id)
-      .single();
-
-    if (gateErr) {
-      console.error('Ad reward gate check failed:', gateErr);
+    const gateRes = await fetchMyUserRowForMiningGate(user.id);
+    if (!gateRes.ok) {
+      console.error('Ad reward gate check failed:', gateRes.message);
       toast.error('정보를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');
       return false;
     }
 
-    if (gate?.mining_disabled) {
+    const gateRow = gateRes.row;
+    if (Boolean(gateRow.mining_disabled)) {
       toast.error(
         '관리자에 의해 채굴·광고 보상이 중단된 계정입니다. 문의는 고객지원을 이용해 주세요.',
         { duration: 6000 },
@@ -354,14 +391,7 @@ export default function Home() {
     const isComplete = newSlots.length === 5;
     const reward = AD_REWARD_PER_SLOT + (isComplete ? AD_BONUS_ALL_SLOTS : 0);
 
-    // Fetch fresh points to avoid stale values
-    const { data: freshUser } = await supabase
-      .from('users')
-      .select('point')
-      .eq('id', user.id)
-      .single();
-
-    const currentPoint = freshUser?.point ?? profile?.point ?? 0;
+    const currentPoint = Number(gateRow.point ?? profile?.point ?? 0);
 
     const { error: slotError } = await supabase
       .from('users')
@@ -373,7 +403,15 @@ export default function Home() {
 
     if (slotError) {
       console.error('Failed to save ad slot:', slotError);
-      toast.error('Failed to save progress.');
+      if (isMiningDisabledDbError(slotError.message ?? '')) {
+        toast.error(
+          '관리자에 의해 채굴·광고 보상이 중단된 계정입니다. 문의는 고객지원을 이용해 주세요.',
+          { duration: 6000 },
+        );
+        await refreshProfile();
+      } else {
+        toast.error('Failed to save progress.');
+      }
       return false;
     }
 
