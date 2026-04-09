@@ -1,5 +1,5 @@
--- 비정상 채굴 의심: 최근 24h MINING 횟수 > 6 (4시간 쿨다운 기준 이론상 최대 6회/일)
--- Supabase SQL Editor에서 한 번 실행하면 admin_stats_summary()만 갱신됩니다.
+-- admin_stats_summary 에 mining_disabled_users (채굴 차단 인원) 필드 추가
+-- 이미 동일 함수가 배포된 프로젝트는 이 파일 전체를 SQL Editor에서 한 번 실행하세요.
 
 CREATE OR REPLACE FUNCTION public.admin_stats_summary()
 RETURNS jsonb

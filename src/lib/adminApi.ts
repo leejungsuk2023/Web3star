@@ -307,6 +307,7 @@ export async function adminStatsSummary(): Promise<
       points_negative_abs_sum: number;
       active_users: number;
       suspended_users: number;
+      mining_disabled_users: number;
       total_mining_sum: number;
       today_mining_sum: number;
       abnormal_mining_users_24h: number;
@@ -322,6 +323,7 @@ export async function adminStatsSummary(): Promise<
     points_negative_abs_sum?: number;
     active_users?: number;
     suspended_users?: number;
+    mining_disabled_users?: number;
     total_mining_sum?: number;
     today_mining_sum?: number;
     abnormal_mining_users_24h?: number;
@@ -333,6 +335,7 @@ export async function adminStatsSummary(): Promise<
     points_negative_abs_sum: Number(j.points_negative_abs_sum ?? 0),
     active_users: Number(j.active_users ?? 0),
     suspended_users: Number(j.suspended_users ?? 0),
+    mining_disabled_users: Number(j.mining_disabled_users ?? 0),
     total_mining_sum: Number(j.total_mining_sum ?? 0),
     today_mining_sum: Number(j.today_mining_sum ?? 0),
     abnormal_mining_users_24h: Number(j.abnormal_mining_users_24h ?? 0),

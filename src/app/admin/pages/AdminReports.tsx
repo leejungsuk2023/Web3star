@@ -9,6 +9,7 @@ export default function AdminReports() {
     total_mining_sum: number;
     today_mining_sum: number;
     suspended_users: number;
+    mining_disabled_users: number;
   } | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -28,6 +29,7 @@ export default function AdminReports() {
         total_mining_sum: res.total_mining_sum,
         today_mining_sum: res.today_mining_sum,
         suspended_users: res.suspended_users,
+        mining_disabled_users: res.mining_disabled_users,
       });
     })();
     return () => {
@@ -53,7 +55,7 @@ export default function AdminReports() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <div className="rounded-xl border border-gray-800 bg-[#0f0f18] p-5">
           <div className="text-xs text-gray-500">발행 합(양수)</div>
           <div className="mt-1 text-xl font-semibold text-emerald-400 tabular-nums">
@@ -85,12 +87,20 @@ export default function AdminReports() {
           </div>
         </div>
         <div className="rounded-xl border border-gray-800 bg-[#0f0f18] p-5">
-          <div className="text-xs text-gray-500">활성 / 정지</div>
+          <div className="text-xs text-gray-500">활성 / 정지 (계정)</div>
           <div className="mt-1 text-xl font-semibold text-white tabular-nums">
             {data != null
               ? `${data.active_users.toLocaleString()} / ${data.suspended_users.toLocaleString()}`
               : '—'}
           </div>
+          <div className="mt-1 text-[11px] text-gray-600">account_status</div>
+        </div>
+        <div className="rounded-xl border border-gray-800 bg-[#0f0f18] p-5">
+          <div className="text-xs text-gray-500">채굴 차단</div>
+          <div className="mt-1 text-xl font-semibold text-amber-400 tabular-nums">
+            {data != null ? data.mining_disabled_users.toLocaleString() : '—'}
+          </div>
+          <div className="mt-1 text-[11px] text-gray-600">mining_disabled</div>
         </div>
       </div>
     </div>

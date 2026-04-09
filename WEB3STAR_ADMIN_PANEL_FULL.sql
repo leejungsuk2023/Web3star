@@ -558,6 +558,7 @@ DECLARE
   spent bigint;
   user_count_active bigint;
   user_count_suspended bigint;
+  user_count_mining_disabled bigint;
   total_mining bigint;
   today_mining bigint;
   abnormal_users bigint;
@@ -568,6 +569,7 @@ BEGIN
   SELECT coalesce(sum(-amount), 0) INTO spent FROM public.mining_logs WHERE amount < 0;
   SELECT count(*) INTO user_count_active FROM public.users WHERE account_status = 'active';
   SELECT count(*) INTO user_count_suspended FROM public.users WHERE account_status = 'suspended';
+  SELECT count(*) INTO user_count_mining_disabled FROM public.users WHERE mining_disabled = true;
   SELECT coalesce(sum(amount), 0) INTO total_mining FROM public.mining_logs WHERE type = 'MINING' AND amount > 0;
   SELECT coalesce(sum(amount), 0) INTO today_mining
   FROM public.mining_logs
@@ -588,6 +590,7 @@ BEGIN
     'points_negative_abs_sum', spent,
     'active_users', user_count_active,
     'suspended_users', user_count_suspended,
+    'mining_disabled_users', user_count_mining_disabled,
     'total_mining_sum', total_mining,
     'today_mining_sum', today_mining,
     'abnormal_mining_users_24h', abnormal_users

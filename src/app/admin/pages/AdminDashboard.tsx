@@ -29,6 +29,7 @@ export default function AdminDashboard() {
     points_negative_abs_sum: number;
     active_users: number;
     suspended_users: number;
+    mining_disabled_users: number;
     total_mining_sum: number;
     today_mining_sum: number;
     abnormal_mining_users_24h: number;
@@ -55,6 +56,7 @@ export default function AdminDashboard() {
         points_negative_abs_sum: s.points_negative_abs_sum,
         active_users: s.active_users,
         suspended_users: s.suspended_users,
+        mining_disabled_users: s.mining_disabled_users,
         total_mining_sum: s.total_mining_sum,
         today_mining_sum: s.today_mining_sum,
         abnormal_mining_users_24h: s.abnormal_mining_users_24h,
@@ -105,7 +107,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           label="전체 채굴량 합계 (MINING)"
           value={summary?.total_mining_sum}
@@ -126,11 +128,17 @@ export default function AdminDashboard() {
           raw
         />
         <StatCard
-          label="활성 / 정지 사용자"
+          label="활성 / 정지 (계정)"
           value={summary ? `${summary.active_users} / ${summary.suspended_users}` : undefined}
-          sub="account_status"
+          sub="account_status — 사용자 목록에서 상태를 suspended 로 바꿀 때만 증가"
           accent="text-cyan-400"
           raw
+        />
+        <StatCard
+          label="채굴 차단"
+          value={summary?.mining_disabled_users}
+          sub="users.mining_disabled — 채굴 OFF 버튼으로 차단한 인원"
+          accent="text-amber-400"
         />
       </div>
 
