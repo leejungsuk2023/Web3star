@@ -97,7 +97,7 @@ END;
 $$;
 
 -- ---------------------------------------------------------------------------
--- admin_stats_summary: 전체 채굴, 오늘 채굴, 정지 수, 비정상(24h 내 MINING 12회 초과 사용자 수)
+-- admin_stats_summary: 전체 채굴, 오늘 채굴, 정지 수, 비정상(24h 내 MINING 6회 초과 — 4시간 주기 기준 이론상 최대 6회/일)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_stats_summary()
 RETURNS jsonb
@@ -131,7 +131,7 @@ BEGIN
     FROM public.mining_logs m
     WHERE m.type = 'MINING' AND m.created_at > now() - interval '24 hours'
     GROUP BY m.user_id
-    HAVING count(*) > 12
+    HAVING count(*) > 6
   ) s;
 
   RETURN jsonb_build_object(

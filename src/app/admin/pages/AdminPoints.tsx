@@ -75,12 +75,12 @@ export default function AdminPoints() {
         </p>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-xs text-gray-500">
-            사용자 UUID
+            사용자 (이메일·닉네임·초대코드 또는 UUID)
             <input
               value={adjUser}
               onChange={(e) => setAdjUser(e.target.value)}
-              placeholder="uuid"
-              className="w-72 rounded-lg border border-gray-700 bg-[#0f0f18] px-3 py-2 font-mono text-sm text-white"
+              placeholder="예: cashwood39 또는 user@gmail.com"
+              className="w-80 rounded-lg border border-gray-700 bg-[#0f0f18] px-3 py-2 text-sm text-white"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-gray-500">
@@ -105,7 +105,7 @@ export default function AdminPoints() {
             onClick={async () => {
               const d = Number(adjDelta);
               if (!adjUser.trim() || Number.isNaN(d) || d === 0) {
-                toast.error('UUID와 유효한 변동량을 입력하세요.');
+                toast.error('사용자 식별자와 유효한 변동량을 입력하세요.');
                 return;
               }
               const r = await adminAdjustPoints(adjUser.trim(), d, adjReason);
@@ -204,11 +204,12 @@ export default function AdminPoints() {
         <h2 className="text-lg font-medium text-white">포인트 거래 로그</h2>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-xs text-gray-500">
-            사용자 UUID (비우면 전체)
+            사용자 (비우면 전체 · 이메일·닉네임·UUID)
             <input
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
-              className="w-72 rounded-lg border border-gray-700 bg-[#0f0f18] px-3 py-2 font-mono text-sm text-white"
+              placeholder="cashwood39 또는 UUID"
+              className="w-80 rounded-lg border border-gray-700 bg-[#0f0f18] px-3 py-2 text-sm text-white"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-gray-500">

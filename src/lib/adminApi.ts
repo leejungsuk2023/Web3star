@@ -99,6 +99,68 @@ function rpcError(message: string): { ok: false; message: string } {
   return { ok: false, message };
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isLikelyUuid(value: string): boolean {
+  return UUID_RE.test(value.trim());
+}
+
+/**
+ * 수동 조정·로그 필터 등: UUID 또는 이메일/닉네임/초대코드/이메일 앞부분(cashwood39) → user id
+ */
+export async function resolveAdminTargetUserId(
+  raw: string,
+): Promise<{ ok: true; userId: string } | { ok: false; message: string }> {
+  const q = raw.trim();
+  if (!q) return rpcError('사용자 식별자를 입력하세요.');
+
+  if (isLikelyUuid(q)) {
+    return { ok: true, userId: q };
+  }
+
+  const lower = q.toLowerCase();
+  const res = await adminListUsers({ search: q, limit: 80, offset: 0 });
+  if (!res.ok) return res;
+  const rows = res.rows;
+
+  const exactMatches = rows.filter((u) => {
+    const nick = u.nickname?.trim().toLowerCase() ?? '';
+    const email = u.email?.trim().toLowerCase() ?? '';
+    const local = email.includes('@') ? email.split('@')[0] ?? '' : '';
+    const code = u.invite_code?.trim().toLowerCase() ?? '';
+    return (
+      nick === lower ||
+      email === lower ||
+      local === lower ||
+      code === lower
+    );
+  });
+
+  const pick = exactMatches.length === 1 ? exactMatches[0] : rows.length === 1 ? rows[0] : null;
+  if (pick) {
+    return { ok: true, userId: pick.id };
+  }
+
+  if (rows.length === 0) {
+    return rpcError('해당하는 사용자를 찾을 수 없습니다. 이메일·닉네임·초대코드 또는 UUID를 확인하세요.');
+  }
+
+  if (exactMatches.length > 1) {
+    return rpcError(
+      `동일한 식별자에 여러 계정이 있습니다(${exactMatches.length}명). UUID로 지정해 주세요.`,
+    );
+  }
+
+  const preview = rows
+    .slice(0, 5)
+    .map((u) => adminUserDisplayLabel(u.nickname, u.email, u.id))
+    .join(', ');
+  return rpcError(
+    `검색 결과가 ${rows.length}명입니다. 이메일 전체·닉네임 정확히 입력하거나 UUID를 사용하세요. 예: ${preview}`,
+  );
+}
+
 export async function adminListUsers(params: {
   search?: string;
   role?: string;
@@ -162,10 +224,14 @@ export async function adminSetMiningDisabled(
 }
 
 export async function adminAdjustPoints(
-  userId: string,
+  userIdOrIdentifier: string,
   delta: number,
   reason: string,
 ): Promise<{ ok: true; balance?: number } | { ok: false; message: string }> {
+  const resolved = await resolveAdminTargetUserId(userIdOrIdentifier);
+  if (!resolved.ok) return resolved;
+  const userId = resolved.userId;
+
   const { data, error } = await supabase.rpc('admin_adjust_points', {
     p_user_id: userId,
     p_delta: delta,
@@ -183,8 +249,15 @@ export async function adminListMiningLogs(params: {
   limit?: number;
   offset?: number;
 }): Promise<{ ok: true; total: number; rows: MiningLogRow[] } | { ok: false; message: string }> {
+  let pUserId: string | null = params.userId?.trim() || null;
+  if (pUserId && !isLikelyUuid(pUserId)) {
+    const resolved = await resolveAdminTargetUserId(pUserId);
+    if (!resolved.ok) return resolved;
+    pUserId = resolved.userId;
+  }
+
   const { data, error } = await supabase.rpc('admin_list_mining_logs', {
-    p_user_id: params.userId ?? null,
+    p_user_id: pUserId,
     p_type: params.type || null,
     p_limit: params.limit ?? 100,
     p_offset: params.offset ?? 0,

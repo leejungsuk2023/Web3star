@@ -59,6 +59,8 @@ export default function Home() {
   const adCooldown = adCooldownSecondsRemaining(adCooldownEndsAt);
   const [isInterstitialInFlight, setIsInterstitialInFlight] = useState(false);
 
+  const miningBlocked = Boolean(profile?.mining_disabled);
+
   // Ads 동시 show 방지용 in-flight 락 (사용자가 연타할 때 중복 호출되는 걸 막음)
   const interstitialInFlightRef = useRef(false);
   const rewardedInFlightRef = useRef(false);
@@ -95,6 +97,17 @@ export default function Home() {
       cancelled = true;
     };
   }, [user?.id]);
+
+  /** 관리자 채굴 차단 시 예약된 채굴 알림 취소 */
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    if (!miningBlocked) return;
+    void LocalNotifications.cancel({ notifications: [{ id: MINING_NOTIFICATION_ID }] });
+  }, [miningBlocked]);
+
+  useEffect(() => {
+    if (miningBlocked && isModalOpen) setIsModalOpen(false);
+  }, [miningBlocked, isModalOpen]);
 
   // Initialize state from profile — rewarded slots only count during post-mine cooldown (after logo tap).
   useEffect(() => {
@@ -229,6 +242,7 @@ export default function Home() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const listenerPromise = App.addListener('resume', async () => {
+      if (profile?.mining_disabled) return;
       if (!profile?.last_mined_at) return;
       const minedAt = new Date(profile.last_mined_at).getTime();
       if (Number.isNaN(minedAt)) return;
@@ -239,22 +253,38 @@ export default function Home() {
     return () => {
       void listenerPromise.then((l) => l.remove());
     };
-  }, [profile?.last_mined_at, scheduleMiningNotification]);
+  }, [profile?.last_mined_at, profile?.mining_disabled, scheduleMiningNotification]);
 
   // Mine: always exactly MINING_REWARD (10) points, no ad bonus
   const handleMine = useCallback(async () => {
     if (!user || isMining || centerButtonActive) return;
+
+    const { data: gate, error: gateErr } = await supabase
+      .from('users')
+      .select('point, mining_disabled')
+      .eq('id', user.id)
+      .single();
+
+    if (gateErr) {
+      console.error('Mining gate check failed:', gateErr);
+      toast.error('채굴 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+
+    if (gate?.mining_disabled) {
+      toast.error(
+        '관리자에 의해 채굴이 중단되었습니다. 하단 광고 보상도 이용할 수 없습니다. 문의는 고객지원을 이용해 주세요.',
+        { duration: 6000 },
+      );
+      await refreshProfile();
+      return;
+    }
+
     setIsMining(true);
 
     const now = new Date().toISOString();
 
-    const { data: freshUser } = await supabase
-      .from('users')
-      .select('point')
-      .eq('id', user.id)
-      .single();
-
-    const currentPoint = freshUser?.point ?? profile?.point ?? 0;
+    const currentPoint = gate?.point ?? profile?.point ?? 0;
 
     const { error: updateError } = await supabase
       .from('users')
@@ -291,6 +321,28 @@ export default function Home() {
   // Ad watched: award PTS on Rewarded. Returns true if 10s cooldown should start after ad is dismissed (X).
   const handleWatchAd = useCallback(async (): Promise<boolean> => {
     if (!user) return false;
+
+    const { data: gate, error: gateErr } = await supabase
+      .from('users')
+      .select('mining_disabled')
+      .eq('id', user.id)
+      .single();
+
+    if (gateErr) {
+      console.error('Ad reward gate check failed:', gateErr);
+      toast.error('정보를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+      return false;
+    }
+
+    if (gate?.mining_disabled) {
+      toast.error(
+        '관리자에 의해 채굴·광고 보상이 중단된 계정입니다. 문의는 고객지원을 이용해 주세요.',
+        { duration: 6000 },
+      );
+      await refreshProfile();
+      return false;
+    }
+
     setIsModalOpen(false);
 
     if (activeSlots.length >= 5) return false;
@@ -353,6 +405,14 @@ export default function Home() {
   const handleCenterButtonClick = useCallback(() => {
     if (centerButtonActive || isMining || interstitialInFlightRef.current) return;
 
+    if (miningBlocked) {
+      toast.error(
+        '관리자에 의해 채굴이 중단되었습니다. 문의는 고객지원을 이용해 주세요.',
+        { duration: 6000 },
+      );
+      return;
+    }
+
     interstitialInFlightRef.current = true;
     setIsInterstitialInFlight(true);
 
@@ -372,11 +432,18 @@ export default function Home() {
       console.warn('Ad failed, mining anyway:', e);
       void onDone();
     });
-  }, [centerButtonActive, isMining]);
+  }, [centerButtonActive, isMining, miningBlocked]);
 
   const handleSlotClick = () => {
     // Block slot taps during interstitial / rewarded to avoid ad call stacking.
     if (isInterstitialInFlight || interstitialInFlightRef.current || rewardedInFlightRef.current) return;
+    if (miningBlocked) {
+      toast.error(
+        '관리자에 의해 채굴·광고 보상이 중단되었습니다. 문의는 고객지원을 이용해 주세요.',
+        { duration: 6000 },
+      );
+      return;
+    }
     if (canOpenRewardedAdSlotModal(centerButtonActive, activeSlots.length, adCooldown)) {
       setIsModalOpen(true);
     }
@@ -387,7 +454,12 @@ export default function Home() {
   }, [centerButtonActive, isModalOpen]);
 
   const getSlotColor = (slot: number) => {
-    if (!centerButtonActive || isInterstitialInFlight || interstitialInFlightRef.current) {
+    if (
+      miningBlocked ||
+      !centerButtonActive ||
+      isInterstitialInFlight ||
+      interstitialInFlightRef.current
+    ) {
       return 'cursor-not-allowed border border-zinc-700/80 bg-zinc-900/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]';
     }
     const isActive = activeSlots.includes(slot);
@@ -404,7 +476,7 @@ export default function Home() {
   };
 
   const slotIcon = (slot: number) => {
-    if (!centerButtonActive) {
+    if (miningBlocked || !centerButtonActive) {
       return <Lock className="h-5 w-5 text-zinc-500" aria-hidden strokeWidth={2} />;
     }
     if (activeSlots.includes(slot)) {
@@ -428,6 +500,15 @@ export default function Home() {
       {/* Mining logo → timer → points card: one block, shift down together */}
       <div className="mt-6 flex w-full shrink-0 flex-col sm:mt-8">
         <div className="flex shrink-0 flex-col items-center px-6 pt-1 min-[400px]:pt-2 sm:pt-3">
+        {miningBlocked && (
+          <div
+            role="alert"
+            className="mb-4 w-full max-w-md rounded-xl border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-center text-sm leading-snug text-amber-100"
+          >
+            관리자에 의해 <strong className="font-semibold text-amber-50">채굴이 중단</strong>된 계정입니다. 로고
+            채굴·하단 광고 보상을 이용할 수 없습니다. 해제 문의는 고객지원을 이용해 주세요.
+          </div>
+        )}
         {/* Glowing Circular Button */}
         <div className="relative mb-4 max-[380px]:mb-3">
           <div className={`absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 blur-3xl scale-125 animate-pulse transition-opacity duration-500 ${
@@ -439,12 +520,20 @@ export default function Home() {
 
           <button
             onClick={handleCenterButtonClick}
-            disabled={centerButtonActive || isMining || isInterstitialInFlight}
-            aria-label={centerButtonActive ? 'Mining in progress' : 'Start Mining'}
+            disabled={centerButtonActive || isMining || isInterstitialInFlight || miningBlocked}
+            aria-label={
+              miningBlocked
+                ? '채굴 중단됨'
+                : centerButtonActive
+                  ? 'Mining in progress'
+                  : 'Start Mining'
+            }
             className={`relative h-48 w-48 max-[380px]:h-44 max-[380px]:w-44 overflow-hidden rounded-full p-[3px] shadow-2xl transition-all duration-300 ${
-              centerButtonActive
-                ? 'bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 shadow-blue-500/45 hover:scale-105 active:scale-95'
-                : 'cursor-pointer bg-gradient-to-br from-purple-700/95 via-blue-800/95 to-indigo-900/95 shadow-black/40 hover:scale-[1.02]'
+              miningBlocked
+                ? 'cursor-not-allowed opacity-45 grayscale-[0.35] bg-gradient-to-br from-zinc-800 via-zinc-900 to-black'
+                : centerButtonActive
+                  ? 'bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 shadow-blue-500/45 hover:scale-105 active:scale-95'
+                  : 'cursor-pointer bg-gradient-to-br from-purple-700/95 via-blue-800/95 to-indigo-900/95 shadow-black/40 hover:scale-[1.02]'
             }`}
           >
             <div className="relative box-border flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden rounded-full bg-[#000000] p-0 shadow-[inset_0_0_32px_rgba(0,0,0,0.88),inset_0_1px_2px_rgba(255,255,255,0.04)]">
@@ -513,13 +602,16 @@ export default function Home() {
                 type="button"
                 onClick={handleSlotClick}
                 disabled={
+                  miningBlocked ||
                   !centerButtonActive ||
                   activeSlots.includes(slot) ||
                   adCooldown > 0 ||
                   isInterstitialInFlight
                 }
                 aria-label={`Ad slot ${slot}${
-                  !centerButtonActive
+                  miningBlocked
+                    ? ', 채굴 중단으로 잠김'
+                    : !centerButtonActive
                     ? ', locked until you mine'
                     : activeSlots.includes(slot)
                       ? ', completed'

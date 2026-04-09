@@ -138,7 +138,7 @@ export default function AdminDashboard() {
         <StatCard
           label="비정상 채굴 의심 (24h)"
           value={summary?.abnormal_mining_users_24h}
-          sub="최근 24시간 MINING 12회 초과 사용자 수"
+          sub="최근 24시간 MINING 6회 초과 사용자 수 (4시간 쿨다운 기준 이론상 최대 6회/일)"
           accent="text-rose-400"
         />
         <div className="rounded-xl border border-gray-800 bg-[#0f0f18] p-5 text-sm text-gray-500">

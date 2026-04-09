@@ -118,8 +118,10 @@ export default function AdminReferrals() {
           사용자별 초대 인원·<strong className="font-medium text-gray-400">레퍼럴 포인트(누적)</strong>는
           추천 보상으로 쌓인 <code className="text-gray-600">mining_logs</code>의 REFERRAL·BONUS 합입니다.
           오류 시 <code className="text-cyan-600">admin_adjust_points</code>로{' '}
-          <strong className="font-medium text-gray-400">현재 포인트(잔액)</strong>를 조정합니다. (조정분은
-          ADMIN_ADJUST 로그)
+          <strong className="font-medium text-gray-400">현재 포인트(잔액)</strong>를 조정합니다. 조정분은{' '}
+          <code className="text-gray-600">ADMIN_ADJUST</code> 로그이며, 레퍼럴 상세 목록에 포함하려면 Supabase에{' '}
+          <code className="text-gray-600">docs/supabase-fix-referral-detail-logs-admin-adjust.sql</code> 를
+          실행해 주세요.
         </p>
       </div>
 
@@ -328,7 +330,7 @@ export default function AdminReferrals() {
                   )}
 
                   <h4 className="mb-2 text-xs font-medium uppercase text-gray-500">
-                    이 계정의 추천 관련 로그 REFERRAL·BONUS ({logsTotal.toLocaleString()})
+                    이 계정의 추천·수동조정 로그 REFERRAL·BONUS·ADMIN_ADJUST ({logsTotal.toLocaleString()})
                   </h4>
                   {refLogs.length === 0 ? (
                     <p className="text-sm text-gray-600">없음</p>
@@ -337,11 +339,23 @@ export default function AdminReferrals() {
                       {refLogs.map((m) => (
                         <li
                           key={m.id}
-                          className="rounded-lg border border-gray-800/80 bg-black/20 px-2 py-2 text-gray-300"
+                          className={`rounded-lg border px-2 py-2 text-gray-300 ${
+                            m.type === 'ADMIN_ADJUST'
+                              ? 'border-amber-800/60 bg-amber-950/20'
+                              : 'border-gray-800/80 bg-black/20'
+                          }`}
                         >
                           <div className="flex justify-between gap-2 text-gray-500">
                             <span>{new Date(m.created_at).toLocaleString()}</span>
-                            <span className="text-cyan-500/90">{m.type}</span>
+                            <span
+                              className={
+                                m.type === 'ADMIN_ADJUST'
+                                  ? 'text-amber-400/90'
+                                  : 'text-cyan-500/90'
+                              }
+                            >
+                              {m.type}
+                            </span>
                           </div>
                           <div className="mt-1 tabular-nums text-white">
                             {m.amount > 0 ? '+' : ''}

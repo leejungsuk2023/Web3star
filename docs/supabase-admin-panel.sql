@@ -536,7 +536,7 @@ BEGIN
     FROM public.mining_logs m
     WHERE m.type = 'MINING' AND m.created_at > now() - interval '24 hours'
     GROUP BY m.user_id
-    HAVING count(*) > 12
+    HAVING count(*) > 6
   ) s;
 
   RETURN jsonb_build_object(

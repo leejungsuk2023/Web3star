@@ -149,7 +149,8 @@ $$;
 GRANT EXECUTE ON FUNCTION public.admin_list_invited_users(uuid, int, int) TO authenticated;
 
 -- ---------------------------------------------------------------------------
--- 해당 사용자 계정에 기록된 추천 관련 mining_logs (REFERRAL + BONUS)
+-- 해당 사용자 계정에 기록된 추천·보정 관련 mining_logs
+-- REFERRAL, BONUS + 레퍼럴 화면에서 한 수동 조정(admin_adjust_points → ADMIN_ADJUST)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_list_referral_program_logs(
   p_user_id uuid,
@@ -172,14 +173,14 @@ BEGIN
   SELECT count(*) INTO total
   FROM public.mining_logs m
   WHERE m.user_id = p_user_id
-    AND m.type IN ('REFERRAL', 'BONUS');
+    AND m.type IN ('REFERRAL', 'BONUS', 'ADMIN_ADJUST');
 
   SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.created_at DESC), '[]'::jsonb) INTO rows
   FROM (
     SELECT m.id, m.user_id, m.amount, m.type, m.slot_number, m.created_at
     FROM public.mining_logs m
     WHERE m.user_id = p_user_id
-      AND m.type IN ('REFERRAL', 'BONUS')
+      AND m.type IN ('REFERRAL', 'BONUS', 'ADMIN_ADJUST')
     ORDER BY m.created_at DESC
     LIMIT lim OFFSET off
   ) x;
