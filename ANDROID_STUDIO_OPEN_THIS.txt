@@ -1,0 +1,10 @@
+Android Studio에서는 아래 폴더만 여세요. (여기가 git / npm / cap sync 가 돌아가는 실제 프로젝트입니다.)
+
+  C:\Users\MSI\Desktop\Web3star-1\Web3star-1\android
+
+절대 여기 열면 안 됩니다. (옛날 복사본 — 웹 자산·버전코드가 다릅니다.)
+
+  C:\Users\MSI\Desktop\Web3star-1\android
+
+AAB 만들기 전에 항상 Web3star-1\Web3star-1 루트에서:
+  npm run android:prep
