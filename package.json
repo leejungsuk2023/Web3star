@@ -10,6 +10,7 @@
     "preview:gh-pages": "npm run build:gh-pages && vite preview --base /Web3star/",
     "build:app": "vite build --mode app",
     "android:prep": "npm run build:app && npx cap sync android",
+    "play:checklist": "node scripts/print-play-checklist.mjs",
     "dev": "vite",
     "dev:web": "vite --mode web",
     "test": "vitest run",

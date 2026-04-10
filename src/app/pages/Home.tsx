@@ -3,7 +3,7 @@ import { Lock, Timer, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import GetMorePointModal from '../components/GetMorePointModal';
 import miningCenterLogo from '../../assets/mining-center-logo.png';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, type UserProfile } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { showInterstitialAd, showRewardedAd, preloadInterstitialAd } from '../../lib/admob';
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -50,17 +50,50 @@ function parseGetMyUserRowRpc(data: unknown): Record<string, unknown> | null {
   return null;
 }
 
+function sameAuthUserId(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/**
+ * RPC → users 직접 조회 → (마지막) 이미 화면에 있는 프로필.
+ * 네트워크·RPC 일시 실패 시에도 프로필이 보이면 채굴/광고 게이트만 막히지 않게 함.
+ */
 async function fetchMyUserRowForMiningGate(
   userId: string,
+  fallbackProfile: UserProfile | null | undefined,
 ): Promise<{ ok: true; row: Record<string, unknown> } | { ok: false; message: string }> {
-  const { data, error } = await supabase.rpc('get_my_user_row');
-  if (error) return { ok: false, message: error.message };
-  const row = parseGetMyUserRowRpc(data);
-  const rid = row?.id != null ? String(row.id) : '';
-  if (!row || rid !== userId) {
-    return { ok: false, message: '프로필을 불러오지 못했습니다.' };
+  const { data: rpcData, error: rpcError } = await supabase.rpc('get_my_user_row');
+  if (!rpcError) {
+    const row = parseGetMyUserRowRpc(rpcData);
+    const rid = row?.id != null ? String(row.id) : '';
+    if (row && sameAuthUserId(rid, userId)) {
+      return { ok: true, row };
+    }
   }
-  return { ok: true, row };
+
+  const { data: directRow, error: directError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (!directError && directRow) {
+    const dr = directRow as Record<string, unknown>;
+    const drid = dr.id != null ? String(dr.id) : '';
+    if (sameAuthUserId(drid, userId)) {
+      return { ok: true, row: dr };
+    }
+  }
+
+  if (fallbackProfile && sameAuthUserId(fallbackProfile.id, userId)) {
+    return { ok: true, row: fallbackProfile as unknown as Record<string, unknown> };
+  }
+
+  const message =
+    rpcError?.message ??
+    directError?.message ??
+    '프로필을 불러오지 못했습니다.';
+  return { ok: false, message };
 }
 
 function isMiningDisabledDbError(message: string): boolean {
@@ -296,7 +329,7 @@ export default function Home() {
   const handleMine = useCallback(async () => {
     if (!user || isMining || centerButtonActive) return;
 
-    const gateRes = await fetchMyUserRowForMiningGate(user.id);
+    const gateRes = await fetchMyUserRowForMiningGate(user.id, profile);
     if (!gateRes.ok) {
       console.error('Mining gate check failed:', gateRes.message);
       toast.error('채굴 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
@@ -363,7 +396,7 @@ export default function Home() {
   const handleWatchAd = useCallback(async (): Promise<boolean> => {
     if (!user) return false;
 
-    const gateRes = await fetchMyUserRowForMiningGate(user.id);
+    const gateRes = await fetchMyUserRowForMiningGate(user.id, profile);
     if (!gateRes.ok) {
       console.error('Ad reward gate check failed:', gateRes.message);
       toast.error('정보를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');

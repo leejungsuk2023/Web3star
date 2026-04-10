@@ -1,0 +1,75 @@
+Web3Star — Internal test / Play build (one pipeline)
+====================================================
+
+Goal: Stop fixing errors one-by-one. Same steps every time = same result as a
+correct local APK, modulo Play signing (OAuth SHA-1).
+
+
+A. One repo path (non-negotiable)
+---------------------------------
+- Open ONLY:  .../Web3star-1/Web3star-1/android   (nested repo with package.json)
+- Do NOT build from:  .../Web3star-1/android  (stale public / wrong tree)
+
+
+B. One build command (includes web sync)
+----------------------------------------
+From repo root (Web3star-1/Web3star-1):
+
+  npm run aab:release
+
+This already runs:  build:app  ->  cap sync android  ->  Gradle bundleRelease
+Do not create a Signed Bundle in Studio WITHOUT running android:prep first.
+
+For debug APK on device (optional):
+
+  npm run apk:debug
+
+  (Same as aab:release for web: build:app + cap sync, then assembleDebug.)
+
+
+C. Env at build time (baked into the binary)
+----------------------------------------------
+Before aab:release, ensure the SAME machine/CI has:
+
+  VITE_SUPABASE_URL
+  VITE_SUPABASE_ANON_KEY
+  VITE_GOOGLE_WEB_CLIENT_ID   (Web client ID, same GCP project as Android OAuth)
+
+Wrong or missing vars = login/mining works on one build and fails on another.
+
+
+D. Google Cloud (do once per app signing setup)
+-----------------------------------------------
+- Play Console -> Testing and release -> App integrity
+- Copy SHA-1 from **App signing key certificate** (not Upload key)
+- Google Cloud -> APIs & Services -> Credentials -> OAuth client **Android**
+- Package: com.web3star.app
+- Paste that SHA-1
+
+Without this: local debug APK may work; Play internal install may show SIGN_IN_CANCELED.
+
+
+E. Supabase (usually once)
+--------------------------
+- Google provider enabled; client IDs consistent with D
+- If RPC errors: deploy get_my_user_row (see docs/supabase-auth-profile-rpc.sql)
+
+
+F. Play Console store policy (once per app)
+-------------------------------------------
+- Policy -> App content -> Privacy policy URL (e.g. https://web3star.org/privacy)
+
+
+G. Before each upload
+---------------------
+- Bump versionCode (and versionName if you want) in android/app/build.gradle
+- Run npm run aab:release
+- Upload: android/app/build/outputs/bundle/release/app-release.aab
+- Uninstall old app on phone; install from Internal testing link again
+
+
+H. If something still fails
+---------------------------
+- Compare: same Supabase project in URL vs anon key (ref must match)
+- Compare: Play install uses App signing SHA-1 in OAuth (section D)
+- Compare: You did not open the wrong android folder (section A)
