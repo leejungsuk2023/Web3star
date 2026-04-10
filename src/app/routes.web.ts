@@ -22,6 +22,10 @@ export const router = createBrowserRouter(
           lazy: () => import('./pages/Homepage').then((m) => ({ Component: m.default })),
         },
         { path: '/app/login', Component: Login },
+        {
+          path: '/privacy',
+          lazy: () => import('./pages/PrivacyPolicyPage').then((m) => ({ Component: m.default })),
+        },
         { path: '/app/signup', element: createElement(Navigate, { to: '/app/login', replace: true }) },
         { path: '/login', loader: () => redirect('/app/login') },
         { path: '/signup', element: createElement(Navigate, { to: '/app/login', replace: true }) },

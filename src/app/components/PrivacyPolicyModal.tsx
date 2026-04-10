@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { PrivacyPolicyContent } from './PrivacyPolicyContent';
 
 interface PrivacyPolicyModalProps {
   isOpen: boolean;
@@ -9,7 +10,9 @@ interface PrivacyPolicyModalProps {
 export default function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps) {
   useEffect(() => {
     if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
@@ -18,123 +21,34 @@ export default function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyMod
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-      {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
-      ></div>
+        aria-hidden
+      />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-2xl max-h-[80vh] bg-gradient-to-br from-gray-900 to-gray-950 rounded-3xl border border-gray-800 shadow-2xl overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-800">
+      <div className="relative flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-gray-800 bg-gradient-to-br from-gray-900 to-gray-950 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-800 p-6">
           <h2 className="text-2xl font-bold text-white">Privacy Policy</h2>
           <button
+            type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-800/50 hover:bg-gray-700/50 flex items-center justify-center transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800/50 transition-colors hover:bg-gray-700/50"
+            aria-label="Close"
           >
-            <X className="w-5 h-5 text-gray-400" />
+            <X className="h-5 w-5 text-gray-400" />
           </button>
         </div>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 text-gray-300 text-sm leading-relaxed space-y-4">
-          <p className="text-gray-500 text-xs">Last updated: February 6, 2026</p>
-
-          <section>
-            <h3 className="text-white font-semibold text-base mb-2">1. Introduction</h3>
-            <p>
-              Welcome to Web3Star ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our crypto mining application.
-            </p>
-          </section>
-
-          <section>
-            <h3 className="text-white font-semibold text-base mb-2">2. Information We Collect</h3>
-            <p className="mb-2">We collect information that you provide directly to us, including:</p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
-              <li>Email address and password (for account creation)</li>
-              <li>Nickname and profile information</li>
-              <li>Referral codes and invitation data</li>
-              <li>Mining activity and rewards history</li>
-              <li>Device information and usage statistics</li>
-            </ul>
-          </section>
-
-          <section>
-            <h3 className="text-white font-semibold text-base mb-2">3. How We Use Your Information</h3>
-            <p className="mb-2">We use the information we collect to:</p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
-              <li>Provide, maintain, and improve our services</li>
-              <li>Process your mining rewards and transactions</li>
-              <li>Send you technical notices and support messages</li>
-              <li>Respond to your comments and questions</li>
-              <li>Detect and prevent fraud or abuse</li>
-              <li>Comply with legal obligations</li>
-            </ul>
-          </section>
-
-          <section>
-            <h3 className="text-white font-semibold text-base mb-2">4. Data Security</h3>
-            <p>
-              We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the Internet is 100% secure.
-            </p>
-          </section>
-
-          <section>
-            <h3 className="text-white font-semibold text-base mb-2">5. Third-Party Services</h3>
-            <p>
-              Our application may contain advertisements and links to third-party services. We are not responsible for the privacy practices of these third parties. We encourage you to read their privacy policies.
-            </p>
-          </section>
-
-          <section>
-            <h3 className="text-white font-semibold text-base mb-2">6. Children's Privacy</h3>
-            <p>
-              Our services are not intended for users under the age of 18. We do not knowingly collect personal information from children under 18. If you are a parent or guardian and believe your child has provided us with personal information, please contact us.
-            </p>
-          </section>
-
-          <section>
-            <h3 className="text-white font-semibold text-base mb-2">7. Your Rights</h3>
-            <p className="mb-2">You have the right to:</p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
-              <li>Access and receive a copy of your personal data</li>
-              <li>Correct inaccurate or incomplete data</li>
-              <li>Request deletion of your personal data</li>
-              <li>Object to or restrict processing of your data</li>
-              <li>Withdraw consent at any time</li>
-            </ul>
-          </section>
-
-          <section>
-            <h3 className="text-white font-semibold text-base mb-2">8. Changes to This Policy</h3>
-            <p>
-              We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.
-            </p>
-          </section>
-
-          <section>
-            <h3 className="text-white font-semibold text-base mb-2">9. Contact Us</h3>
-            <p>
-              If you have any questions about this Privacy Policy, please visit:
-              <br />
-              <a
-                href="https://web3star.org"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-cyan-400 hover:text-cyan-300 underline"
-              >
-                web3star.org
-              </a>
-            </p>
-          </section>
+        <div className="flex-1 overflow-y-auto p-6 text-sm leading-relaxed text-gray-300">
+          <PrivacyPolicyContent className="space-y-4 text-gray-300 text-sm leading-relaxed" />
         </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t border-gray-800">
+        <div className="border-t border-gray-800 p-6">
           <button
+            type="button"
             onClick={onClose}
-            className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50"
+            className="w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-4 font-semibold text-white shadow-lg shadow-cyan-500/30 transition-all duration-200 hover:from-cyan-400 hover:to-blue-400 hover:shadow-cyan-500/50"
           >
             Close
           </button>

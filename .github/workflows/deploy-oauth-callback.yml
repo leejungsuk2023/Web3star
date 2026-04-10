@@ -75,12 +75,13 @@ jobs:
       - name: SPA fallback for GitHub Pages
         run: cp dist/index.html dist/404.html
 
-      # 일부 환경에서 /admin 등 직접 URL이 404만 반환하는 경우 대비(물리 경로로 200 가능)
-      - name: SPA deep paths (admin)
+      # 일부 환경에서 /admin, /privacy 등 직접 URL이 404만 반환하는 경우 대비(물리 경로로 200 가능)
+      - name: SPA deep paths (admin, privacy)
         shell: bash
         run: |
-          mkdir -p dist/admin
+          mkdir -p dist/admin dist/privacy
           cp dist/index.html dist/admin/index.html
+          cp dist/index.html dist/privacy/index.html
 
       - name: Upload artifact (dist)
         uses: actions/upload-pages-artifact@v3
