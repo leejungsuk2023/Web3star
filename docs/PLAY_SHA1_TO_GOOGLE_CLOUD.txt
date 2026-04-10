@@ -1,0 +1,50 @@
+Where to put SHA-1 (for Google Sign-In on Play Store builds)
+================================================================
+
+You do NOT paste SHA-1 into Play Console for this.
+You paste it into Google Cloud Console, OAuth client (Android type).
+
+
+STEP A - Copy SHA-1 from Play Console
+-------------------------------------
+1. Open Google Play Console and select your app (Web3Star).
+
+2. Left menu: Testing and release -> App integrity.
+
+3. Find "Google Play app signing" section.
+
+4. Open "App signing key certificate" (NOT "Upload key certificate").
+
+5. Copy the SHA-1 fingerprint (format like AA:BB:CC:...).
+
+
+STEP B - Paste into Google Cloud Console
+------------------------------------------
+1. Open: https://console.cloud.google.com
+
+2. Select the SAME Google Cloud project where your Web OAuth client ID
+   was created (the one you use as VITE_GOOGLE_WEB_CLIENT_ID in the app).
+
+3. Menu: APIs & services -> Credentials.
+
+4. Click "Create credentials" -> "OAuth client ID".
+
+5. Application type: Android.
+
+6. Name: any label (e.g. Web3Star Android Play).
+
+7. Package name: com.web3star.app
+
+8. SHA-1 certificate fingerprint: paste the value from Step A.
+
+9. Click Create (or Save).
+
+If an Android OAuth client already exists for this package:
+- Click that client name -> Edit -> add the SHA-1 -> Save.
+
+
+STEP C - Wait and retest
+------------------------
+Changes can take a few minutes to apply.
+Uninstall the app from the phone, install again from Play (internal test),
+then try Google sign-in again.
