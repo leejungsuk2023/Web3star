@@ -1,9 +1,12 @@
 # Google Play 업로드용 릴리스 AAB 생성
-# 선행: android/ 에 업로드 키스토어 + keystore.properties (android/keystore.properties.example 참고)
 # 산출물: android/app/build/outputs/bundle/release/app-release.aab
 #
-# Android Studio에서만 Bundle을 만들지 마세요. public 폴더가 오래되면 초창기 UI/로그인 실패 번들이 됩니다.
-# 수동 순서: npm run android:prep  후 Studio에서 Signed Bundle, 또는 이 스크립트 전체 실행.
+# 서명 (택1):
+#   A) android/keystore.properties + web3star-upload.jks (example 참고)
+#   B) 환경 변수 WEB3STAR_STORE_PASSWORD + WEB3STAR_KEY_PASSWORD
+#      → %USERPROFILE%\.web3star\release-signing.ps1 에 두고 이 스크립트가 자동 로드
+#
+# Android Studio에서만 Bundle 만들지 말 것. 먼저 이 스크립트가 build:app + cap sync 포함.
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
@@ -25,15 +28,37 @@ if (-not $env:JAVA_HOME -or -not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
   Write-Error "JAVA_HOME not set. Install Android Studio or JDK 17+."
 }
 
+# Optional local secrets (not in repo): passwords for env-based Gradle signing
+$signingSecretsDir = Join-Path $env:USERPROFILE ".web3star"
+$signingSecrets = Join-Path $signingSecretsDir "release-signing.ps1"
+if (Test-Path $signingSecrets) {
+  Write-Host "Loading: $signingSecrets" -ForegroundColor DarkGray
+  . $signingSecrets
+}
+
 $props = Join-Path $root "android\keystore.properties"
-if (-not (Test-Path $props)) {
+$jks = Join-Path $root "android\web3star-upload.jks"
+if (-not (Test-Path $jks)) {
+  $parentJks = Join-Path (Split-Path $root -Parent) "android\web3star-upload.jks"
+  if (Test-Path $parentJks) {
+    Copy-Item -Force $parentJks $jks
+    Write-Host "Copied web3star-upload.jks from parent Web3star-1\android\" -ForegroundColor Green
+  }
+}
+
+$hasEnv = [bool]$env:WEB3STAR_STORE_PASSWORD -and [bool]$env:WEB3STAR_KEY_PASSWORD
+if (-not (Test-Path $props) -and -not $hasEnv) {
   Write-Host ""
-  Write-Host "=== Missing android/keystore.properties ===" -ForegroundColor Yellow
-  Write-Host "Step 1 - Create upload keystore once (save passwords safely):"
-  Write-Host '  keytool -genkeypair -v -keystore android\web3star-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload'
+  Write-Host "=== Release signing not configured ===" -ForegroundColor Yellow
+  Write-Host "Option A: Copy android\keystore.properties.example -> android\keystore.properties and fill passwords."
+  Write-Host "Option B: Create: $signingSecrets"
+  Write-Host "  (see scripts\web3star-release-signing.EXAMPLE.ps1)"
   Write-Host ""
-  Write-Host "Step 2 - Copy android\keystore.properties.example to android\keystore.properties and fill storePassword/keyPassword."
-  Write-Host ""
+  exit 1
+}
+
+if (-not (Test-Path $jks)) {
+  Write-Host "Missing android\web3star-upload.jks — place Play upload keystore there or copy from ..\android\" -ForegroundColor Red
   exit 1
 }
 

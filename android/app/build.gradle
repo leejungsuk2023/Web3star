@@ -5,12 +5,18 @@ apply plugin: 'com.android.application'
 // AAB 만들기 직전에 프로젝트 루트에서: npm run android:prep  (또는 npm run build:app && npx cap sync android)
 // 디버그 APK는 scripts/build-apk-debug.ps1 이 위 단계를 매번 실행합니다.
 
-// Play 스토어 업로드용 서명: android/keystore.properties + 키스토어 파일 (Git 제외)
+// Play 업로드 서명: android/keystore.properties (Git 제외) 또는 환경 변수
+//   WEB3STAR_STORE_PASSWORD, WEB3STAR_KEY_PASSWORD
+//   선택: WEB3STAR_STORE_FILE (기본 web3star-upload.jks), WEB3STAR_KEY_ALIAS (기본 upload)
 def keystorePropertiesFile = rootProject.file('keystore.properties')
 def keystoreProperties = new Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
+def web3starJksName = System.getenv('WEB3STAR_STORE_FILE') ?: 'web3star-upload.jks'
+def web3starSigningFromProps = keystorePropertiesFile.exists()
+def web3starSigningFromEnv = System.getenv('WEB3STAR_STORE_PASSWORD') && System.getenv('WEB3STAR_KEY_PASSWORD') && rootProject.file(web3starJksName).exists()
+def web3starReleaseSigningReady = web3starSigningFromProps || web3starSigningFromEnv
 
 android {
     namespace = "com.web3star.app"
@@ -30,18 +36,23 @@ android {
     }
     signingConfigs {
         release {
-            if (keystorePropertiesFile.exists()) {
+            if (web3starSigningFromProps) {
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
                 storeFile rootProject.file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
+            } else if (web3starSigningFromEnv) {
+                storeFile rootProject.file(web3starJksName)
+                storePassword System.getenv('WEB3STAR_STORE_PASSWORD')
+                keyAlias (System.getenv('WEB3STAR_KEY_ALIAS') ?: 'upload')
+                keyPassword System.getenv('WEB3STAR_KEY_PASSWORD')
             }
         }
     }
     buildTypes {
         release {
             minifyEnabled false
-            if (keystorePropertiesFile.exists()) {
+            if (web3starReleaseSigningReady) {
                 signingConfig signingConfigs.release
             }
             // AGP/Gradle 최신 버전에서 proguard-android.txt(기본값) 사용이 중단됨
