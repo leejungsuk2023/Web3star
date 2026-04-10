@@ -1,6 +1,9 @@
 # Google Play 업로드용 릴리스 AAB 생성
 # 선행: android/ 에 업로드 키스토어 + keystore.properties (android/keystore.properties.example 참고)
 # 산출물: android/app/build/outputs/bundle/release/app-release.aab
+#
+# Android Studio에서만 Bundle을 만들지 마세요. public 폴더가 오래되면 초창기 UI/로그인 실패 번들이 됩니다.
+# 수동 순서: npm run android:prep  후 Studio에서 Signed Bundle, 또는 이 스크립트 전체 실행.
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
