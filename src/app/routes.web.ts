@@ -26,6 +26,10 @@ export const router = createBrowserRouter(
           path: '/privacy',
           lazy: () => import('./pages/PrivacyPolicyPage').then((m) => ({ Component: m.default })),
         },
+        {
+          path: '/account-deletion',
+          lazy: () => import('./pages/AccountDeletionPage').then((m) => ({ Component: m.default })),
+        },
         { path: '/app/signup', element: createElement(Navigate, { to: '/app/login', replace: true }) },
         { path: '/login', loader: () => redirect('/app/login') },
         { path: '/signup', element: createElement(Navigate, { to: '/app/login', replace: true }) },
