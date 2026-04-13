@@ -76,13 +76,15 @@ jobs:
       - name: SPA fallback for GitHub Pages
         run: cp dist/index.html dist/404.html
 
-      # 일부 환경에서 /admin, /privacy 등 직접 URL이 404만 반환하는 경우 대비(물리 경로로 200 가능)
-      - name: SPA deep paths (admin, privacy)
+      # GitHub Pages는 /path 직접 접속 시 물리 파일이 없으면 404(Play 계정 삭제 URL 검사 실패).
+      # /admin, /privacy, /account-deletion 은 dist/<path>/index.html 로 200 응답되게 복사.
+      - name: SPA deep paths (admin, privacy, account-deletion)
         shell: bash
         run: |
-          mkdir -p dist/admin dist/privacy
+          mkdir -p dist/admin dist/privacy dist/account-deletion
           cp dist/index.html dist/admin/index.html
           cp dist/index.html dist/privacy/index.html
+          cp dist/index.html dist/account-deletion/index.html
 
       - name: Upload artifact (dist)
         uses: actions/upload-pages-artifact@v3
