@@ -1,6 +1,9 @@
 package com.web3star.app;
 
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -21,6 +24,8 @@ public class MainActivity extends BridgeActivity {
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private int webViewAttachTries = 0;
+    /** Play 업데이트 후에도 WebView가 예전 번들 JS를 쓰는 경우가 있어, versionCode 변경 시 캐시만 비움 */
+    private boolean appliedWebViewVersionCacheClear;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -52,6 +57,8 @@ public class MainActivity extends BridgeActivity {
             return;
         }
 
+        maybeClearWebViewCacheOnVersionChange(webView);
+
         ViewCompat.setOnApplyWindowInsetsListener(
                 webView,
                 (v, windowInsets) -> {
@@ -80,5 +87,24 @@ public class MainActivity extends BridgeActivity {
                     return WindowInsetsCompat.CONSUMED;
                 });
         ViewCompat.requestApplyInsets(webView);
+    }
+
+    private void maybeClearWebViewCacheOnVersionChange(WebView webView) {
+        if (appliedWebViewVersionCacheClear) {
+            return;
+        }
+        appliedWebViewVersionCacheClear = true;
+        try {
+            PackageInfo pi =
+                    getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_META_DATA);
+            int current = pi.versionCode;
+            SharedPreferences prefs = getSharedPreferences("web3star_wv", MODE_PRIVATE);
+            int last = prefs.getInt("last_version_code", -1);
+            if (last != current) {
+                webView.clearCache(true);
+                prefs.edit().putInt("last_version_code", current).apply();
+            }
+        } catch (Exception ignored) {
+        }
     }
 }
