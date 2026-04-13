@@ -2,8 +2,8 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import { Capacitor } from '@capacitor/core';
 import { Home, Trophy, User, Bell, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
 import { useAuth } from '../../context/AuthContext';
+import ActivityHistoryModal from './ActivityHistoryModal';
 import {
   LAYOUT_HEADER_PT_CLASS,
   LAYOUT_NAV_PB_CLASS,
@@ -66,6 +66,7 @@ export default function Layout() {
   const pullDeltaYRef = useRef(0);
   const lastReloadAtRef = useRef(0);
   const [pullRefreshState, setPullRefreshState] = useState<'hidden' | 'pull' | 'ready' | 'refreshing'>('hidden');
+  const [activityHistoryOpen, setActivityHistoryOpen] = useState(false);
 
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!isAndroid) return;
@@ -185,8 +186,9 @@ export default function Layout() {
               </div>
             </div>
             <button
-              aria-label="Notifications"
-              onClick={() => toast.info('Notifications coming soon!')}
+              type="button"
+              aria-label="포인트·활동 내역"
+              onClick={() => setActivityHistoryOpen(true)}
               className="w-10 h-10 rounded-full bg-gray-800/50 flex items-center justify-center hover:bg-gray-700/50 transition-colors relative"
             >
               <Bell className="w-5 h-5 text-gray-400" />
@@ -346,6 +348,11 @@ export default function Layout() {
           </button>
         </div>
       </nav>
+
+      <ActivityHistoryModal
+        isOpen={activityHistoryOpen}
+        onClose={() => setActivityHistoryOpen(false)}
+      />
     </div>
   );
 }
