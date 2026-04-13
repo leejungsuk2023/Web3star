@@ -50,6 +50,8 @@ export default function ActivityHistoryModal({ isOpen, onClose }: ActivityHistor
   const { user } = useAuth();
   const [logs, setLogs] = useState<MiningLog[]>([]);
   const [loading, setLoading] = useState(false);
+  /** 조회 실패(RLS 등)일 때만 값 있음. 비어 있으면 진짜로 행이 없거나 아직 로딩 전. */
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -63,6 +65,8 @@ export default function ActivityHistoryModal({ isOpen, onClose }: ActivityHistor
 
     async function fetchLogs() {
       setLoading(true);
+      setFetchError(null);
+      setLogs([]);
       const { data, error } = await supabase
         .from('mining_logs')
         .select('*')
@@ -70,8 +74,11 @@ export default function ActivityHistoryModal({ isOpen, onClose }: ActivityHistor
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (!error && data) {
-        setLogs(data);
+      if (error) {
+        setFetchError(error.message);
+        setLogs([]);
+      } else {
+        setLogs(data ?? []);
       }
       setLoading(false);
     }
@@ -108,9 +115,18 @@ export default function ActivityHistoryModal({ isOpen, onClose }: ActivityHistor
             <div className="flex items-center justify-center py-12">
               <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
             </div>
+          ) : fetchError ? (
+            <div className="space-y-2 px-2 py-10 text-center text-sm text-amber-200/90">
+              <p className="font-medium">내역을 불러오지 못했습니다.</p>
+              <p className="text-xs text-gray-400 break-words">{fetchError}</p>
+              <p className="text-xs text-gray-500">
+                Supabase에서 <code className="text-gray-400">mining_logs</code> 읽기 권한(RLS)을 확인해 주세요.
+              </p>
+            </div>
           ) : logs.length === 0 ? (
-            <div className="text-center text-gray-500 py-12">
-              No activity yet. Start mining!
+            <div className="space-y-2 px-2 py-12 text-center text-gray-500">
+              <p>아직 기록된 활동이 없습니다.</p>
+              <p className="text-xs text-gray-600">채굴·광고 보상을 하면 여기에 쌓입니다.</p>
             </div>
           ) : (
             <div className="space-y-3">
