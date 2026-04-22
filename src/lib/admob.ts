@@ -8,7 +8,7 @@ import {
 const INTERSTITIAL_AD_ID = 'ca-app-pub-7386110967445510/4672420595';
 const REWARDED_AD_ID = 'ca-app-pub-7386110967445510/9098750762';
 
-/** 로컬 개발에서만 테스트 광고. 프로덕션 빌드(Vite production)에서는 false */
+/** 로컬 `vite`에서만 true → 샘플 단위 ID. `vite build`(Play용)에서는 false로 치환됨. "Test Ad"가 남으면 AdMob 테스트 기기 등록·디버그 APK·구버전 자산 여부를 확인 */
 const admobUseTestAds = import.meta.env.DEV;
 
 const isNative = () => Capacitor.isNativePlatform();
@@ -112,6 +112,10 @@ export async function showInterstitialAd(onDone: () => void | Promise<void>): Pr
 /**
  * 보상형 광고. Rewarded 시 onReward, 광고 화면이 닫힐 때(Dismissed) onDismissed.
  * 쿨다운 등은 onDismissed에서 처리해, 광고 시청 중 백그라운드에서 타이머가 도는 문제를 막는다.
+ *
+ * 네이티브 플러그인은 보상 시점에 showRewardVideoAd() Promise를 resolve할 수 있어,
+ * 이 함수는 Dismissed / FailedToShow(또는 prepare 실패)까지 끝난 뒤에만 반환한다.
+ * 그래야 호출부가 in-flight 락을 풀기 전에 다음 슬롯 탭·쿨다운이 섞이지 않는다.
  */
 export async function showRewardedAd(
   onReward: () => void | Promise<void>,
@@ -125,8 +129,51 @@ export async function showRewardedAd(
 
   let rewardListener: { remove: () => Promise<void> } | null = null;
   let dismissedListener: { remove: () => Promise<void> } | null = null;
+  let failedListener: { remove: () => Promise<void> } | null = null;
   /** Rewarded handler may still be awaiting DB; Dismissed must wait so onDismissed sees correct state */
   let rewardInFlight: Promise<void> = Promise.resolve();
+
+  let resolveFlow!: () => void;
+  const flowDone = new Promise<void>((r) => {
+    resolveFlow = r;
+  });
+  let flowEnded = false;
+
+  const removeListeners = async () => {
+    if (rewardListener) {
+      try {
+        await rewardListener.remove();
+      } catch {
+        /* ignore */
+      }
+      rewardListener = null;
+    }
+    if (dismissedListener) {
+      try {
+        await dismissedListener.remove();
+      } catch {
+        /* ignore */
+      }
+      dismissedListener = null;
+    }
+    if (failedListener) {
+      try {
+        await failedListener.remove();
+      } catch {
+        /* ignore */
+      }
+      failedListener = null;
+    }
+  };
+
+  const finishFlowOnce = async () => {
+    if (flowEnded) return;
+    flowEnded = true;
+    await rewardInFlight;
+    await removeListeners();
+    await Promise.resolve(onDismissed?.());
+    resolveFlow();
+  };
 
   try {
     rewardListener = await AdMob.addListener(RewardAdPluginEvents.Rewarded, async () => {
@@ -136,16 +183,11 @@ export async function showRewardedAd(
     });
 
     dismissedListener = await AdMob.addListener(RewardAdPluginEvents.Dismissed, async () => {
-      await rewardInFlight;
-      if (rewardListener) {
-        await rewardListener.remove();
-        rewardListener = null;
-      }
-      if (dismissedListener) {
-        await dismissedListener.remove();
-        dismissedListener = null;
-      }
-      await Promise.resolve(onDismissed?.());
+      await finishFlowOnce();
+    });
+
+    failedListener = await AdMob.addListener(RewardAdPluginEvents.FailedToShow, async () => {
+      await finishFlowOnce();
     });
 
     await AdMob.prepareRewardVideoAd({
@@ -153,15 +195,14 @@ export async function showRewardedAd(
       isTesting: admobUseTestAds,
     });
     await AdMob.showRewardVideoAd();
+    await flowDone;
   } catch (e) {
     console.warn('Rewarded ad failed:', e);
-    if (rewardListener) {
-      await rewardListener.remove();
-      rewardListener = null;
-    }
-    if (dismissedListener) {
-      await dismissedListener.remove();
-      dismissedListener = null;
+    if (!flowEnded) {
+      await removeListeners();
+      await Promise.resolve(onDismissed?.());
+      flowEnded = true;
+      resolveFlow();
     }
   }
 }

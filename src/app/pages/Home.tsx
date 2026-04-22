@@ -128,6 +128,8 @@ export default function Home() {
   const [, setAdCooldownPulse] = useState(0);
   const adCooldown = adCooldownSecondsRemaining(adCooldownEndsAt);
   const [isInterstitialInFlight, setIsInterstitialInFlight] = useState(false);
+  /** 보상형 준비~종료까지 슬롯 UI·탭을 막음(ref만 쓰면 리렌더 전 한 프레임 동안 disabled가 false일 수 있음) */
+  const [isRewardedAdBusy, setIsRewardedAdBusy] = useState(false);
 
   const miningBlocked = Boolean(profile?.mining_disabled);
 
@@ -507,7 +509,14 @@ export default function Home() {
 
   const handleSlotClick = () => {
     // Block slot taps during interstitial / rewarded to avoid ad call stacking.
-    if (isInterstitialInFlight || interstitialInFlightRef.current || rewardedInFlightRef.current) return;
+    if (
+      isInterstitialInFlight ||
+      interstitialInFlightRef.current ||
+      rewardedInFlightRef.current ||
+      isRewardedAdBusy
+    ) {
+      return;
+    }
     if (miningBlocked) {
       toast.error(
         '관리자에 의해 채굴·광고 보상이 중단되었습니다. 문의는 고객지원을 이용해 주세요.',
@@ -529,7 +538,9 @@ export default function Home() {
       miningBlocked ||
       !centerButtonActive ||
       isInterstitialInFlight ||
-      interstitialInFlightRef.current
+      interstitialInFlightRef.current ||
+      isRewardedAdBusy ||
+      rewardedInFlightRef.current
     ) {
       return 'cursor-not-allowed border border-zinc-700/80 bg-zinc-900/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]';
     }
@@ -547,7 +558,12 @@ export default function Home() {
   };
 
   const slotIcon = (slot: number) => {
-    if (miningBlocked || !centerButtonActive) {
+    if (
+      miningBlocked ||
+      !centerButtonActive ||
+      isRewardedAdBusy ||
+      rewardedInFlightRef.current
+    ) {
       return <Lock className="h-5 w-5 text-zinc-500" aria-hidden strokeWidth={2} />;
     }
     if (activeSlots.includes(slot)) {
@@ -677,7 +693,8 @@ export default function Home() {
                   !centerButtonActive ||
                   activeSlots.includes(slot) ||
                   adCooldown > 0 ||
-                  isInterstitialInFlight
+                  isInterstitialInFlight ||
+                  isRewardedAdBusy
                 }
                 aria-label={`Ad slot ${slot}${
                   miningBlocked
@@ -732,6 +749,7 @@ export default function Home() {
           // Rewarded ad 중복 show 방지
           if (rewardedInFlightRef.current) return;
           rewardedInFlightRef.current = true;
+          setIsRewardedAdBusy(true);
           setIsModalOpen(false);
           try {
             let startCooldownAfterDismiss = false;
@@ -746,6 +764,7 @@ export default function Home() {
               }
             );
           } finally {
+            setIsRewardedAdBusy(false);
             rewardedInFlightRef.current = false;
           }
         }}
