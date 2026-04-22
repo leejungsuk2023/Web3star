@@ -8,6 +8,9 @@ import {
 const INTERSTITIAL_AD_ID = 'ca-app-pub-7386110967445510/4672420595';
 const REWARDED_AD_ID = 'ca-app-pub-7386110967445510/9098750762';
 
+/** 로컬 개발에서만 테스트 광고. 프로덕션 빌드(Vite production)에서는 false */
+const admobUseTestAds = import.meta.env.DEV;
+
 const isNative = () => Capacitor.isNativePlatform();
 
 let interstitialReady = false;
@@ -33,7 +36,7 @@ export async function preloadInterstitialAd(): Promise<void> {
   try {
     await AdMob.prepareInterstitial({
       adId: INTERSTITIAL_AD_ID,
-      isTesting: true,
+      isTesting: admobUseTestAds,
     });
     interstitialReady = true;
   } catch (e) {
@@ -94,7 +97,7 @@ export async function showInterstitialAd(onDone: () => void | Promise<void>): Pr
     if (!interstitialReady) {
       await AdMob.prepareInterstitial({
         adId: INTERSTITIAL_AD_ID,
-        isTesting: true,
+        isTesting: admobUseTestAds,
       });
     }
     interstitialReady = false;
@@ -147,7 +150,7 @@ export async function showRewardedAd(
 
     await AdMob.prepareRewardVideoAd({
       adId: REWARDED_AD_ID,
-      isTesting: true,
+      isTesting: admobUseTestAds,
     });
     await AdMob.showRewardVideoAd();
   } catch (e) {
