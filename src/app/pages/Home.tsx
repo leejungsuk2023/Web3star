@@ -9,6 +9,7 @@ import { showInterstitialAd, showRewardedAd, preloadInterstitialAd } from '../..
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 import {
   MINING_COOLDOWN_MS,
   canOpenRewardedAdSlotModal,
@@ -17,8 +18,11 @@ import {
 const MINING_REWARD = 10;
 const AD_REWARD_PER_SLOT = 5;
 const AD_BONUS_ALL_SLOTS = 5;
-const AD_COOLDOWN_SECONDS = 10;
+const AD_COOLDOWN_SECONDS = 20;
 const AD_COOLDOWN_TICK_MS = 200;
+const UPDATE_NOTICE_KEY = 'web3star_update_notice_ad_interval_2026_04_20s';
+const PLAY_STORE_WEB_URL = 'https://play.google.com/store/apps/details?id=com.web3star.app';
+const PLAY_STORE_APP_URL = 'market://details?id=com.web3star.app';
 
 function adCooldownSecondsRemaining(endsAtMs: number | null): number {
   if (endsAtMs == null) return 0;
@@ -120,6 +124,7 @@ export default function Home() {
   const { user, profile, refreshProfile } = useAuth();
   const [time, setTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isUpdateNoticeOpen, setIsUpdateNoticeOpen] = useState(false);
   const [activeSlots, setActiveSlots] = useState<number[]>([]);
   const [centerButtonActive, setCenterButtonActive] = useState(false);
   const [isMining, setIsMining] = useState(false);
@@ -180,6 +185,48 @@ export default function Home() {
   useEffect(() => {
     if (miningBlocked && isModalOpen) setIsModalOpen(false);
   }, [miningBlocked, isModalOpen]);
+
+  // One-time update notice for ad interval policy change.
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem(UPDATE_NOTICE_KEY) === '1';
+      if (!seen) setIsUpdateNoticeOpen(true);
+    } catch {
+      setIsUpdateNoticeOpen(true);
+    }
+  }, []);
+
+  const closeUpdateNotice = useCallback(() => {
+    setIsUpdateNoticeOpen(false);
+    try {
+      localStorage.setItem(UPDATE_NOTICE_KEY, '1');
+    } catch {
+      // ignore storage failures
+    }
+  }, []);
+
+  const openStoreForUpdate = useCallback(async () => {
+    closeUpdateNotice();
+    try {
+      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+        try {
+          await Browser.open({ url: PLAY_STORE_APP_URL });
+          return;
+        } catch {
+          await Browser.open({ url: PLAY_STORE_WEB_URL });
+          return;
+        }
+      }
+      if (Capacitor.isNativePlatform()) {
+        await Browser.open({ url: PLAY_STORE_WEB_URL });
+      } else {
+        window.open(PLAY_STORE_WEB_URL, '_blank', 'noopener,noreferrer');
+      }
+    } catch (e) {
+      console.warn('Failed to open update page:', e);
+      window.open(PLAY_STORE_WEB_URL, '_blank', 'noopener,noreferrer');
+    }
+  }, [closeUpdateNotice]);
 
   // Initialize state from profile — rewarded slots only count during post-mine cooldown (after logo tap).
   useEffect(() => {
@@ -770,6 +817,42 @@ export default function Home() {
         }}
         triggerSource="slot"
       />
+
+      {isUpdateNoticeOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={closeUpdateNotice}
+          ></div>
+          <div className="relative z-[61] w-full max-w-sm rounded-2xl border border-cyan-500/30 bg-zinc-900 p-6 shadow-2xl">
+            <h2 className="text-lg font-semibold text-white">Update Notice</h2>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-300">
+              Ad interval has been improved to 20 seconds.
+              <br />
+              Please update to the latest version.
+            </p>
+            <p className="mt-2 text-xs text-cyan-400/90">
+              Improved ad interval
+            </p>
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={closeUpdateNotice}
+                className="flex-1 rounded-lg border border-zinc-600 px-3 py-2 text-sm text-zinc-200 transition-colors hover:bg-zinc-800"
+              >
+                Later
+              </button>
+              <button
+                type="button"
+                onClick={() => { void openStoreForUpdate(); }}
+                className="flex-1 rounded-lg bg-cyan-500 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan-400"
+              >
+                Update Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
