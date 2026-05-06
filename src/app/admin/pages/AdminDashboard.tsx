@@ -148,6 +148,8 @@ export default function AdminDashboard() {
           value={summary?.abnormal_mining_users_24h}
           sub="최근 24시간 MINING 6회 초과 사용자 수 (4시간 쿨다운 기준 이론상 최대 6회/일)"
           accent="text-rose-400"
+          to="/admin/mining?abnormal=1"
+          linkTitle="클릭하면 해당 사용자 목록(채굴·사용자 활동)으로 이동합니다."
         />
         <div className="rounded-xl border border-gray-800 bg-[#0f0f18] p-5 text-sm text-gray-500">
           <div className="text-xs uppercase tracking-wide text-gray-500">보안·로그</div>
@@ -284,20 +286,43 @@ function StatCard({
   sub,
   accent,
   raw,
+  to,
+  linkTitle,
 }: {
   label: string;
   value: number | string | undefined;
   sub: string;
   accent: string;
   raw?: boolean;
+  /** 설정 시 카드 전체가 링크로 동작합니다. */
+  to?: string;
+  linkTitle?: string;
 }) {
-  return (
-    <div className="rounded-xl border border-gray-800 bg-[#0f0f18] p-5">
+  const inner = (
+    <>
       <div className="text-xs uppercase tracking-wide text-gray-500">{label}</div>
       <div className={`mt-2 text-2xl font-semibold tabular-nums ${accent}`}>
         {value === undefined ? '—' : raw ? value : typeof value === 'number' ? value.toLocaleString() : value}
       </div>
       <div className="mt-1 text-xs text-gray-600">{sub}</div>
+    </>
+  );
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        title={linkTitle}
+        className="block rounded-xl border border-gray-800 bg-[#0f0f18] p-5 no-underline transition hover:border-gray-600 hover:bg-[#12121c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500"
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-gray-800 bg-[#0f0f18] p-5">
+      {inner}
     </div>
   );
 }

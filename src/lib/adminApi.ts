@@ -83,6 +83,14 @@ export type InvitedUserRow = {
   referred_by: string | null;
 };
 
+/** admin_list_abnormal_mining_users_24h 행 — 대시보드 “비정상 채굴 의심”과 동일 기준 */
+export type AbnormalMiningUserRow = {
+  user_id: string;
+  mining_count_24h: number;
+  email: string | null;
+  nickname: string | null;
+};
+
 /** 표시용: 닉네임 → 이메일 → 짧은 ID (UUID만 크게 보이지 않게) */
 export function adminUserDisplayLabel(
   nickname: string | null | undefined,
@@ -298,6 +306,29 @@ export async function adminDecideWithdrawal(
   const j = data as { ok?: boolean; message?: string };
   if (!j?.ok) return rpcError(j?.message ?? 'Failed');
   return { ok: true };
+}
+
+export async function adminListAbnormalMiningUsers24h(params?: {
+  limit?: number;
+  offset?: number;
+}): Promise<{ ok: true; total: number; rows: AbnormalMiningUserRow[] } | { ok: false; message: string }> {
+  const { data, error } = await supabase.rpc('admin_list_abnormal_mining_users_24h', {
+    p_limit: params?.limit ?? 100,
+    p_offset: params?.offset ?? 0,
+  });
+  if (error) return rpcError(error.message);
+  const j = data as {
+    ok?: boolean;
+    total?: number;
+    rows?: AbnormalMiningUserRow[];
+    message?: string;
+  };
+  if (!j?.ok) return rpcError(j?.message ?? 'Request failed');
+  const rows = (j.rows ?? []).map((r) => ({
+    ...r,
+    mining_count_24h: Number(r.mining_count_24h ?? 0),
+  }));
+  return { ok: true, total: Number(j.total ?? 0), rows };
 }
 
 export async function adminStatsSummary(): Promise<

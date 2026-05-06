@@ -26,56 +26,64 @@ DECLARE
 BEGIN
   PERFORM public._admin_assert();
 
-  SELECT count(*) INTO total
-  FROM public.users u
-  WHERE (
-    p_search IS NULL OR p_search = ''
-    OR u.email ILIKE '%' || p_search || '%'
-    OR u.nickname ILIKE '%' || p_search || '%'
-    OR u.invite_code ILIKE '%' || p_search || '%'
-    OR u.id::text ILIKE '%' || btrim(p_search) || '%'
-  );
+  -- 한 번만 집계한 뒤 조인합니다. (행마다 상관 서브쿼리면 users·mining_logs 풀스캔이 반복되어 statement timeout 납니다.)
+  WITH children AS (
+    SELECT c.id AS child_id, btrim(c.referred_by::text) AS ref_text
+    FROM public.users c
+    WHERE c.referred_by IS NOT NULL AND btrim(c.referred_by::text) <> ''
+  ),
+  referral_pairs AS (
+    SELECT ch.child_id, u.id AS referrer_id
+    FROM children ch
+    INNER JOIN public.users u ON ch.child_id <> u.id
+      AND (
+        ch.ref_text = u.id::text
+        OR (
+          u.invite_code IS NOT NULL
+          AND btrim(u.invite_code) <> ''
+          AND ch.ref_text = btrim(u.invite_code)
+        )
+      )
+  ),
+  referral_counts AS (
+    SELECT referrer_id, count(*)::int AS referral_count
+    FROM referral_pairs
+    GROUP BY referrer_id
+  ),
+  log_sums AS (
+    SELECT m.user_id, coalesce(sum(m.amount), 0)::bigint AS referral_points_from_logs
+    FROM public.mining_logs m
+    WHERE m.type IN ('REFERRAL', 'BONUS')
+    GROUP BY m.user_id
+  ),
+  filtered AS (
+    SELECT
+      u.id,
+      u.email,
+      u.nickname,
+      u.point,
+      u.invite_code,
+      u.created_at,
+      coalesce(rc.referral_count, 0) AS referral_count,
+      coalesce(ls.referral_points_from_logs, 0)::bigint AS referral_points_from_logs
+    FROM public.users u
+    LEFT JOIN referral_counts rc ON rc.referrer_id = u.id
+    LEFT JOIN log_sums ls ON ls.user_id = u.id
+    WHERE (
+      p_search IS NULL OR p_search = ''
+      OR u.email ILIKE '%' || p_search || '%'
+      OR u.nickname ILIKE '%' || p_search || '%'
+      OR u.invite_code ILIKE '%' || p_search || '%'
+      OR u.id::text ILIKE '%' || btrim(p_search) || '%'
+    )
+  )
+  SELECT count(*) INTO total FROM filtered;
 
   SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY t.referral_count DESC, t.created_at DESC), '[]'::jsonb) INTO rows
   FROM (
-    SELECT s.*
-    FROM (
-      SELECT
-        u.id,
-        u.email,
-        u.nickname,
-        u.point,
-        u.invite_code,
-        u.created_at,
-        (
-          SELECT count(*)::int
-          FROM public.users c
-          WHERE c.id <> u.id
-            AND (
-              btrim(c.referred_by::text) = u.id::text
-              OR (
-                u.invite_code IS NOT NULL
-                AND btrim(u.invite_code) <> ''
-                AND btrim(c.referred_by::text) = btrim(u.invite_code)
-              )
-            )
-        ) AS referral_count,
-        (
-          SELECT coalesce(sum(m.amount), 0)::bigint
-          FROM public.mining_logs m
-          WHERE m.user_id = u.id
-            AND m.type IN ('REFERRAL', 'BONUS')
-        ) AS referral_points_from_logs
-      FROM public.users u
-      WHERE (
-        p_search IS NULL OR p_search = ''
-        OR u.email ILIKE '%' || p_search || '%'
-        OR u.nickname ILIKE '%' || p_search || '%'
-        OR u.invite_code ILIKE '%' || p_search || '%'
-        OR u.id::text ILIKE '%' || btrim(p_search) || '%'
-      )
-    ) s
-    ORDER BY s.referral_count DESC, s.created_at DESC
+    SELECT f.*
+    FROM filtered f
+    ORDER BY f.referral_count DESC, f.created_at DESC
     LIMIT lim OFFSET off
   ) t;
 

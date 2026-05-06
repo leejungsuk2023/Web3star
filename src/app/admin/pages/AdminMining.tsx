@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import {
   adminAdjustPoints,
+  adminListAbnormalMiningUsers24h,
   adminListMiningLogs,
   adminListUsers,
   adminSetAccountStatus,
   adminSetMiningDisabled,
   adminSetUserRole,
   adminUserDisplayLabel,
+  type AbnormalMiningUserRow,
   type AdminUserRow,
   type MiningLogRow,
 } from '../../../lib/adminApi';
@@ -20,12 +23,21 @@ function lastActivityLabel(u: AdminUserRow): string {
 }
 
 export default function AdminMining() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const abnormalParam = searchParams.get('abnormal');
+  const showAbnormalPanel =
+    abnormalParam === '1' || abnormalParam === 'true' || abnormalParam === '24h';
+
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [userTotal, setUserTotal] = useState(0);
   const [loadingUsers, setLoadingUsers] = useState(true);
+
+  const [abnormalRows, setAbnormalRows] = useState<AbnormalMiningUserRow[]>([]);
+  const [abnormalTotal, setAbnormalTotal] = useState(0);
+  const [abnormalLoading, setAbnormalLoading] = useState(false);
 
   const [detailUser, setDetailUser] = useState<AdminUserRow | null>(null);
   const [detailLogs, setDetailLogs] = useState<MiningLogRow[]>([]);
@@ -60,6 +72,25 @@ export default function AdminMining() {
   useEffect(() => {
     void loadUsers();
   }, [loadUsers]);
+
+  const loadAbnormal = useCallback(async () => {
+    setAbnormalLoading(true);
+    const res = await adminListAbnormalMiningUsers24h({ limit: 200, offset: 0 });
+    setAbnormalLoading(false);
+    if (!res.ok) {
+      toast.error(res.message);
+      setAbnormalRows([]);
+      setAbnormalTotal(0);
+      return;
+    }
+    setAbnormalRows(res.rows);
+    setAbnormalTotal(res.total);
+  }, []);
+
+  useEffect(() => {
+    if (!showAbnormalPanel) return;
+    void loadAbnormal();
+  }, [showAbnormalPanel, loadAbnormal]);
 
   useEffect(() => {
     if (!detailUser) return;
@@ -99,6 +130,24 @@ export default function AdminMining() {
       return;
     }
     setDetailLogs(res.rows);
+  };
+
+  const openDetailFromAbnormal = async (r: AbnormalMiningUserRow) => {
+    const res = await adminListUsers({ search: r.user_id, limit: 30, offset: 0 });
+    if (res.ok) {
+      const u = res.rows.find((x) => x.id === r.user_id);
+      if (u) {
+        void openDetail(u);
+        return;
+      }
+    }
+    toast.error('사용자 정보를 불러오지 못했습니다. 아래 검색에 UUID를 붙여넣어 조회해 보세요.');
+  };
+
+  const closeAbnormalPanel = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('abnormal');
+    setSearchParams(next, { replace: true });
   };
 
   async function apply(
@@ -145,6 +194,89 @@ export default function AdminMining() {
           ON/OFF를 바로 적용할 수 있습니다.
         </p>
       </div>
+
+      {showAbnormalPanel && (
+        <section className="space-y-3 rounded-xl border border-rose-900/45 bg-rose-950/15 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-medium text-rose-100">비정상 채굴 의심 (24h)</h2>
+              <p className="mt-1 text-xs text-gray-500">
+                최근 24시간 동안 MINING 로그가 6회를 넘은 계정입니다. 대시보드 &quot;비정상 채굴 의심&quot; 인원 수와 같은
+                기준입니다. Supabase에{' '}
+                <code className="text-cyan-600">docs/supabase-admin-list-abnormal-mining-users-24h.sql</code> 배포가
+                필요합니다.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void loadAbnormal()}
+                className="rounded-lg bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-700"
+              >
+                새로고침
+              </button>
+              <button
+                type="button"
+                onClick={closeAbnormalPanel}
+                className="rounded-lg border border-gray-600 px-3 py-1.5 text-sm text-gray-300 hover:bg-white/5"
+              >
+                패널 닫기
+              </button>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500">총 {abnormalTotal.toLocaleString()}명</p>
+          <div className="overflow-x-auto rounded-lg border border-gray-800">
+            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+              <thead className="bg-[#0f0f18] text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="border-b border-gray-800 px-2 py-2">사용자</th>
+                  <th className="border-b border-gray-800 px-2 py-2">24h MINING 횟수</th>
+                  <th className="border-b border-gray-800 px-2 py-2">작업</th>
+                </tr>
+              </thead>
+              <tbody>
+                {abnormalLoading ? (
+                  <tr>
+                    <td colSpan={3} className="px-3 py-8 text-center text-gray-500">
+                      불러오는 중…
+                    </td>
+                  </tr>
+                ) : abnormalRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-3 py-8 text-center text-gray-500">
+                      해당 없음
+                    </td>
+                  </tr>
+                ) : (
+                  abnormalRows.map((r) => (
+                    <tr key={r.user_id} className="border-b border-gray-800/80 hover:bg-white/[0.02]">
+                      <td className="max-w-[280px] px-2 py-2 align-top">
+                        <div className="font-mono text-[11px] text-gray-500" title={r.user_id}>
+                          {r.user_id.slice(0, 13)}…
+                        </div>
+                        <div className="text-gray-200">{r.nickname || '—'}</div>
+                        <div className="truncate text-xs text-gray-500">{r.email ?? '—'}</div>
+                      </td>
+                      <td className="px-2 py-2 tabular-nums text-rose-200">
+                        {r.mining_count_24h.toLocaleString()}
+                      </td>
+                      <td className="px-2 py-2 align-top">
+                        <button
+                          type="button"
+                          onClick={() => void openDetailFromAbnormal(r)}
+                          className="rounded border border-gray-600 px-2 py-1 text-xs text-cyan-300 hover:bg-white/5"
+                        >
+                          로그
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className="space-y-4">
         <h2 className="text-lg font-medium text-white">사용자별 채굴량</h2>
