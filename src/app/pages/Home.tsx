@@ -18,9 +18,9 @@ import {
 const MINING_REWARD = 10;
 const AD_REWARD_PER_SLOT = 5;
 const AD_BONUS_ALL_SLOTS = 5;
-const AD_COOLDOWN_SECONDS = 20;
+const AD_COOLDOWN_SECONDS = 40;
 const AD_COOLDOWN_TICK_MS = 200;
-const UPDATE_NOTICE_KEY = 'web3star_update_notice_ad_interval_2026_04_20s';
+const UPDATE_NOTICE_KEY = 'web3star_update_notice_ad_interval_2026_05_40s';
 const PLAY_STORE_WEB_URL = 'https://play.google.com/store/apps/details?id=com.web3star.app';
 const PLAY_STORE_APP_URL = 'market://details?id=com.web3star.app';
 
@@ -441,7 +441,7 @@ export default function Home() {
     setIsMining(false);
   }, [user, isMining, centerButtonActive, profile, refreshProfile, scheduleMiningNotification]);
 
-  // Ad watched: award PTS on Rewarded. Returns true if 10s cooldown should start after ad is dismissed (X).
+  // Ad watched: award PTS on Rewarded. Returns true if inter-slot cooldown should start after ad is dismissed (X).
   const handleWatchAd = useCallback(async (): Promise<boolean> => {
     if (!user) return false;
 
@@ -827,12 +827,12 @@ export default function Home() {
           <div className="relative z-[61] w-full max-w-sm rounded-2xl border border-cyan-500/30 bg-zinc-900 p-6 shadow-2xl">
             <h2 className="text-lg font-semibold text-white">Update Notice</h2>
             <p className="mt-3 text-sm leading-relaxed text-zinc-300">
-              Ad interval has been improved to 20 seconds.
+              There is now a 40-second wait between rewarded ads (was 20 seconds). This helps keep request volume healthier.
               <br />
-              Please update to the latest version.
+              Please update to the latest version for the best experience.
             </p>
             <p className="mt-2 text-xs text-cyan-400/90">
-              Improved ad interval
+              Ad interval: 40 seconds
             </p>
             <div className="mt-5 flex gap-2">
               <button
