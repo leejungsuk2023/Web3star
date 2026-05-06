@@ -77,15 +77,22 @@ BEGIN
       OR u.id::text ILIKE '%' || btrim(p_search) || '%'
     )
   )
-  SELECT count(*) INTO total FROM filtered;
-
-  SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY t.referral_count DESC, t.created_at DESC), '[]'::jsonb) INTO rows
-  FROM (
-    SELECT f.*
-    FROM filtered f
-    ORDER BY f.referral_count DESC, f.created_at DESC
-    LIMIT lim OFFSET off
-  ) t;
+  -- CTE(filtered)는 단일 SELECT 문 안에서만 유효합니다. 두 번째 SELECT로 나누면 relation "filtered" does not exist 가 납니다.
+  SELECT
+    (SELECT count(*)::bigint FROM filtered),
+    (
+      SELECT coalesce(
+        jsonb_agg(to_jsonb(page) ORDER BY page.referral_count DESC, page.created_at DESC),
+        '[]'::jsonb
+      )
+      FROM (
+        SELECT f.*
+        FROM filtered f
+        ORDER BY f.referral_count DESC, f.created_at DESC
+        LIMIT lim OFFSET off
+      ) page
+    )
+  INTO total, rows;
 
   RETURN jsonb_build_object('ok', true, 'total', total, 'rows', rows);
 END;
