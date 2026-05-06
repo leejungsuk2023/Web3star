@@ -26,24 +26,31 @@ DECLARE
 BEGIN
   PERFORM public._admin_assert();
 
-  -- 한 번만 집계한 뒤 조인합니다. (행마다 상관 서브쿼리면 users·mining_logs 풀스캔이 반복되어 statement timeout 납니다.)
+  -- 집계는 한 번만. referral_pairs 는 예전처럼 children × 전체 users 조인하면 O(N×M) 로 statement timeout 납니다.
+  -- → referred_by 가 UUID 형식이면 users PK 로만 붙이고, 아니면 btrim(invite_code) (= 인덱스) 로만 붙입니다.
   WITH children AS (
     SELECT c.id AS child_id, btrim(c.referred_by::text) AS ref_text
     FROM public.users c
     WHERE c.referred_by IS NOT NULL AND btrim(c.referred_by::text) <> ''
   ),
-  referral_pairs AS (
+  referral_by_referrer_id AS (
+    SELECT ch.child_id, u.id AS referrer_id
+    FROM children ch
+    INNER JOIN public.users u ON u.id = ch.ref_text::uuid AND ch.child_id <> u.id
+    WHERE ch.ref_text ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+  ),
+  referral_by_invite_code AS (
     SELECT ch.child_id, u.id AS referrer_id
     FROM children ch
     INNER JOIN public.users u ON ch.child_id <> u.id
-      AND (
-        ch.ref_text = u.id::text
-        OR (
-          u.invite_code IS NOT NULL
-          AND btrim(u.invite_code) <> ''
-          AND ch.ref_text = btrim(u.invite_code)
-        )
-      )
+      AND u.invite_code IS NOT NULL
+      AND btrim(u.invite_code) <> ''
+      AND btrim(u.invite_code) = ch.ref_text
+  ),
+  referral_pairs AS (
+    SELECT * FROM referral_by_referrer_id
+    UNION
+    SELECT * FROM referral_by_invite_code
   ),
   referral_counts AS (
     SELECT referrer_id, count(*)::int AS referral_count
@@ -205,3 +212,18 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.admin_list_referral_program_logs(uuid, int, int) TO authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 성능 인덱스 (레퍼럴 RPC timeout 완화). 이미 있으면 건너뜁니다.
+-- ---------------------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_users_invite_code_btrim
+  ON public.users ((btrim(invite_code)))
+  WHERE invite_code IS NOT NULL AND btrim(invite_code) <> '';
+
+CREATE INDEX IF NOT EXISTS idx_mining_logs_user_referral_bonus
+  ON public.mining_logs (user_id)
+  WHERE type IN ('REFERRAL', 'BONUS');
+
+CREATE INDEX IF NOT EXISTS idx_users_referred_by_btrim
+  ON public.users ((btrim(referred_by::text)))
+  WHERE referred_by IS NOT NULL AND btrim(referred_by::text) <> '';
