@@ -18,9 +18,10 @@ import {
 const MINING_REWARD = 10;
 const AD_REWARD_PER_SLOT = 5;
 const AD_BONUS_ALL_SLOTS = 5;
-const AD_COOLDOWN_SECONDS = 40;
+const AD_COOLDOWN_SECONDS = 30;
 const AD_COOLDOWN_TICK_MS = 200;
-const UPDATE_NOTICE_KEY = 'web3star_update_notice_ad_interval_2026_05_40s';
+const AD_COOLDOWN_STORAGE_PREFIX = 'web3star_ad_cooldown_ends_at_v1_';
+const UPDATE_NOTICE_KEY = 'web3star_update_notice_ad_interval_2026_05_30s';
 const PLAY_STORE_WEB_URL = 'https://play.google.com/store/apps/details?id=com.web3star.app';
 const PLAY_STORE_APP_URL = 'market://details?id=com.web3star.app';
 
@@ -29,6 +30,35 @@ function adCooldownSecondsRemaining(endsAtMs: number | null): number {
   const ms = endsAtMs - Date.now();
   if (ms <= 0) return 0;
   return Math.ceil(ms / 1000);
+}
+
+function adCooldownStorageKey(userId: string): string {
+  return `${AD_COOLDOWN_STORAGE_PREFIX}${userId}`;
+}
+
+function loadAdCooldownEndsAt(userId: string): number | null {
+  try {
+    const raw = localStorage.getItem(adCooldownStorageKey(userId));
+    if (!raw) return null;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed <= Date.now()) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveAdCooldownEndsAt(userId: string, endsAtMs: number | null): void {
+  try {
+    const key = adCooldownStorageKey(userId);
+    if (endsAtMs == null || endsAtMs <= Date.now()) {
+      localStorage.removeItem(key);
+      return;
+    }
+    localStorage.setItem(key, String(endsAtMs));
+  } catch {
+    // ignore storage failures
+  }
 }
 
 const MINING_NOTIFICATION_ID = 1001;
@@ -245,6 +275,20 @@ export default function Home() {
     }
   }, [profile]);
 
+  // Keep inter-slot cooldown active across pull-to-refresh / app restart.
+  useEffect(() => {
+    if (!user?.id) return;
+    const restored = loadAdCooldownEndsAt(user.id);
+    if (restored != null) {
+      setAdCooldownEndsAt((prev) => (prev == null ? restored : Math.max(prev, restored)));
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    saveAdCooldownEndsAt(user.id, adCooldownEndsAt);
+  }, [user?.id, adCooldownEndsAt]);
+
   // Mining cycle timer
   useEffect(() => {
     const timer = setInterval(() => {
@@ -444,6 +488,14 @@ export default function Home() {
   // Ad watched: award PTS on Rewarded. Returns true if inter-slot cooldown should start after ad is dismissed (X).
   const handleWatchAd = useCallback(async (): Promise<boolean> => {
     if (!user) return false;
+    if (!centerButtonActive) {
+      toast.error('Mine with the center logo first to unlock ad slots.');
+      return false;
+    }
+    if (adCooldown > 0) {
+      toast.warning(`Next ad slot unlocks in ${adCooldown}s.`);
+      return false;
+    }
 
     const gateRes = await fetchMyUserRowForMiningGate(user.id, profile);
     if (!gateRes.ok) {
@@ -474,6 +526,26 @@ export default function Home() {
     const reward = AD_REWARD_PER_SLOT + (isComplete ? AD_BONUS_ALL_SLOTS : 0);
 
     const currentPoint = Number(gateRow.point ?? profile?.point ?? 0);
+
+    // Server timestamp guard: prevent rapid reward repeats if UI state is bypassed.
+    const { data: lastAdPointLog } = await supabase
+      .from('mining_logs')
+      .select('created_at')
+      .eq('user_id', user.id)
+      .eq('type', 'AD_POINT')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lastAdPointLog?.created_at) {
+      const lastAt = new Date(lastAdPointLog.created_at).getTime();
+      const remainMs = AD_COOLDOWN_SECONDS * 1000 - (Date.now() - lastAt);
+      if (remainMs > 0) {
+        const nextEndsAt = Date.now() + remainMs;
+        setAdCooldownEndsAt((prev) => (prev == null ? nextEndsAt : Math.max(prev, nextEndsAt)));
+        toast.error(`Ad reward is on cooldown. Try again in ${Math.ceil(remainMs / 1000)}s.`);
+        return false;
+      }
+    }
 
     const { error: slotError } = await supabase
       .from('users')
@@ -514,7 +586,7 @@ export default function Home() {
     }
     toast.success(`+${AD_REWARD_PER_SLOT} PTS Ad reward! (${newSlots.length}/5)`);
     return true;
-  }, [user, activeSlots, profile, refreshProfile, centerButtonActive]);
+  }, [user, activeSlots, profile, refreshProfile, centerButtonActive, adCooldown]);
 
   // 항상 최신 handleMine을 참조하도록 ref 유지 (stale closure 방지)
   const handleMineRef = useRef(handleMine);
@@ -827,12 +899,12 @@ export default function Home() {
           <div className="relative z-[61] w-full max-w-sm rounded-2xl border border-cyan-500/30 bg-zinc-900 p-6 shadow-2xl">
             <h2 className="text-lg font-semibold text-white">Update Notice</h2>
             <p className="mt-3 text-sm leading-relaxed text-zinc-300">
-              There is now a 40-second wait between rewarded ads (was 20 seconds). This helps keep request volume healthier.
+              There is now a 30-second wait between rewarded ads. This helps keep request volume healthier.
               <br />
               Please update to the latest version for the best experience.
             </p>
             <p className="mt-2 text-xs text-cyan-400/90">
-              Ad interval: 40 seconds
+              Ad interval: 30 seconds
             </p>
             <div className="mt-5 flex gap-2">
               <button
