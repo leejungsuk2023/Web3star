@@ -318,17 +318,7 @@ export default function Login() {
 
           <div
             className={`mt-auto w-full shrink-0 border-t border-gray-800/80 bg-[#0a0a0f]/95 px-6 pt-4 backdrop-blur ${LOGIN_FOOTER_PB_CLASS}`}
-          >
-            {import.meta.env.DEV && Capacitor.isNativePlatform() && (
-              <button
-                type="button"
-                onClick={() => navigate('/app/admob-test')}
-                className="mb-3 w-full text-center text-xs text-gray-500 transition-colors hover:text-gray-300"
-              >
-                AdMob Test (Android/iOS)
-              </button>
-            )}
-          </div>
+          />
         </div>
       </div>
 

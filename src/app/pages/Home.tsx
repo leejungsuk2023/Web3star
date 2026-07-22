@@ -18,10 +18,10 @@ import {
 const MINING_REWARD = 10;
 const AD_REWARD_PER_SLOT = 5;
 const AD_BONUS_ALL_SLOTS = 5;
-const AD_COOLDOWN_SECONDS = 30;
+const AD_COOLDOWN_SECONDS = 15;
 const AD_COOLDOWN_TICK_MS = 200;
 const AD_COOLDOWN_STORAGE_PREFIX = 'web3star_ad_cooldown_ends_at_v1_';
-const UPDATE_NOTICE_KEY = 'web3star_update_notice_ad_interval_2026_05_30s';
+const UPDATE_NOTICE_KEY = 'web3star_update_notice_ad_interval_2026_07_15s';
 const PLAY_STORE_WEB_URL = 'https://play.google.com/store/apps/details?id=com.web3star.app';
 const PLAY_STORE_APP_URL = 'market://details?id=com.web3star.app';
 
@@ -620,8 +620,10 @@ export default function Home() {
       }
     };
 
+    // showInterstitialAd 내부에서 로드→표시→실패 시 재시도까지 처리한 뒤 onDone 호출
     showInterstitialAd(onDone).catch((e) => {
-      console.warn('Ad failed, mining anyway:', e);
+      console.warn('Interstitial flow crashed, mining anyway:', e);
+      toast.error('Ad error. Mining continues.');
       void onDone();
     });
   }, [centerButtonActive, isMining, miningBlocked]);

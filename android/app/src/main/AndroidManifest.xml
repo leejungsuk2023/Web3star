@@ -61,6 +61,8 @@
     <!-- ioninappbrowser 등이 끌고 오는 CAMERA 제거 (미사용 시 Play 개인정보처리방침 요구 방지) -->
     <uses-permission android:name="android.permission.CAMERA" tools:node="remove" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- targetSdk 33+ AdMob 광고 ID (실광고 노출에 필요) -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
