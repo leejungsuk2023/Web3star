@@ -220,7 +220,7 @@ export default function Layout() {
         </div>
       )}
 
-      {/* justify-start: keep hero + card under the timer; avoid vertically centering the whole block (felt “too low” vs tab bar) */}
+      {/* justify-start: content height drives scroll — avoid min-h-full trapping overflow */}
       <div
         ref={scrollRef}
         onTouchStart={onTouchStart}
@@ -228,14 +228,14 @@ export default function Layout() {
         onTouchEnd={onTouchEnd}
         className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
       >
-        <div className="flex min-h-full min-w-0 w-full flex-1 flex-col justify-start">
+        <div className="flex w-full min-w-0 flex-col justify-start">
           <Outlet />
         </div>
       </div>
 
-      {/* Bottom tab bar — larger tap targets (~56px icon tile + text-sm labels) */}
+      {/* Bottom tab bar — larger tap targets; labels must clear system nav */}
       <nav
-        className={`relative z-10 flex min-h-[5.25rem] shrink-0 items-center border-t border-gray-800 bg-gradient-to-t from-gray-900/95 to-gray-900/80 px-4 pt-2 backdrop-blur-md ${LAYOUT_NAV_PB_CLASS}`}
+        className={`relative z-10 flex shrink-0 items-center border-t border-gray-800 bg-gradient-to-t from-gray-900/95 to-gray-900/80 px-4 pt-2.5 backdrop-blur-md ${LAYOUT_NAV_PB_CLASS}`}
       >
         <div className="mx-auto flex w-full max-w-sm items-stretch justify-around gap-1">
           <button
@@ -245,7 +245,7 @@ export default function Layout() {
                 devNativePreview ? '/app/__preview/home?nativePreview=1' : '/app'
               )
             }
-            className="group flex min-h-[4.5rem] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-1 active:opacity-90"
+            className="group flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-1 active:opacity-90"
           >
             <div
               className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all ${
@@ -282,7 +282,7 @@ export default function Layout() {
                   : '/app/leaderboard'
               )
             }
-            className="group flex min-h-[4.5rem] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-1 active:opacity-90"
+            className="group flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-1 active:opacity-90"
           >
             <div
               className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all ${
@@ -319,7 +319,7 @@ export default function Layout() {
                   : '/app/profile'
               )
             }
-            className="group flex min-h-[4.5rem] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-1 active:opacity-90"
+            className="group flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-1 active:opacity-90"
           >
             <div
               className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all ${

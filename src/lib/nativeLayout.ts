@@ -20,7 +20,7 @@ export const LAYOUT_HEADER_PT_CLASS = native
 
 /** Extra lift under tab row if system inset is still 0 in WebView (env rarely works on Android) */
 export const LAYOUT_NAV_PB_CLASS = native
-  ? 'pb-[max(0.5rem,env(safe-area-inset-bottom,0px),1.25rem)]'
+  ? 'pb-[max(0.75rem,env(safe-area-inset-bottom,0px),1.75rem)]'
   : 'pb-[max(0.75rem,calc(0.5rem+env(safe-area-inset-bottom,24px)))]';
 
 export const AUTH_PAGE_OUTER_CLASS =

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Lock, Timer, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import GetMorePointModal from '../components/GetMorePointModal';
+import MiningUnlockSlider from '../components/MiningUnlockSlider';
 import miningCenterLogo from '../../assets/mining-center-logo.png';
 import { useAuth, type UserProfile } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -157,6 +158,8 @@ export default function Home() {
   const [isUpdateNoticeOpen, setIsUpdateNoticeOpen] = useState(false);
   const [activeSlots, setActiveSlots] = useState<number[]>([]);
   const [centerButtonActive, setCenterButtonActive] = useState(false);
+  /** 4시간 쿨다운 종료 후 슬라이드 잠금해제 여부 (오토클릭 방지) */
+  const [miningSwipeUnlocked, setMiningSwipeUnlocked] = useState(false);
   const [isMining, setIsMining] = useState(false);
   /** Wall-clock end of inter-slot ad cooldown (avoids setTimeout drift on some devices). */
   const [adCooldownEndsAt, setAdCooldownEndsAt] = useState<number | null>(null);
@@ -176,6 +179,9 @@ export default function Home() {
   const notificationPermissionPromptedRef = useRef(false);
   /** Show the settings nudge at most once per app session if permission stays denied. */
   const miningNotifPermissionToastShownRef = useRef(false);
+  /** 쿨다운 종료 시 1회만 스와이프 리셋 (00:00:00에서 매초 언락이 풀리는 것 방지) */
+  const centerButtonActiveRef = useRef(centerButtonActive);
+  centerButtonActiveRef.current = centerButtonActive;
 
   // Prompt notification permission early on Home entry (once) so users don't see delayed popup later.
   useEffect(() => {
@@ -270,6 +276,9 @@ export default function Home() {
         return elapsed < MINING_COOLDOWN_MS;
       })();
       setCenterButtonActive(inCooldown);
+      if (inCooldown) {
+        setMiningSwipeUnlocked(false);
+      }
 
       setActiveSlots(effectiveAdSlotsViewed(profile.last_mined_at, profile.ad_slots_viewed));
     }
@@ -296,8 +305,12 @@ export default function Home() {
         const remaining = getTimeRemaining(profile.last_mined_at);
         setTime(remaining);
 
-        if (remaining.hours === 0 && remaining.minutes === 0 && remaining.seconds === 0) {
+        const cooldownEnded =
+          remaining.hours === 0 && remaining.minutes === 0 && remaining.seconds === 0;
+        // 쿨다운이 막 끝났을 때만 스와이프 잠금 재적용 (매초 false로 덮어쓰지 않음)
+        if (cooldownEnded && centerButtonActiveRef.current) {
           setCenterButtonActive(false);
+          setMiningSwipeUnlocked(false);
           setActiveSlots([]);
           // 쿨다운 끝 → 로고(채굴) 전까지 하단 리워드 슬롯 잠금 → 광고 미리 로딩
           preloadInterstitialAd();
@@ -420,12 +433,16 @@ export default function Home() {
 
   // Mine: always exactly MINING_REWARD (10) points, no ad bonus
   const handleMine = useCallback(async () => {
-    if (!user || isMining || centerButtonActive) return;
+    if (!user || isMining || centerButtonActive) {
+      if (!user) setMiningSwipeUnlocked(false);
+      return;
+    }
 
     const gateRes = await fetchMyUserRowForMiningGate(user.id, profile);
     if (!gateRes.ok) {
       console.error('Mining gate check failed:', gateRes.message);
       toast.error('채굴 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      setMiningSwipeUnlocked(false);
       return;
     }
 
@@ -436,6 +453,7 @@ export default function Home() {
         { duration: 6000 },
       );
       await refreshProfile();
+      setMiningSwipeUnlocked(false);
       return;
     }
 
@@ -465,6 +483,7 @@ export default function Home() {
       } else {
         toast.error('Mining failed. Please try again.');
       }
+      setMiningSwipeUnlocked(false);
       setIsMining(false);
       return;
     }
@@ -476,6 +495,7 @@ export default function Home() {
     });
 
     setCenterButtonActive(true);
+    setMiningSwipeUnlocked(false);
     setActiveSlots([]);
     setAdCooldownEndsAt(null);
     await refreshProfile();
@@ -594,7 +614,8 @@ export default function Home() {
     handleMineRef.current = handleMine;
   }, [handleMine]);
 
-  const handleCenterButtonClick = useCallback(() => {
+  /** 스와이프 완료 시 바로 채굴 시작 (로고 탭 없음 — 오토클릭 방지) */
+  const startMiningAfterSwipe = useCallback(() => {
     if (centerButtonActive || isMining || interstitialInFlightRef.current) return;
 
     if (miningBlocked) {
@@ -602,6 +623,7 @@ export default function Home() {
         '관리자에 의해 채굴이 중단되었습니다. 문의는 고객지원을 이용해 주세요.',
         { duration: 6000 },
       );
+      setMiningSwipeUnlocked(false);
       return;
     }
 
@@ -620,13 +642,17 @@ export default function Home() {
       }
     };
 
-    // showInterstitialAd 내부에서 로드→표시→실패 시 재시도까지 처리한 뒤 onDone 호출
     showInterstitialAd(onDone).catch((e) => {
       console.warn('Interstitial flow crashed, mining anyway:', e);
       toast.error('Ad error. Mining continues.');
       void onDone();
     });
   }, [centerButtonActive, isMining, miningBlocked]);
+
+  const handleSwipeUnlocked = useCallback(() => {
+    setMiningSwipeUnlocked(true);
+    startMiningAfterSwipe();
+  }, [startMiningAfterSwipe]);
 
   const handleSlotClick = () => {
     // Block slot taps during interstitial / rewarded to avoid ad call stacking.
@@ -704,21 +730,21 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col pt-2 pb-1 sm:pt-3 sm:pb-1">
-      {/* Mining logo → timer → points card: one block, shift down together */}
-      <div className="mt-6 flex w-full shrink-0 flex-col sm:mt-8">
-        <div className="flex shrink-0 flex-col items-center px-6 pt-1 min-[400px]:pt-2 sm:pt-3">
+    <div className="flex w-full flex-col pt-1 pb-28 sm:pt-2 sm:pb-32">
+      {/* Mining logo → timer → points card */}
+      <div className="mt-4 flex w-full flex-col sm:mt-5">
+        <div className="flex flex-col items-center px-6 pt-1">
         {miningBlocked && (
           <div
             role="alert"
-            className="mb-4 w-full max-w-md rounded-xl border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-center text-sm leading-snug text-amber-100"
+            className="mb-3 w-full max-w-md rounded-xl border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-center text-sm leading-snug text-amber-100"
           >
             관리자에 의해 <strong className="font-semibold text-amber-50">채굴이 중단</strong>된 계정입니다. 로고
             채굴·하단 광고 보상을 이용할 수 없습니다. 해제 문의는 고객지원을 이용해 주세요.
           </div>
         )}
         {/* Glowing Circular Button */}
-        <div className="relative mb-4 max-[380px]:mb-3">
+        <div className="relative mb-3 max-[380px]:mb-2">
           <div className={`absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 blur-3xl scale-125 animate-pulse transition-opacity duration-500 ${
             centerButtonActive ? 'opacity-30' : 'opacity-10'
           }`}></div>
@@ -727,21 +753,21 @@ export default function Home() {
           }`}></div>
 
           <button
-            onClick={handleCenterButtonClick}
-            disabled={centerButtonActive || isMining || isInterstitialInFlight || miningBlocked}
+            type="button"
+            disabled
             aria-label={
               miningBlocked
                 ? '채굴 중단됨'
                 : centerButtonActive
                   ? 'Mining in progress'
-                  : 'Start Mining'
+                  : 'Swipe below to start mining'
             }
-            className={`relative h-48 w-48 max-[380px]:h-44 max-[380px]:w-44 overflow-hidden rounded-full p-[3px] shadow-2xl transition-all duration-300 ${
+            className={`relative h-40 w-40 max-[380px]:h-36 max-[380px]:w-36 overflow-hidden rounded-full p-[3px] shadow-2xl transition-all duration-300 ${
               miningBlocked
                 ? 'cursor-not-allowed opacity-45 grayscale-[0.35] bg-gradient-to-br from-zinc-800 via-zinc-900 to-black'
                 : centerButtonActive
-                  ? 'bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 shadow-blue-500/45 hover:scale-105 active:scale-95'
-                  : 'cursor-pointer bg-gradient-to-br from-purple-700/95 via-blue-800/95 to-indigo-900/95 shadow-black/40 hover:scale-[1.02]'
+                  ? 'bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 shadow-blue-500/45'
+                  : 'cursor-default bg-gradient-to-br from-purple-700/95 via-blue-800/95 to-indigo-900/95 shadow-black/40'
             }`}
           >
             <div className="relative box-border flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden rounded-full bg-[#000000] p-0 shadow-[inset_0_0_32px_rgba(0,0,0,0.88),inset_0_1px_2px_rgba(255,255,255,0.04)]">
@@ -766,20 +792,34 @@ export default function Home() {
           </button>
         </div>
 
+        {/* Anti-autoclicker: 스와이프 완료 시 즉시 채굴 시작 */}
+        <div className="mb-3 w-full max-w-sm max-[380px]:mb-2">
+          <MiningUnlockSlider
+            enabled={
+              !centerButtonActive &&
+              !miningBlocked &&
+              !isMining &&
+              !isInterstitialInFlight
+            }
+            unlocked={miningSwipeUnlocked}
+            onUnlocked={handleSwipeUnlocked}
+          />
+        </div>
+
         {/* Countdown Timer */}
         <div className="text-center">
-          <div className="text-4xl font-mono font-bold tracking-wider bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+          <div className="text-3xl font-mono font-bold tracking-wider bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent sm:text-4xl">
             {formatTime(time.hours)}:{formatTime(time.minutes)}:{formatTime(time.seconds)}
           </div>
-          <div className="mt-2 text-xs uppercase tracking-widest text-gray-500">Next Mining Cycle</div>
+          <div className="mt-1.5 text-xs uppercase tracking-widest text-gray-500">Next Mining Cycle</div>
         </div>
         </div>
 
-        <div className="h-4 shrink-0 sm:h-5" aria-hidden />
+        <div className="h-3 shrink-0" aria-hidden />
 
-        <div className="mt-2 shrink-0 px-6 pb-1 pt-0 sm:pb-1">
+        <div className="mt-1 px-6">
         <div className="bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm rounded-2xl p-4 border border-gray-800">
-          <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center justify-between gap-2 mb-2">
             <div className="min-w-0">
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <span className="text-sm font-medium text-zinc-300">Get More Points</span>
@@ -802,6 +842,20 @@ export default function Home() {
               </span>
             </div>
           </div>
+
+          {/* Bonus — keep ABOVE slots so it never sits under the tab bar */}
+          {activeSlots.length < 5 && (
+            <div className="mb-3 text-center">
+              <span className="text-xs text-gray-500">
+                Bonus <span className="text-cyan-500">+5 PTS</span> for watching all 5 ads
+              </span>
+            </div>
+          )}
+          {activeSlots.length === 5 && (
+            <div className="mb-3 text-center">
+              <span className="text-xs text-cyan-400 font-medium">All 5 ads completed! Total +30 PTS</span>
+            </div>
+          )}
 
           <div className="flex items-center justify-between gap-3">
             {[1, 2, 3, 4, 5].map((slot) => (
@@ -834,20 +888,6 @@ export default function Home() {
               </button>
             ))}
           </div>
-
-          {/* Bonus info */}
-          {activeSlots.length < 5 && (
-            <div className="mt-3 text-center">
-              <span className="text-xs text-gray-600">
-                Bonus <span className="text-cyan-500">+5 PTS</span> for watching all 5 ads
-              </span>
-            </div>
-          )}
-          {activeSlots.length === 5 && (
-            <div className="mt-3 text-center">
-              <span className="text-xs text-cyan-400 font-medium">All 5 ads completed! Total +30 PTS</span>
-            </div>
-          )}
 
           {/* Cooldown message */}
           {adCooldown > 0 && (
