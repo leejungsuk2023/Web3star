@@ -1,5 +1,6 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router';
+import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { Home, Trophy, User, Bell, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -9,6 +10,7 @@ import {
   LAYOUT_NAV_PB_CLASS,
   LAYOUT_ROOT_CLASS,
 } from '../../lib/nativeLayout';
+import { consumeAppBack, registerAppBackHandler } from '../../lib/appBackHandlers';
 import headerShieldLogo from '../../assets/web3star-header-shield-logo.png';
 
 /** Preview baseline. Real native already has WebView top inset, so use a smaller extra header lift there. */
@@ -59,8 +61,6 @@ export default function Layout() {
     location.pathname.includes('/__preview/profile');
   const isAndroid = platform === 'android' || /Android/i.test(navigator.userAgent);
 
-  // Android: when user pulls down while already at top, trigger a hard refresh.
-  // This helps recover from occasional "stuck/lag" states.
   const touchStartYRef = useRef(0);
   const pullingRef = useRef(false);
   const pullDeltaYRef = useRef(0);
@@ -68,6 +68,55 @@ export default function Layout() {
   const [pullRefreshState, setPullRefreshState] = useState<'hidden' | 'pull' | 'ready' | 'refreshing'>('hidden');
   const [activityHistoryOpen, setActivityHistoryOpen] = useState(false);
 
+  const homePath = devNativePreview ? '/app/__preview/home?nativePreview=1' : '/app';
+  const leaderboardPath = devNativePreview
+    ? '/app/__preview/leaderboard?nativePreview=1'
+    : '/app/leaderboard';
+  const profilePath = devNativePreview
+    ? '/app/__preview/profile?nativePreview=1'
+    : '/app/profile';
+
+  const goTab = (path: string) => {
+    navigate(path, { replace: true });
+    // Reset main scroll when switching tabs so each page starts at top
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: 0 });
+    });
+  };
+
+  useEffect(() => {
+    return registerAppBackHandler(() => {
+      if (activityHistoryOpen) {
+        setActivityHistoryOpen(false);
+        return true;
+      }
+      return false;
+    });
+  }, [activityHistoryOpen]);
+
+  // Android back: close modal → leave tab to Home → exit app (do not hop Profile→Leaderboard)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const subPromise = App.addListener('backButton', () => {
+      if (consumeAppBack()) return;
+      if (!onAppHome) {
+        navigate(homePath, { replace: true });
+        requestAnimationFrame(() => {
+          scrollRef.current?.scrollTo({ top: 0 });
+        });
+        return;
+      }
+      void App.exitApp();
+    });
+    return () => {
+      void subPromise.then((h) => {
+        void h.remove();
+      });
+    };
+  }, [onAppHome, homePath, navigate]);
+
+  // Android: when user pulls down while already at top, trigger a hard refresh.
+  // This helps recover from occasional "stuck/lag" states.
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!isAndroid) return;
     const el = scrollRef.current;
@@ -167,13 +216,7 @@ export default function Layout() {
             </div>
           </div>
           <button
-            onClick={() =>
-              navigate(
-                devNativePreview
-                  ? '/app/__preview/profile?nativePreview=1'
-                  : '/app/profile'
-              )
-            }
+            onClick={() => goTab(profilePath)}
             className="relative z-[2] w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/30 hover:scale-105 transition-transform active:scale-95"
           >
             <User className="w-6 h-6 text-white" />
@@ -240,11 +283,7 @@ export default function Layout() {
         <div className="mx-auto flex w-full max-w-sm items-stretch justify-around gap-1">
           <button
             type="button"
-            onClick={() =>
-              navigate(
-                devNativePreview ? '/app/__preview/home?nativePreview=1' : '/app'
-              )
-            }
+            onClick={() => goTab(homePath)}
             className="group flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-1 active:opacity-90"
           >
             <div
@@ -275,13 +314,7 @@ export default function Layout() {
 
           <button
             type="button"
-            onClick={() =>
-              navigate(
-                devNativePreview
-                  ? '/app/__preview/leaderboard?nativePreview=1'
-                  : '/app/leaderboard'
-              )
-            }
+            onClick={() => goTab(leaderboardPath)}
             className="group flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-1 active:opacity-90"
           >
             <div
@@ -312,13 +345,7 @@ export default function Layout() {
 
           <button
             type="button"
-            onClick={() =>
-              navigate(
-                devNativePreview
-                  ? '/app/__preview/profile?nativePreview=1'
-                  : '/app/profile'
-              )
-            }
+            onClick={() => goTab(profilePath)}
             className="group flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-1 active:opacity-90"
           >
             <div

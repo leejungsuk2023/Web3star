@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   adminListUsers,
@@ -8,6 +8,8 @@ import {
   type AdminUserRow,
 } from '../../../lib/adminApi';
 
+const PAGE_SIZE = 50;
+
 function lastActivityLabel(u: AdminUserRow): string {
   const tLog = u.last_log_at ? new Date(u.last_log_at).getTime() : 0;
   const tMine = u.last_mined_at ? new Date(u.last_mined_at).getTime() : 0;
@@ -15,24 +17,105 @@ function lastActivityLabel(u: AdminUserRow): string {
   return m > 0 ? new Date(m).toLocaleString() : '—';
 }
 
+/** Visible page numbers: 1 … window … last */
+function buildPageItems(current: number, totalPages: number, radius = 2): (number | 'gap')[] {
+  if (totalPages <= 0) return [];
+  const set = new Set<number>();
+  set.add(1);
+  set.add(totalPages);
+  for (let p = current - radius; p <= current + radius; p += 1) {
+    if (p >= 1 && p <= totalPages) set.add(p);
+  }
+  const sorted = [...set].sort((a, b) => a - b);
+  const out: (number | 'gap')[] = [];
+  for (let i = 0; i < sorted.length; i += 1) {
+    if (i > 0 && sorted[i]! - sorted[i - 1]! > 1) out.push('gap');
+    out.push(sorted[i]!);
+  }
+  return out;
+}
+
+function PaginationBar({
+  page,
+  totalPages,
+  loading,
+  onPage,
+}: {
+  page: number;
+  totalPages: number;
+  loading: boolean;
+  onPage: (p: number) => void;
+}) {
+  const items = useMemo(() => buildPageItems(page, totalPages), [page, totalPages]);
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-1.5">
+      <button
+        type="button"
+        disabled={page <= 1 || loading}
+        onClick={() => onPage(page - 1)}
+        className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-white enabled:hover:bg-white/5 disabled:opacity-40"
+      >
+        이전
+      </button>
+      {items.map((item, idx) =>
+        item === 'gap' ? (
+          <span key={`gap-${idx}`} className="px-1 text-gray-600">
+            …
+          </span>
+        ) : (
+          <button
+            key={item}
+            type="button"
+            disabled={loading}
+            onClick={() => onPage(item)}
+            className={
+              item === page
+                ? 'min-w-9 rounded-lg border border-cyan-500/60 bg-cyan-500/20 px-2.5 py-1.5 text-sm font-medium text-cyan-200'
+                : 'min-w-9 rounded-lg border border-gray-700 px-2.5 py-1.5 text-sm text-white enabled:hover:bg-white/5 disabled:opacity-40'
+            }
+          >
+            {item}
+          </button>
+        ),
+      )}
+      <button
+        type="button"
+        disabled={page >= totalPages || loading}
+        onClick={() => onPage(page + 1)}
+        className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-white enabled:hover:bg-white/5 disabled:opacity-40"
+      >
+        다음
+      </button>
+    </div>
+  );
+}
+
 export default function AdminUsers() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
   const [rows, setRows] = useState<AdminUserRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
+  useEffect(() => {
+    setPage(1);
+  }, [search, roleFilter, statusFilter]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setErr(null);
+    const offset = (page - 1) * PAGE_SIZE;
     const res = await adminListUsers({
       search: search.trim() || undefined,
       role: roleFilter || undefined,
       status: statusFilter || undefined,
-      limit: 80,
-      offset: 0,
+      limit: PAGE_SIZE,
+      offset,
     });
     setLoading(false);
     if (!res.ok) {
@@ -41,11 +124,17 @@ export default function AdminUsers() {
     }
     setRows(res.rows);
     setTotal(res.total);
-  }, [search, roleFilter, statusFilter]);
+    const maxPage = Math.max(1, Math.ceil(res.total / PAGE_SIZE));
+    if (page > maxPage) setPage(maxPage);
+  }, [search, roleFilter, statusFilter, page]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = total === 0 ? 0 : Math.min(page * PAGE_SIZE, total);
 
   async function apply(
     label: string,
@@ -120,7 +209,14 @@ export default function AdminUsers() {
         </div>
       )}
 
-      <div className="text-xs text-gray-500">총 {total.toLocaleString()}명 · 표시 {rows.length}명</div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-xs text-gray-500">
+          총 {total.toLocaleString()}명
+          {total > 0 ? ` · ${rangeStart.toLocaleString()}–${rangeEnd.toLocaleString()} 표시` : ''}
+          {total > 0 ? ` · ${page}/${totalPages} 페이지` : ''}
+        </div>
+        <PaginationBar page={page} totalPages={totalPages} loading={loading} onPage={setPage} />
+      </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-800">
         <table className="w-full min-w-[1040px] border-collapse text-left text-sm">
@@ -217,6 +313,8 @@ export default function AdminUsers() {
           </tbody>
         </table>
       </div>
+
+      <PaginationBar page={page} totalPages={totalPages} loading={loading} onPage={setPage} />
     </div>
   );
 }

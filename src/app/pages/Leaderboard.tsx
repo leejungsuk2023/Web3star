@@ -100,8 +100,8 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between border-b border-gray-800/90 bg-gradient-to-b from-zinc-900/60 to-zinc-900/30 px-6 py-4 backdrop-blur-sm">
+    <div className="flex w-full flex-col px-0 pb-28">
+      <div className="flex items-center justify-between border-b border-gray-800/90 bg-gradient-to-b from-zinc-900/60 to-zinc-900/30 px-6 py-4 backdrop-blur-sm">
         <div className="w-10" />
         <h1 className="text-center text-xl font-bold tracking-tight sm:text-2xl bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
           Top Miners
@@ -116,7 +116,7 @@ export default function Leaderboard() {
         </button>
       </div>
 
-      <div className="shrink-0 border-b border-gray-800/90 bg-gradient-to-r from-gray-900/40 to-gray-800/30 px-6 py-4 backdrop-blur-sm">
+      <div className="border-b border-gray-800/90 bg-gradient-to-r from-gray-900/40 to-gray-800/30 px-6 py-4 backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div>
             <span className="text-xs text-zinc-500 sm:text-sm">My Rank</span>
@@ -131,8 +131,7 @@ export default function Leaderboard() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-3 [-webkit-overflow-scrolling:touch]">
-        <div className="space-y-3 pb-28">
+      <div className="space-y-3 px-4 pt-3 pb-4">
           {leaderboardData.map((user) => (
             <div
               key={user.rank}
@@ -178,7 +177,6 @@ export default function Leaderboard() {
               No miners yet. Be the first!
             </div>
           )}
-        </div>
       </div>
     </div>
   );

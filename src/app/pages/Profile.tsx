@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Copy, ClipboardCheck, History, FileText, Lock, Mail, LogOut, Shield } from 'lucide-react';
 import { useState } from 'react';
@@ -9,6 +9,7 @@ import ActivityHistoryModal from '../components/ActivityHistoryModal';
 import WhitepaperModal from '../components/WhitepaperModal';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { registerAppBackHandler } from '../../lib/appBackHandlers';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -20,6 +21,33 @@ export default function Profile() {
   const [isWhitepaperOpen, setIsWhitepaperOpen] = useState(false);
 
   const referralCode = profile?.invite_code ?? '------';
+
+  useEffect(() => {
+    return registerAppBackHandler(() => {
+      if (isWhitepaperOpen) {
+        setIsWhitepaperOpen(false);
+        return true;
+      }
+      if (isPrivacyPolicyOpen) {
+        setIsPrivacyPolicyOpen(false);
+        return true;
+      }
+      if (isContactSupportOpen) {
+        setIsContactSupportOpen(false);
+        return true;
+      }
+      if (isActivityHistoryOpen) {
+        setIsActivityHistoryOpen(false);
+        return true;
+      }
+      return false;
+    });
+  }, [
+    isWhitepaperOpen,
+    isPrivacyPolicyOpen,
+    isContactSupportOpen,
+    isActivityHistoryOpen,
+  ]);
 
   const handleCopy = async () => {
     try {
@@ -81,7 +109,7 @@ export default function Profile() {
   ];
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pb-28 pt-2 [-webkit-overflow-scrolling:touch] sm:px-6">
+    <div className="w-full px-5 pb-28 pt-2 sm:px-6">
       <div className="mx-auto max-w-md">
         <div className="mb-5 flex flex-col items-center">
           <h2 className="mb-0.5 text-xl font-bold text-zinc-100">{profile?.nickname ?? 'User'}</h2>
